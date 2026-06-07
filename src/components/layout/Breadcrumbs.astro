@@ -48,7 +48,7 @@ const {
 
 // Build breadcrumb items array
 const items: BreadcrumbItem[] = [
-  { label: 'Home', url: '/', level: 'home' },
+  { label: 'Home', url: import.meta.env.BASE_URL, level: 'home' },
 ];
 
 if (topicId && topicDisplayName) {
