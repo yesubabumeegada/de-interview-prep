@@ -54,7 +54,7 @@ const items: BreadcrumbItem[] = [
 if (topicId && topicDisplayName) {
   items.push({
     label: topicDisplayName,
-    url: `/topic/${topicId}/`,
+    url: `${import.meta.env.BASE_URL}topic/${topicId}/`,
     level: 'topic',
   });
 }
@@ -62,7 +62,7 @@ if (topicId && topicDisplayName) {
 if (subtopicId && subtopicDisplayName && topicId) {
   items.push({
     label: subtopicDisplayName,
-    url: `/topic/${topicId}/${subtopicId}`,
+    url: `${import.meta.env.BASE_URL}topic/${topicId}/${subtopicId}`,
     level: 'subtopic',
   });
 }

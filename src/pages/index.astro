@@ -131,7 +131,7 @@ const topicIcons: Record<string, string> = {
         const icon = topic ? topicIcons[topic.icon] || '📖' : '📖';
         
         return (
-          <Card href={`/topic/${stat.topicId}/`} class="card-stagger">
+          <Card href={`${import.meta.env.BASE_URL}topic/${stat.topicId}/`} class="card-stagger">
             <div class="flex items-start gap-3">
               <!-- Icon badge -->
               <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-xl" style="background: var(--gradient-subtle); border: 1px solid var(--color-surface-tertiary);">

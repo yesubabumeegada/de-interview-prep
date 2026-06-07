@@ -99,7 +99,7 @@ const topics = topicsConfig.topics.sort((a, b) => a.order - b.order);
                     return (
                       <li class="sidebar-subtopic-item">
                         <a
-                          href={`/topic/${topic.id}/${subtopic.id}`}
+                          href={`${import.meta.env.BASE_URL}topic/${topic.id}/${subtopic.id}`}
                           class:list={[
                             'flex items-center gap-2 px-3 py-[5px] rounded-md text-[0.78rem] leading-tight transition-colors duration-100',
                             isSubActive
@@ -196,7 +196,7 @@ const topics = topicsConfig.topics.sort((a, b) => a.order - b.order);
                     return (
                       <li class="sidebar-subtopic-item">
                         <a
-                          href={`/topic/${topic.id}/${subtopic.id}`}
+                          href={`${import.meta.env.BASE_URL}topic/${topic.id}/${subtopic.id}`}
                           class:list={[
                             'flex items-center gap-2 px-3 py-[5px] rounded-md text-[0.75rem] leading-snug transition-all duration-100',
                             isSubActive

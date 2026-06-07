@@ -104,7 +104,7 @@ export function buildBreadcrumbs(params: {
   if (params.topicId && params.topicDisplayName) {
     items.push({
       label: params.topicDisplayName,
-      url: `/topic/${params.topicId}/`,
+      url: `${import.meta.env.BASE_URL}topic/${params.topicId}/`,
       level: 'topic',
     });
   }
@@ -112,7 +112,7 @@ export function buildBreadcrumbs(params: {
   if (params.subtopicId && params.subtopicDisplayName && params.topicId) {
     items.push({
       label: params.subtopicDisplayName,
-      url: `/topic/${params.topicId}/${params.subtopicId}`,
+      url: `${import.meta.env.BASE_URL}topic/${params.topicId}/${params.subtopicId}`,
       level: 'subtopic',
     });
   }
