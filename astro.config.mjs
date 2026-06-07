@@ -96,7 +96,7 @@ function validateTopicsConfig() {
 // https://astro.build/config
 export default defineConfig({
   site: 'https://yesubabumeegada.github.io',
-  base: '/de-interview-prep',
+  base: '/de-interview-prep/',
   integrations: [
     validateTopicsConfig(),
     validateContentFrontmatter(),
