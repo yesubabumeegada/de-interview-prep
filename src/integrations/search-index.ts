@@ -204,7 +204,7 @@ function buildDisplayNameMaps(config: TopicsConfig): {
  * Generate the URL path for a content item.
  */
 function generateUrl(topic: string, subtopic: string): string {
-  return `/topic/${topic}/${subtopic}`;
+  return `${import.meta.env.BASE_URL}topic/${topic}/${subtopic}`;
 }
 
 // --- Slug Generation ---
