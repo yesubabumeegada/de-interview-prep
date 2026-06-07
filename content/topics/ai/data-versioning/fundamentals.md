@@ -3,7 +3,7 @@ title: "AI - Data Versioning"
 topic: ai
 subtopic: data-versioning
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [ai, data-versioning, dvc, git-lfs, reproducibility]
 ---

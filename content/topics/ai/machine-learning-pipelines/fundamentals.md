@@ -3,7 +3,7 @@ title: "AI - Machine Learning Pipelines"
 topic: ai
 subtopic: machine-learning-pipelines
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [ai, machine-learning, pipelines, sklearn, data-splits, overfitting]
 ---

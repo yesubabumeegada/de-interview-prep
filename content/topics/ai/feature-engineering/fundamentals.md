@@ -3,7 +3,7 @@ title: "AI - Feature Engineering"
 topic: ai
 subtopic: feature-engineering
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [ai, feature-engineering, encoding, scaling, imputation, feature-selection]
 ---

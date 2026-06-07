@@ -3,7 +3,7 @@ title: "AI - Experiment Tracking"
 topic: ai
 subtopic: experiment-tracking
 content_type: scenario_question
-difficulty_level: beginner
+difficulty_level: junior
 layer: scenarios
 tags: [ai, experiment-tracking, scenarios, reproducibility, hyperparameter-search, governance]
 ---

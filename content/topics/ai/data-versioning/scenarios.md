@@ -3,7 +3,7 @@ title: "AI - Data Versioning"
 topic: ai
 subtopic: data-versioning
 content_type: scenario_question
-difficulty_level: beginner
+difficulty_level: junior
 layer: scenarios
 tags: [ai, data-versioning, scenarios, drift-tracing, reproducibility, audit]
 ---

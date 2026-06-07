@@ -3,7 +3,7 @@ title: "AI - MLOps"
 topic: ai
 subtopic: mlops
 content_type: scenario_question
-difficulty_level: beginner
+difficulty_level: junior
 layer: scenarios
 tags: [ai, mlops, scenarios, stale-models, pipeline-failures, governance]
 ---

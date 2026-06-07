@@ -3,7 +3,7 @@ title: "AI - Bias and Fairness"
 topic: ai
 subtopic: bias-and-fairness
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [ai, bias, fairness, demographic-parity, equalized-odds, protected-attributes]
 ---

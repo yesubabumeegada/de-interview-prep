@@ -3,7 +3,7 @@ title: "AI - Bias and Fairness"
 topic: ai
 subtopic: bias-and-fairness
 content_type: scenario_question
-difficulty_level: beginner
+difficulty_level: junior
 layer: scenarios
 tags: [ai, bias, fairness, scenarios, model-bias, regulatory-audit, recommendations]
 ---

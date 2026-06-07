@@ -3,7 +3,7 @@ title: "AI - Experiment Tracking"
 topic: ai
 subtopic: experiment-tracking
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [ai, experiment-tracking, mlflow, params, metrics, artifacts]
 ---

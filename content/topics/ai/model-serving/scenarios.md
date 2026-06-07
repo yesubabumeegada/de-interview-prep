@@ -3,7 +3,7 @@ title: "AI - Model Serving"
 topic: ai
 subtopic: model-serving
 content_type: scenario_question
-difficulty_level: beginner
+difficulty_level: junior
 layer: scenarios
 tags: [ai, model-serving, scenarios, latency, traffic-spikes, rollback]
 ---

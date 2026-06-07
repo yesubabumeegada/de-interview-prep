@@ -3,7 +3,7 @@ title: "AI - Model Serving"
 topic: ai
 subtopic: model-serving
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [ai, model-serving, fastapi, flask, rest-api, latency, throughput]
 ---

@@ -3,7 +3,7 @@ title: "AI - Model Monitoring"
 topic: ai
 subtopic: model-monitoring
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [ai, model-monitoring, data-drift, concept-drift, psi, kl-divergence]
 ---
