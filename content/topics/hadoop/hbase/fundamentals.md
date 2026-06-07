@@ -3,7 +3,7 @@ title: "HBase - Fundamentals"
 topic: hadoop
 subtopic: hbase
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [hadoop, hbase, wide-column, nosql, row-key, regions]
 ---

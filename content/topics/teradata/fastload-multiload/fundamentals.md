@@ -3,7 +3,7 @@ title: "Teradata - FastLoad and MultiLoad Fundamentals"
 topic: teradata
 subtopic: fastload-multiload
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [teradata, fastload, multiload, tpt, bulk-load, etl]
 ---

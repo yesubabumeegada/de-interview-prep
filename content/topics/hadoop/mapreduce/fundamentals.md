@@ -3,7 +3,7 @@ title: "MapReduce - Fundamentals"
 topic: hadoop
 subtopic: mapreduce
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [hadoop, mapreduce, map, reduce, shuffle, sort]
 ---

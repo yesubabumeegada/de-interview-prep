@@ -3,7 +3,7 @@ title: "Kafka Streams - Fundamentals"
 topic: kafka
 subtopic: kafka-streams
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [kafka, kafka-streams, stream-processing, KStream, KTable, topology]
 ---

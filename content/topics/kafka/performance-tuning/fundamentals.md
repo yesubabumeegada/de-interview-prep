@@ -3,7 +3,7 @@ title: "Kafka Performance Tuning - Fundamentals"
 topic: kafka
 subtopic: performance-tuning
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [kafka, performance, throughput, latency, producer-tuning, consumer-tuning, broker-tuning]
 ---

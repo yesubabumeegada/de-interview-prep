@@ -3,7 +3,7 @@ title: "Incremental Loading - Fundamentals"
 topic: etl-concepts
 subtopic: incremental-loading
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [etl, incremental-loading, watermark, high-water-mark, batch]
 ---

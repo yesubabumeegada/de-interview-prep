@@ -3,7 +3,7 @@ title: "Teradata - Statistics Fundamentals"
 topic: teradata
 subtopic: statistics
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [teradata, statistics, collect-statistics, optimizer, query-performance]
 ---

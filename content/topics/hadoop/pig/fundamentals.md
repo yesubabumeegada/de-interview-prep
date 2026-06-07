@@ -3,7 +3,7 @@ title: "Pig - Fundamentals"
 topic: hadoop
 subtopic: pig
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [hadoop, pig, pig-latin, mapreduce, etl, data-processing]
 ---

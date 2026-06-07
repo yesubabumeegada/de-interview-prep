@@ -3,7 +3,7 @@ title: "SCD Implementation - Fundamentals"
 topic: etl-concepts
 subtopic: scd-implementation
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [etl, scd, slowly-changing-dimensions, type-1, type-2, dimensional-modeling]
 ---

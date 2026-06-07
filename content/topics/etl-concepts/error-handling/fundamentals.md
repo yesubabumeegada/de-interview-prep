@@ -3,7 +3,7 @@ title: "Error Handling - Fundamentals"
 topic: etl-concepts
 subtopic: error-handling
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [etl, error-handling, retry, dead-letter-queue, alerting]
 ---

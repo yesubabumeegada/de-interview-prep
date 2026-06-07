@@ -3,7 +3,7 @@ title: "ZooKeeper - Fundamentals"
 topic: hadoop
 subtopic: zookeeper
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [hadoop, zookeeper, distributed-coordination, znodes, ensemble, quorum]
 ---

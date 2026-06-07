@@ -3,7 +3,7 @@ title: "Hive - Fundamentals"
 topic: hadoop
 subtopic: hive
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [hadoop, hive, hiveql, metastore, partitioning, orc, parquet]
 ---

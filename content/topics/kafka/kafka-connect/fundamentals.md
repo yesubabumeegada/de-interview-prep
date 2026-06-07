@@ -3,7 +3,7 @@ title: "Kafka Connect - Fundamentals"
 topic: kafka
 subtopic: kafka-connect
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [kafka, kafka-connect, connectors, source, sink, workers, transforms]
 ---

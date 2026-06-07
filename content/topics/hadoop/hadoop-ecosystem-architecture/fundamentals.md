@@ -3,7 +3,7 @@ title: "Hadoop Ecosystem Architecture - Fundamentals"
 topic: hadoop
 subtopic: hadoop-ecosystem-architecture
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [hadoop, hdfs, yarn, hive, hbase, spark, ecosystem, architecture]
 ---

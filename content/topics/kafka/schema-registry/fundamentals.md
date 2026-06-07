@@ -3,7 +3,7 @@ title: "Schema Registry - Fundamentals"
 topic: kafka
 subtopic: schema-registry
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [kafka, schema-registry, avro, schema-evolution, serialization]
 ---

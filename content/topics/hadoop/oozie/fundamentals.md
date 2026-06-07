@@ -3,7 +3,7 @@ title: "Oozie - Fundamentals"
 topic: hadoop
 subtopic: oozie
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [hadoop, oozie, workflow, scheduler, mapreduce, hive]
 ---

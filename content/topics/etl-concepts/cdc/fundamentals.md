@@ -3,7 +3,7 @@ title: "Change Data Capture - Fundamentals"
 topic: etl-concepts
 subtopic: cdc
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [etl, cdc, debezium, binlog, wal, kafka]
 ---

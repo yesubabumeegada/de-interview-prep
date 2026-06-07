@@ -3,7 +3,7 @@ title: "Teradata - Primary Index Fundamentals"
 topic: teradata
 subtopic: primary-index
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [teradata, primary-index, upi, nupi, row-hashing, data-distribution]
 ---

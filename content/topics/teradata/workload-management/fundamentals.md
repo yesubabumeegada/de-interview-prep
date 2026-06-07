@@ -3,7 +3,7 @@ title: "Teradata - Workload Management Fundamentals"
 topic: teradata
 subtopic: workload-management
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [teradata, workload-management, tasm, tdwm, priority, throttling]
 ---

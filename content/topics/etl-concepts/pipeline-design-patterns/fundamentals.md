@@ -3,7 +3,7 @@ title: "Pipeline Design Patterns - Fundamentals"
 topic: etl-concepts
 subtopic: pipeline-design-patterns
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [etl, pipeline-design, lambda, kappa, medallion, batch, streaming]
 ---

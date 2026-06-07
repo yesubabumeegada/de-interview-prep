@@ -337,6 +337,135 @@
         { "id": "metadata-management", "displayName": "Metadata Management", "order": 9 },
         { "id": "schema-design-patterns", "displayName": "Schema Design Patterns", "order": 10 }
       ]
+    },
+    {
+      "id": "dbt",
+      "displayName": "dbt",
+      "order": 19,
+      "icon": "dbt",
+      "subtopics": [
+        { "id": "dbt-fundamentals", "displayName": "dbt Fundamentals", "order": 1 },
+        { "id": "models-and-materializations", "displayName": "Models & Materializations", "order": 2 },
+        { "id": "sources-and-staging", "displayName": "Sources & Staging", "order": 3 },
+        { "id": "testing", "displayName": "Testing", "order": 4 },
+        { "id": "macros-and-jinja", "displayName": "Macros & Jinja", "order": 5 },
+        { "id": "seeds-and-snapshots", "displayName": "Seeds & Snapshots", "order": 6 },
+        { "id": "exposures-and-metrics", "displayName": "Exposures & Metrics", "order": 7 },
+        { "id": "dbt-cloud-and-ci-cd", "displayName": "dbt Cloud & CI/CD", "order": 8 }
+      ]
+    },
+    {
+      "id": "data-quality",
+      "displayName": "Data Quality & Testing",
+      "order": 20,
+      "icon": "data-quality",
+      "subtopics": [
+        { "id": "data-quality-fundamentals", "displayName": "Data Quality Fundamentals", "order": 1 },
+        { "id": "great-expectations", "displayName": "Great Expectations", "order": 2 },
+        { "id": "data-contracts", "displayName": "Data Contracts", "order": 3 },
+        { "id": "schema-validation", "displayName": "Schema Validation", "order": 4 },
+        { "id": "anomaly-detection", "displayName": "Anomaly Detection", "order": 5 },
+        { "id": "data-profiling", "displayName": "Data Profiling", "order": 6 },
+        { "id": "sla-monitoring", "displayName": "SLA Monitoring", "order": 7 },
+        { "id": "incident-management", "displayName": "Incident Management", "order": 8 }
+      ]
+    },
+    {
+      "id": "azure",
+      "displayName": "Azure Data Engineering",
+      "order": 21,
+      "icon": "azure",
+      "subtopics": [
+        { "id": "azure-data-factory", "displayName": "Azure Data Factory", "order": 1 },
+        { "id": "azure-synapse", "displayName": "Azure Synapse Analytics", "order": 2 },
+        { "id": "adls", "displayName": "ADLS Gen2", "order": 3 },
+        { "id": "azure-databricks", "displayName": "Azure Databricks", "order": 4 },
+        { "id": "azure-stream-analytics", "displayName": "Azure Stream Analytics", "order": 5 },
+        { "id": "event-hubs", "displayName": "Event Hubs", "order": 6 },
+        { "id": "azure-sql", "displayName": "Azure SQL & Managed Instance", "order": 7 },
+        { "id": "cosmos-db", "displayName": "Cosmos DB", "order": 8 },
+        { "id": "purview", "displayName": "Microsoft Purview", "order": 9 }
+      ]
+    },
+    {
+      "id": "data-lakehouse",
+      "displayName": "Data Lakehouse",
+      "order": 22,
+      "icon": "lakehouse",
+      "subtopics": [
+        { "id": "lakehouse-architecture", "displayName": "Lakehouse Architecture", "order": 1 },
+        { "id": "apache-iceberg", "displayName": "Apache Iceberg", "order": 2 },
+        { "id": "apache-hudi", "displayName": "Apache Hudi", "order": 3 },
+        { "id": "delta-lake-deep-dive", "displayName": "Delta Lake Deep Dive", "order": 4 },
+        { "id": "table-format-comparison", "displayName": "Table Format Comparison", "order": 5 },
+        { "id": "catalog-and-governance", "displayName": "Catalog & Governance", "order": 6 },
+        { "id": "query-engines", "displayName": "Query Engines (Trino, Spark, Flink)", "order": 7 },
+        { "id": "storage-optimization", "displayName": "Storage Optimization", "order": 8 }
+      ]
+    },
+    {
+      "id": "real-time-streaming",
+      "displayName": "Real-Time Streaming",
+      "order": 23,
+      "icon": "streaming",
+      "subtopics": [
+        { "id": "apache-flink", "displayName": "Apache Flink", "order": 1 },
+        { "id": "spark-structured-streaming", "displayName": "Spark Structured Streaming", "order": 2 },
+        { "id": "kinesis-advanced", "displayName": "Kinesis Advanced", "order": 3 },
+        { "id": "stream-processing-patterns", "displayName": "Stream Processing Patterns", "order": 4 },
+        { "id": "watermarks-and-windows", "displayName": "Watermarks & Windows", "order": 5 },
+        { "id": "stateful-processing", "displayName": "Stateful Processing", "order": 6 },
+        { "id": "cdc-streaming", "displayName": "CDC Streaming (Debezium)", "order": 7 },
+        { "id": "streaming-architecture", "displayName": "Streaming Architecture Patterns", "order": 8 }
+      ]
+    },
+    {
+      "id": "data-governance",
+      "displayName": "Data Governance",
+      "order": 24,
+      "icon": "governance",
+      "subtopics": [
+        { "id": "governance-fundamentals", "displayName": "Governance Fundamentals", "order": 1 },
+        { "id": "data-catalog", "displayName": "Data Catalog (DataHub, Alation)", "order": 2 },
+        { "id": "data-lineage", "displayName": "Data Lineage", "order": 3 },
+        { "id": "access-control", "displayName": "Access Control & RBAC", "order": 4 },
+        { "id": "pii-and-compliance", "displayName": "PII & Compliance (GDPR, CCPA)", "order": 5 },
+        { "id": "data-classification", "displayName": "Data Classification", "order": 6 },
+        { "id": "metadata-management", "displayName": "Metadata Management", "order": 7 },
+        { "id": "unity-catalog-governance", "displayName": "Unity Catalog Governance", "order": 8 }
+      ]
+    },
+    {
+      "id": "gcp",
+      "displayName": "GCP Data Engineering",
+      "order": 25,
+      "icon": "gcp",
+      "subtopics": [
+        { "id": "bigquery", "displayName": "BigQuery", "order": 1 },
+        { "id": "dataflow", "displayName": "Dataflow (Apache Beam)", "order": 2 },
+        { "id": "pub-sub", "displayName": "Pub/Sub", "order": 3 },
+        { "id": "cloud-storage", "displayName": "Cloud Storage", "order": 4 },
+        { "id": "cloud-composer", "displayName": "Cloud Composer (Airflow)", "order": 5 },
+        { "id": "dataproc", "displayName": "Dataproc (Spark/Hadoop)", "order": 6 },
+        { "id": "bigtable", "displayName": "Bigtable", "order": 7 },
+        { "id": "looker", "displayName": "Looker & Looker Studio", "order": 8 }
+      ]
+    },
+    {
+      "id": "system-design",
+      "displayName": "System Design for DE",
+      "order": 26,
+      "icon": "system-design",
+      "subtopics": [
+        { "id": "pipeline-design-patterns", "displayName": "Pipeline Design Patterns", "order": 1 },
+        { "id": "scalability", "displayName": "Scalability & Partitioning", "order": 2 },
+        { "id": "fault-tolerance", "displayName": "Fault Tolerance & Reliability", "order": 3 },
+        { "id": "data-warehouse-design", "displayName": "Data Warehouse Design", "order": 4 },
+        { "id": "lambda-kappa-architecture", "displayName": "Lambda & Kappa Architecture", "order": 5 },
+        { "id": "cost-optimization", "displayName": "Cost Optimization", "order": 6 },
+        { "id": "end-to-end-case-studies", "displayName": "End-to-End Case Studies", "order": 7 },
+        { "id": "trade-off-analysis", "displayName": "Trade-off Analysis", "order": 8 }
+      ]
     }
   ]
 }

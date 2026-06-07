@@ -3,7 +3,7 @@ title: "Kafka Monitoring - Fundamentals"
 topic: kafka
 subtopic: monitoring
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [kafka, monitoring, JMX, consumer-lag, metrics, broker-health]
 ---

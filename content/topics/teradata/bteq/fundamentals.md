@@ -3,7 +3,7 @@ title: "Teradata - BTEQ Fundamentals"
 topic: teradata
 subtopic: bteq
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [teradata, bteq, scripting, batch, etl, logon]
 ---

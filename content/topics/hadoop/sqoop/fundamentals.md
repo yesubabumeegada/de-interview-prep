@@ -3,7 +3,7 @@ title: "Sqoop - Fundamentals"
 topic: hadoop
 subtopic: sqoop
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [hadoop, sqoop, rdbms, import, export, hdfs]
 ---

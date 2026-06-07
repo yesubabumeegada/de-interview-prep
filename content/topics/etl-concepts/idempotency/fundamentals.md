@@ -3,7 +3,7 @@ title: "Idempotency - Fundamentals"
 topic: etl-concepts
 subtopic: idempotency
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [etl, idempotency, upsert, deduplication, exactly-once]
 ---

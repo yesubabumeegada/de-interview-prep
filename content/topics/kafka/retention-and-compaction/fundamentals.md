@@ -3,7 +3,7 @@ title: "Retention and Compaction - Fundamentals"
 topic: kafka
 subtopic: retention-and-compaction
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [kafka, retention, compaction, log-cleanup, storage, topic-configuration]
 ---

@@ -3,7 +3,7 @@ title: "Teradata - Temporal Tables Fundamentals"
 topic: teradata
 subtopic: temporal-tables
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [teradata, temporal-tables, ansi-temporal, valid-time, transaction-time, period]
 ---

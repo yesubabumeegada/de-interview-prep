@@ -3,7 +3,7 @@ title: "Data Quality - Fundamentals"
 topic: etl-concepts
 subtopic: data-quality
 content_type: study_material
-difficulty_level: beginner
+difficulty_level: junior
 layer: fundamentals
 tags: [etl, data-quality, great-expectations, dbt-tests, completeness, accuracy]
 ---
