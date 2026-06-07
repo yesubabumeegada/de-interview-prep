@@ -1,0 +1,462 @@
+---
+/**
+ * MermaidDiagram.astro
+ * Renders Mermaid diagrams with:
+ *  - Inline zoom controls (+/- and reset, visible on hover)
+ *  - Click to open full-screen modal with pinch/scroll/slider zoom
+ *  - Theme-aware (re-renders on dark/light toggle)
+ *  - DOMPurify SVG sanitisation
+ *  - 5-second render timeout with fallback
+ */
+
+export interface Props {
+  source: string;
+  diagramType: string;
+  fallbackDescription: string;
+  renderTimeout?: number;
+}
+
+const { source, diagramType, fallbackDescription, renderTimeout = 5000 } = Astro.props;
+const diagramId = `mermaid-${Math.random().toString(36).substring(2, 11)}`;
+---
+
+<div
+  class="mermaid-diagram-wrapper relative my-6 group"
+  data-diagram-id={diagramId}
+  data-source={source}
+  data-diagram-type={diagramType}
+  data-fallback-description={fallbackDescription}
+  data-render-timeout={renderTimeout.toString()}
+>
+  <!-- Rendered container -->
+  <div
+    id={`${diagramId}-rendered`}
+    class="mermaid-rendered hidden relative rounded-xl border border-[var(--color-surface-tertiary)] bg-[var(--color-surface)] overflow-hidden"
+    style="box-shadow: var(--shadow-card);"
+  >
+    <!-- SVG lives here (scrollable if wider than container) -->
+    <div
+      id={`${diagramId}-svg-scroll`}
+      class="overflow-x-auto overflow-y-hidden"
+    >
+      <div
+        id={`${diagramId}-svg-stage`}
+        class="mermaid-svg-container p-4 min-w-0"
+        style="transform-origin: top left;"
+      >
+        <!-- SVG inserted by JS -->
+      </div>
+    </div>
+
+    <!-- Inline zoom toolbar (appears on hover) -->
+    <div
+      class="mermaid-zoom-controls absolute bottom-3 right-3 flex items-center gap-1 rounded-lg px-2 py-1.5 z-10"
+      style="background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); box-shadow: var(--shadow-elevated);"
+      aria-label="Diagram zoom controls"
+    >
+      <!-- Zoom out -->
+      <button
+        id={`${diagramId}-zoom-out`}
+        class="diagram-zoom-btn flex items-center justify-center w-7 h-7 rounded-md text-[var(--color-content-secondary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)] interactive disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Zoom out"
+        title="Zoom out"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
+        </svg>
+      </button>
+
+      <!-- Zoom level label -->
+      <span
+        id={`${diagramId}-zoom-label`}
+        class="min-w-[34px] text-center text-[0.68rem] font-semibold tabular-nums text-[var(--color-content-secondary)]"
+      >100%</span>
+
+      <!-- Zoom in -->
+      <button
+        id={`${diagramId}-zoom-in`}
+        class="diagram-zoom-btn flex items-center justify-center w-7 h-7 rounded-md text-[var(--color-content-secondary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)] interactive disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Zoom in"
+        title="Zoom in"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+        </svg>
+      </button>
+
+      <!-- Divider -->
+      <span class="w-px h-4 bg-[var(--color-surface-tertiary)] mx-0.5" aria-hidden="true"></span>
+
+      <!-- Reset zoom -->
+      <button
+        id={`${diagramId}-zoom-reset`}
+        class="diagram-zoom-btn flex items-center justify-center w-7 h-7 rounded-md text-[var(--color-content-secondary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)] interactive"
+        aria-label="Reset zoom"
+        title="Reset zoom"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+        </svg>
+      </button>
+
+      <!-- Divider -->
+      <span class="w-px h-4 bg-[var(--color-surface-tertiary)] mx-0.5" aria-hidden="true"></span>
+
+      <!-- Expand to full-screen -->
+      <button
+        id={`${diagramId}-expand`}
+        class="expand-badge diagram-zoom-btn flex items-center justify-center w-7 h-7 rounded-md text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 interactive"
+        aria-label="View full-screen"
+        title="Full screen (click diagram)"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div
+    id={`${diagramId}-loading`}
+    class="mermaid-loading flex items-center gap-2.5 rounded-xl border border-[var(--color-surface-tertiary)] bg-[var(--color-surface-secondary)] px-4 py-5"
+  >
+    <svg class="h-4 w-4 animate-spin text-[var(--color-primary)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+      <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+    </svg>
+    <span class="text-sm text-[var(--color-content-secondary)]">Rendering {diagramType} diagram…</span>
+  </div>
+
+  <!-- Fallback -->
+  <div
+    id={`${diagramId}-fallback`}
+    class="mermaid-fallback hidden rounded-xl border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/5 p-4"
+  >
+    <div class="mb-2 flex items-center gap-2">
+      <svg class="h-4 w-4 text-[var(--color-warning-dark)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span class="text-sm font-semibold text-[var(--color-warning-dark)]">Diagram could not be rendered</span>
+    </div>
+    <p class="text-sm text-[var(--color-content-secondary)] mb-1"><span class="font-medium">Type:</span> {diagramType}</p>
+    <p class="text-sm text-[var(--color-content)] mb-3">{fallbackDescription}</p>
+    <details class="group">
+      <summary class="cursor-pointer text-sm font-medium text-[var(--color-content-secondary)] hover:text-[var(--color-content)] transition-colors">
+        View source
+      </summary>
+      <pre class="mt-2 max-h-[240px] overflow-auto rounded-lg bg-[var(--color-surface-secondary)] p-3 text-xs font-mono text-[var(--color-content)]"><code>{source}</code></pre>
+    </details>
+  </div>
+
+  <!-- Modal container -->
+  <div id={`${diagramId}-modal`}></div>
+</div>
+
+<script>
+  import mermaid from 'mermaid';
+  import DOMPurify from 'dompurify';
+
+  const SVG_ALLOW = {
+    ADD_TAGS: ['svg','path','circle','rect','line','polyline','polygon','ellipse','text','tspan','g','defs','marker','clipPath','use','symbol','title','desc','foreignObject','image'],
+    ADD_ATTR: ['viewBox','xmlns','style','fill','stroke','stroke-width','marker-end','marker-start','d','cx','cy','r','x','y','width','height','transform','text-anchor','dominant-baseline','font-size','font-family','fill-opacity','stroke-dasharray','points','rx','ry','x1','y1','x2','y2','refX','refY','markerWidth','markerHeight','orient','id','clip-path','href','class'],
+  };
+
+  function getMermaidConfig() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const light = {
+      primaryColor: '#ede9fe', primaryTextColor: '#3730a3', primaryBorderColor: '#4f46e5',
+      lineColor: '#6366f1', secondaryColor: '#f0fdf4', secondaryTextColor: '#166534',
+      secondaryBorderColor: '#16a34a', tertiaryColor: '#fef3c7', tertiaryTextColor: '#92400e',
+      tertiaryBorderColor: '#d97706', background: '#ffffff', mainBkg: '#ede9fe',
+      nodeBorder: '#4f46e5', clusterBkg: '#f8fafc', clusterBorder: '#cbd5e1',
+      titleColor: '#1e293b', edgeLabelBackground: '#f8fafc',
+      fontFamily: 'Inter, system-ui, -apple-system, sans-serif', fontSize: '14px',
+    };
+    const dark = {
+      primaryColor: '#312e81', primaryTextColor: '#c7d2fe', primaryBorderColor: '#818cf8',
+      lineColor: '#818cf8', secondaryColor: '#052e16', secondaryTextColor: '#86efac',
+      secondaryBorderColor: '#16a34a', tertiaryColor: '#451a03', tertiaryTextColor: '#fcd34d',
+      tertiaryBorderColor: '#d97706', background: '#0f172a', mainBkg: '#312e81',
+      nodeBorder: '#818cf8', clusterBkg: '#1e293b', clusterBorder: '#334155',
+      titleColor: '#f1f5f9', edgeLabelBackground: '#1e293b',
+      fontFamily: 'Inter, system-ui, -apple-system, sans-serif', fontSize: '14px',
+    };
+    return {
+      startOnLoad: false, theme: 'base' as const,
+      themeVariables: isDark ? dark : light,
+      securityLevel: 'loose' as const,
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis', padding: 20 },
+      sequence: { useMaxWidth: true, boxMargin: 10, mirrorActors: false },
+      er: { useMaxWidth: true }, gantt: { useMaxWidth: true },
+    };
+  }
+
+  mermaid.initialize(getMermaidConfig());
+
+  async function renderMermaidWithTimeout(id: string, source: string, timeout: number): Promise<string> {
+    mermaid.initialize(getMermaidConfig());
+    return new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`Timeout ${timeout}ms`)), timeout);
+      mermaid.render(id, source)
+        .then((r) => { clearTimeout(timer); resolve(r.svg); })
+        .catch((e) => { clearTimeout(timer); reject(e); });
+    });
+  }
+
+  /* -------------------------------------------------------------------------
+   * Full-screen modal
+   * ---------------------------------------------------------------------- */
+  function openDiagramModal(svgContent: string, alt: string) {
+    const cleanSvg = DOMPurify.sanitize(svgContent, SVG_ALLOW);
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-50 flex flex-col items-center justify-center';
+    modal.style.cssText = 'background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', `Diagram viewer: ${alt}`);
+
+    let zoom = 100;
+    const MIN_ZOOM = 40, MAX_ZOOM = 400, STEP = 20;
+    const clamp = (v: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(v / STEP) * STEP));
+
+    function applyZoom() {
+      const stage = modal.querySelector<HTMLElement>('[data-modal-stage]');
+      const label = modal.querySelector<HTMLElement>('[data-modal-label]');
+      const slider = modal.querySelector<HTMLInputElement>('[data-modal-slider]');
+      const outBtn = modal.querySelector<HTMLButtonElement>('[data-modal-out]');
+      const inBtn  = modal.querySelector<HTMLButtonElement>('[data-modal-in]');
+      if (stage)  stage.style.transform  = `scale(${zoom / 100})`;
+      if (label)  label.textContent      = `${zoom}%`;
+      if (slider) slider.value           = String(zoom);
+      if (outBtn) outBtn.disabled        = zoom <= MIN_ZOOM;
+      if (inBtn)  inBtn.disabled         = zoom >= MAX_ZOOM;
+    }
+
+    function close() {
+      document.body.style.overflow = '';
+      modal.classList.add('opacity-0');
+      setTimeout(() => modal.remove(), 200);
+    }
+
+    modal.innerHTML = `
+      <style>.modal-fade { animation: modalFadeIn 220ms cubic-bezier(0.16,1,0.3,1) forwards; }
+      @keyframes modalFadeIn { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:scale(1); } }</style>
+
+      <!-- Close button -->
+      <button data-modal-close
+        style="position:absolute;top:16px;right:16px;z-index:60;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.18);color:#fff;cursor:pointer;transition:background 150ms ease;"
+        aria-label="Close"
+        onmouseover="this.style.background='rgba(255,255,255,0.22)'"
+        onmouseout="this.style.background='rgba(255,255,255,0.12)'"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <!-- Diagram stage (scrollable) -->
+      <div style="overflow:auto;max-width:calc(100vw - 48px);max-height:calc(100vh - 100px);display:flex;align-items:center;justify-content:center;padding:24px;">
+        <div data-modal-stage class="modal-fade" style="transform-origin:center;transition:transform 200ms cubic-bezier(0.25,1,0.5,1);">
+          ${cleanSvg}
+        </div>
+      </div>
+
+      <!-- Zoom controls bar -->
+      <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:rgba(15,23,42,0.90);border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(12px);box-shadow:0 4px 24px rgba(0,0,0,0.4);">
+        <button data-modal-out aria-label="Zoom out"
+          style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:rgba(255,255,255,0.75);cursor:pointer;transition:background 150ms,color 150ms;"
+          onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'"
+          onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </button>
+
+        <input data-modal-slider type="range" min="${MIN_ZOOM}" max="${MAX_ZOOM}" step="${STEP}" value="${zoom}"
+          style="width:120px;accent-color:#818cf8;cursor:pointer;" aria-label="Zoom level" />
+
+        <span data-modal-label style="min-width:44px;text-align:center;font-size:0.75rem;font-weight:600;color:rgba(255,255,255,0.9);font-variant-numeric:tabular-nums;">${zoom}%</span>
+
+        <button data-modal-in aria-label="Zoom in"
+          style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:rgba(255,255,255,0.75);cursor:pointer;transition:background 150ms,color 150ms;"
+          onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'"
+          onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.75)'"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        </button>
+      </div>
+    `;
+
+    document.body.style.overflow = 'hidden';
+    document.body.appendChild(modal);
+
+    // Wire events
+    modal.querySelector('[data-modal-close]')?.addEventListener('click', close);
+    modal.querySelector('[data-modal-out]')?.addEventListener('click', () => { zoom = clamp(zoom - STEP); applyZoom(); });
+    modal.querySelector('[data-modal-in]')?.addEventListener('click',  () => { zoom = clamp(zoom + STEP); applyZoom(); });
+    modal.querySelector<HTMLInputElement>('[data-modal-slider]')?.addEventListener('input', (e) => {
+      zoom = clamp(Number((e.target as HTMLInputElement).value)); applyZoom();
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) close();
+    });
+
+    // Scroll-to-zoom inside modal
+    modal.addEventListener('wheel', (e: WheelEvent) => {
+      e.preventDefault();
+      zoom = clamp(zoom + (e.deltaY < 0 ? STEP : -STEP));
+      applyZoom();
+    }, { passive: false });
+
+    // Keyboard
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+      if (e.key === '+' || e.key === '=') { zoom = clamp(zoom + STEP); applyZoom(); }
+      if (e.key === '-') { zoom = clamp(zoom - STEP); applyZoom(); }
+      if (e.key === '0') { zoom = 100; applyZoom(); }
+    }
+    document.addEventListener('keydown', onKey);
+
+    // Pinch
+    let lastPinch: number | null = null;
+    modal.addEventListener('touchstart', (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastPinch = Math.sqrt(dx*dx + dy*dy);
+      }
+    });
+    modal.addEventListener('touchmove', (e: TouchEvent) => {
+      if (e.touches.length === 2 && lastPinch !== null) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (Math.abs(d - lastPinch) > 20) {
+          zoom = clamp(zoom + (d > lastPinch ? STEP : -STEP));
+          applyZoom();
+          lastPinch = d;
+        }
+      }
+    });
+    modal.addEventListener('touchend', () => { lastPinch = null; });
+
+    applyZoom();
+  }
+
+  /* -------------------------------------------------------------------------
+   * Inline zoom state per diagram
+   * ---------------------------------------------------------------------- */
+  const diagramZooms = new Map<string, number>();
+
+  function initMermaidDiagrams() {
+    document.querySelectorAll<HTMLElement>('.mermaid-diagram-wrapper').forEach(async (wrapper) => {
+      const id                = wrapper.dataset.diagramId!;
+      const source            = wrapper.dataset.source!;
+      const diagramType       = wrapper.dataset.diagramType!;
+      const fallbackDesc      = wrapper.dataset.fallbackDescription!;
+      const timeout           = parseInt(wrapper.dataset.renderTimeout || '5000', 10);
+
+      const renderedEl        = document.getElementById(`${id}-rendered`);
+      const loadingEl         = document.getElementById(`${id}-loading`);
+      const fallbackEl        = document.getElementById(`${id}-fallback`);
+      const svgStage          = document.getElementById(`${id}-svg-stage`);
+      const zoomLabel         = document.getElementById(`${id}-zoom-label`);
+      const zoomOutBtn        = document.getElementById(`${id}-zoom-out`)  as HTMLButtonElement;
+      const zoomInBtn         = document.getElementById(`${id}-zoom-in`)   as HTMLButtonElement;
+      const zoomResetBtn      = document.getElementById(`${id}-zoom-reset`);
+      const expandBtn         = document.getElementById(`${id}-expand`);
+
+      if (!renderedEl || !loadingEl || !fallbackEl || !svgStage) return;
+
+      // Skip if already rendered (theme re-render path)
+      // Reset zoom to 100 on re-render
+      const MIN_ZOOM = 50, MAX_ZOOM = 400, STEP = 25;
+
+      function getZoom() { return diagramZooms.get(id) ?? 100; }
+      function setZoom(v: number) {
+        const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(v / STEP) * STEP));
+        diagramZooms.set(id, clamped);
+        svgStage.style.transform = `scale(${clamped / 100})`;
+        // Adjust scroll container height so layout doesn't collapse
+        const scrollEl = document.getElementById(`${id}-svg-scroll`);
+        if (scrollEl) {
+          scrollEl.style.minHeight = clamped < 100
+            ? `${svgStage.scrollHeight * clamped / 100}px`
+            : '';
+        }
+        if (zoomLabel) zoomLabel.textContent = `${clamped}%`;
+        if (zoomOutBtn)  zoomOutBtn.disabled  = clamped <= MIN_ZOOM;
+        if (zoomInBtn)   zoomInBtn.disabled   = clamped >= MAX_ZOOM;
+      }
+
+      try {
+        const svgRaw = await renderMermaidWithTimeout(`${id}-svg`, source, timeout);
+
+        // Make responsive
+        const svgResponsive = svgRaw
+          .replace(/\bwidth="[^"]*"/, 'width="100%"')
+          .replace(/\bheight="[^"]*"/, 'height="auto"')
+          .replace(/<svg /, '<svg style="max-width:100%;display:block;" ');
+
+        svgStage.innerHTML = DOMPurify.sanitize(svgResponsive, SVG_ALLOW);
+        renderedEl.classList.remove('hidden');
+        loadingEl.classList.add('hidden');
+        diagramZooms.set(id, 100);
+
+        // Wire inline zoom buttons
+        zoomOutBtn?.addEventListener('click', (e) => { e.stopPropagation(); setZoom(getZoom() - STEP); });
+        zoomInBtn?.addEventListener('click',  (e) => { e.stopPropagation(); setZoom(getZoom() + STEP); });
+        zoomResetBtn?.addEventListener('click',(e) => { e.stopPropagation(); setZoom(100); });
+
+        // Expand button + clicking the diagram opens full-screen modal
+        const openModal = () => openDiagramModal(svgRaw, `${diagramType}: ${fallbackDesc}`);
+        expandBtn?.addEventListener('click', (e) => { e.stopPropagation(); openModal(); });
+        renderedEl.addEventListener('click', (e) => {
+          // Don't open modal if a zoom button was clicked
+          if ((e.target as Element).closest('.mermaid-zoom-controls')) return;
+          openModal();
+        });
+        renderedEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(); }
+        });
+        renderedEl.setAttribute('role', 'button');
+        renderedEl.setAttribute('tabindex', '0');
+        renderedEl.setAttribute('aria-label', `${diagramType} diagram: ${fallbackDesc}. Click to view full-screen.`);
+        renderedEl.style.cursor = 'zoom-in';
+
+      } catch (err) {
+        console.warn(`Mermaid render failed (${id}):`, err);
+        fallbackEl.classList.remove('hidden');
+        loadingEl.classList.add('hidden');
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMermaidDiagrams);
+  } else {
+    initMermaidDiagrams();
+  }
+
+  document.addEventListener('astro:page-load', initMermaidDiagrams);
+  document.addEventListener('theme-changed', () => {
+    // Re-render: clear existing SVG stages so they re-render with new theme
+    document.querySelectorAll<HTMLElement>('.mermaid-diagram-wrapper').forEach((w) => {
+      const id = w.dataset.diagramId!;
+      const stage = document.getElementById(`${id}-svg-stage`);
+      const rendered = document.getElementById(`${id}-rendered`);
+      const loading = document.getElementById(`${id}-loading`);
+      if (stage) stage.innerHTML = '';
+      if (rendered) rendered.classList.add('hidden');
+      if (loading) loading.classList.remove('hidden');
+    });
+    initMermaidDiagrams();
+  });
+
+  const htmlObs = new MutationObserver((muts) => {
+    for (const m of muts) {
+      if (m.attributeName === 'class') { initMermaidDiagrams(); break; }
+    }
+  });
+  htmlObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+</script>

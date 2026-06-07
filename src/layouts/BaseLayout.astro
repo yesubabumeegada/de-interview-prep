@@ -1,0 +1,48 @@
+---
+/**
+ * BaseLayout.astro
+ * Simple HTML skeleton without sidebar grid.
+ * Used for pages like search that may use different layouts.
+ * 
+ * Props:
+ *   - title: Page title (required)
+ *   - description: Meta description (optional)
+ */
+import '../styles/global.css';
+import '../styles/animations.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Data Engineer Interview Preparation - Comprehensive study materials, code snippets, diagrams, and scenario-based questions across 18 core DE topics.' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} | DE Interview Prep</title>
+
+    <!-- Prevent flash of unstyled content: apply stored theme before paint -->
+    <script is:inline>
+      (function() {
+        try {
+          const theme = localStorage.getItem('de-prep-theme');
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch(e) {}
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen bg-[var(--color-surface)] text-[var(--color-content)] theme-transition">
+    <main class="content-area p-4 min-h-screen">
+      <slot />
+    </main>
+  </body>
+</html>

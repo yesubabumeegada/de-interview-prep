@@ -1,0 +1,756 @@
+---
+/**
+ * ContentRenderer.astro
+ * 
+ * Renders processed HTML content with proper typography, styled lists,
+ * and horizontally scrollable table wrappers.
+ * 
+ * Validates: Requirements 2.1
+ */
+
+interface Props {
+  /** Processed HTML string to render */
+  content: string;
+  /** Optional additional CSS classes for the wrapper */
+  class?: string;
+}
+
+const { content, class: className = '' } = Astro.props;
+---
+
+<article class:list={['content-renderer', className]} set:html={content} />
+
+<style is:global>
+  /* ==========================================================================
+     ContentRenderer - Prose Styles
+     Applies proper typography from the design system for rendered HTML content.
+     Ensures headings, paragraphs, lists, and tables render correctly.
+     ========================================================================== */
+
+  .content-renderer {
+    /* Base typography */
+    font-size: 1rem;
+    line-height: 1.75rem;
+    color: var(--color-content);
+  }
+
+  /* --- Headings --- */
+  .content-renderer h1 {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+    font-weight: 700;
+    color: var(--color-content);
+    margin-top: 32px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-surface-tertiary);
+  }
+
+  .content-renderer h1:first-child {
+    margin-top: 0;
+  }
+
+  .content-renderer h2 {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 600;
+    color: var(--color-content);
+    margin-top: 24px;
+    margin-bottom: 12px;
+  }
+
+  .content-renderer h3 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    color: var(--color-content);
+    margin-top: 20px;
+    margin-bottom: 12px;
+  }
+
+  .content-renderer h4 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 500;
+    color: var(--color-content);
+    margin-top: 16px;
+    margin-bottom: 8px;
+  }
+
+  /* --- Paragraphs --- */
+  .content-renderer p {
+    font-size: 1rem;
+    line-height: 1.75rem;
+    font-weight: 400;
+    color: var(--color-content);
+    margin-bottom: 12px;
+  }
+
+  .content-renderer p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* --- Bullet Lists (unordered) --- */
+  .content-renderer ul {
+    list-style-type: disc;
+    padding-left: 24px;
+    margin-bottom: 12px;
+  }
+
+  .content-renderer ul ul {
+    list-style-type: circle;
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+
+  .content-renderer ul ul ul {
+    list-style-type: square;
+  }
+
+  .content-renderer ul li {
+    font-size: 1rem;
+    line-height: 1.75rem;
+    color: var(--color-content);
+    margin-bottom: 4px;
+  }
+
+  /* --- Numbered Lists (ordered) --- */
+  .content-renderer ol {
+    list-style-type: decimal;
+    padding-left: 24px;
+    margin-bottom: 12px;
+  }
+
+  .content-renderer ol ol {
+    list-style-type: lower-alpha;
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+
+  .content-renderer ol ol ol {
+    list-style-type: lower-roman;
+  }
+
+  .content-renderer ol li {
+    font-size: 1rem;
+    line-height: 1.75rem;
+    color: var(--color-content);
+    margin-bottom: 4px;
+  }
+
+  /* Shared list item styles */
+  .content-renderer li > p {
+    margin-bottom: 4px;
+  }
+
+  .content-renderer li:last-child {
+    margin-bottom: 0;
+  }
+
+  /* --- Tables --- */
+  .content-renderer table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    margin-bottom: 12px;
+  }
+
+  .content-renderer thead {
+    background-color: var(--color-surface-tertiary);
+  }
+
+  .content-renderer th {
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid var(--color-surface-tertiary);
+    color: var(--color-content);
+    white-space: nowrap;
+  }
+
+  .content-renderer td {
+    padding: 8px 12px;
+    border: 1px solid var(--color-surface-tertiary);
+    color: var(--color-content);
+  }
+
+  .content-renderer tbody tr:nth-child(even) {
+    background-color: var(--color-surface-secondary);
+  }
+
+  .content-renderer tbody tr:hover {
+    background-color: var(--color-surface-tertiary);
+  }
+
+  /* --- Inline code --- */
+  .content-renderer :not(pre) > code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.875em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: var(--color-surface-tertiary);
+    color: var(--color-primary-dark);
+  }
+
+  .dark .content-renderer :not(pre) > code {
+    color: var(--color-primary-light);
+  }
+
+  /* --- Blockquotes --- */
+  .content-renderer blockquote {
+    border-left: 4px solid var(--color-primary);
+    padding: 12px 16px;
+    margin: 16px 0;
+    background-color: var(--color-surface-secondary);
+    border-radius: 0 8px 8px 0;
+    color: var(--color-content);
+    font-style: normal;
+  }
+
+  .content-renderer blockquote p {
+    margin-bottom: 8px;
+    color: var(--color-content);
+  }
+
+  .content-renderer blockquote p:last-child {
+    margin-bottom: 0;
+  }
+
+  .content-renderer blockquote strong {
+    color: var(--color-primary);
+  }
+
+  .dark .content-renderer blockquote {
+    background-color: var(--color-surface-tertiary);
+  }
+
+  /* --- Horizontal rules --- */
+  .content-renderer hr {
+    border: none;
+    border-top: 2px solid var(--color-surface-tertiary);
+    margin: 32px 0;
+  }
+
+  /* --- Code blocks (pre) --- */
+  .content-renderer pre {
+    background-color: #1e293b;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    overflow-x: auto;
+    border: 1px solid var(--color-surface-tertiary);
+  }
+
+  .dark .content-renderer pre {
+    background-color: #0f172a;
+    border-color: #334155;
+  }
+
+  .content-renderer pre code {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #e2e8f0;
+  }
+
+  /* --- Mermaid rendered SVG containers --- */
+  .mermaid-rendered-svg {
+    margin: 20px 0;
+    text-align: center;
+  }
+
+  .mermaid-rendered-svg svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Mermaid diagram container from remarkMermaid plugin */
+  .content-renderer .mermaid-diagram {
+    margin: 20px 0;
+  }
+
+  .content-renderer .mermaid-diagram .mermaid-render {
+    background-color: var(--color-surface-secondary);
+    border: 1px solid var(--color-surface-tertiary);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    overflow-x: auto;
+  }
+
+  /* Override dark background on mermaid pre blocks (they shouldn't look like code) */
+  .content-renderer .mermaid-diagram pre.mermaid {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--color-content);
+    text-align: center;
+  }
+
+  /* Mermaid error state */
+  .content-renderer .mermaid-error {
+    background-color: var(--color-surface-secondary) !important;
+    border: 1px dashed var(--color-warning) !important;
+    color: var(--color-content) !important;
+  }
+
+  /* --- Links --- */
+  .content-renderer a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 150ms ease-in-out;
+  }
+
+  .content-renderer a:hover {
+    color: var(--color-primary-dark);
+  }
+
+  .dark .content-renderer a:hover {
+    color: var(--color-primary-light);
+  }
+
+  /* --- Strong / Emphasis --- */
+  .content-renderer strong {
+    font-weight: 600;
+    color: var(--color-content);
+  }
+
+  .content-renderer em {
+    font-style: italic;
+  }
+</style>
+
+<script>
+  /**
+   * Client-side script to wrap <table> elements in a horizontal scroll container.
+   * This ensures tables that overflow the viewport width are scrollable
+   * without breaking the page layout.
+   *
+   * Also applies performance optimizations:
+   * - Lazy loading for below-fold images
+   * - Async decoding for images
+   */
+
+  /** Escape a value for safe use in an HTML attribute or text node. */
+  function escAttr(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function wrapTablesInScrollContainer() {
+    const renderers = document.querySelectorAll('.content-renderer');
+    
+    renderers.forEach((renderer) => {
+      const tables = renderer.querySelectorAll('table');
+      
+      tables.forEach((table) => {
+        // Skip if already wrapped
+        if (table.parentElement?.classList.contains('table-scroll-wrapper')) {
+          return;
+        }
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-scroll-wrapper';
+        wrapper.setAttribute('role', 'region');
+        wrapper.setAttribute('aria-label', 'Scrollable table');
+        wrapper.setAttribute('tabindex', '0');
+        
+        table.parentNode?.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+      });
+    });
+  }
+
+  /**
+   * Performance: Apply lazy loading and async decoding to below-fold images.
+   * Images above the fold (within the first viewport height) are left eager.
+   * Also ensures all images have alt text for accessibility (Requirement 8.3).
+   * Requirements: 8.3, 10.3, 10.4
+   */
+  function optimizeImages() {
+    const renderers = document.querySelectorAll('.content-renderer');
+    const viewportHeight = window.innerHeight;
+
+    renderers.forEach((renderer) => {
+      const images = renderer.querySelectorAll('img');
+
+      images.forEach((img) => {
+        // Apply async decoding to all content images
+        img.setAttribute('decoding', 'async');
+
+        // Ensure all images have alt text for accessibility (Requirement 8.3)
+        if (!img.hasAttribute('alt') || img.getAttribute('alt')?.trim() === '') {
+          const title = img.getAttribute('title');
+          const src = img.getAttribute('src') || '';
+          const filename = src.split('/').pop()?.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ') || '';
+          img.setAttribute('alt', title || (filename ? `Diagram: ${filename}` : 'Content image'));
+        }
+
+        // Ensure images are responsive and don't overflow
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+
+        // Determine if image is below the fold
+        const rect = img.getBoundingClientRect();
+        if (rect.top > viewportHeight) {
+          // Below-fold: set lazy loading
+          img.setAttribute('loading', 'lazy');
+        } else {
+          // Above-fold: ensure eager loading for LCP optimization
+          img.setAttribute('loading', 'eager');
+          img.setAttribute('fetchpriority', 'high');
+        }
+      });
+    });
+  }
+
+  // Run on initial load
+  wrapTablesInScrollContainer();
+  optimizeImages();
+  addCodeBlockEnhancements();
+  addImageZoomHandlers();
+
+  // Also run after Astro page transitions (View Transitions)
+  document.addEventListener('astro:page-load', () => {
+    wrapTablesInScrollContainer();
+    optimizeImages();
+    addCodeBlockEnhancements();
+    addImageZoomHandlers();
+  });
+
+  /**
+   * Add copy button and language label to code blocks
+   */
+  function addCodeBlockEnhancements() {
+    const renderers = document.querySelectorAll('.content-renderer');
+    renderers.forEach((renderer) => {
+      const codeBlocks = renderer.querySelectorAll('pre');
+      codeBlocks.forEach((pre) => {
+        if (pre.parentElement?.classList.contains('code-block-wrapper')) return;
+        if (pre.classList.contains('mermaid')) return;
+
+        const codeEl = pre.querySelector('code');
+        let language = '';
+        if (codeEl) {
+          const langClass = Array.from(codeEl.classList).find(c => c.startsWith('language-'));
+          if (langClass) language = langClass.replace('language-', '');
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block-wrapper';
+        pre.parentNode?.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        const header = document.createElement('div');
+        header.className = 'code-block-header';
+        header.innerHTML = `
+          <span class="code-lang-label">${escAttr(language || 'code')}</span>
+          <button class="code-copy-btn" aria-label="Copy code" title="Copy to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span class="copy-text">Copy</span>
+          </button>
+        `;
+        wrapper.insertBefore(header, pre);
+
+        const copyBtn = header.querySelector('.code-copy-btn');
+        copyBtn?.addEventListener('click', async () => {
+          const code = codeEl?.textContent || pre.textContent || '';
+          try {
+            await navigator.clipboard.writeText(code);
+            const textEl = copyBtn.querySelector('.copy-text');
+            if (textEl) { textEl.textContent = 'Copied!'; copyBtn.classList.add('copied'); }
+            setTimeout(() => { 
+              const t = copyBtn.querySelector('.copy-text');
+              if (t) t.textContent = 'Copy'; 
+              copyBtn.classList.remove('copied'); 
+            }, 2000);
+          } catch (err) { console.warn('Copy failed:', err); }
+        });
+      });
+    });
+  }
+
+  /**
+   * Add click-to-zoom on content images and mermaid diagrams
+   */
+  function addImageZoomHandlers() {
+    const renderers = document.querySelectorAll('.content-renderer');
+    renderers.forEach((renderer) => {
+      renderer.querySelectorAll('img').forEach((img) => {
+        if ((img as any).dataset.zoomReady) return;
+        (img as any).dataset.zoomReady = 'true';
+        (img as HTMLElement).style.cursor = 'zoom-in';
+        img.addEventListener('click', () => openZoomModal((img as HTMLImageElement).src, (img as HTMLImageElement).alt || 'Image'));
+      });
+      renderer.querySelectorAll('.mermaid-rendered-svg').forEach((container) => {
+        if ((container as any).dataset.zoomReady) return;
+        (container as any).dataset.zoomReady = 'true';
+        (container as HTMLElement).style.cursor = 'zoom-in';
+        container.addEventListener('click', () => {
+          const svg = container.querySelector('svg');
+          if (svg) {
+            const blob = new Blob([new XMLSerializer().serializeToString(svg)], {type:'image/svg+xml'});
+            openZoomModal(URL.createObjectURL(blob), 'Diagram');
+          }
+        });
+      });
+    });
+  }
+
+  function openZoomModal(src: string, alt: string) {
+    let zoom = 100;
+    const modal = document.createElement('div');
+    modal.className = 'image-zoom-modal';
+    modal.innerHTML = `
+      <div class="izm-backdrop"></div>
+      <button class="izm-close" aria-label="Close">&times;</button>
+      <div class="izm-content"><img src="${escAttr(src)}" alt="${escAttr(alt)}" class="izm-image"/></div>
+      <div class="izm-controls">
+        <button class="izm-btn" data-action="out">−</button>
+        <span class="izm-label">100%</span>
+        <button class="izm-btn" data-action="in">+</button>
+      </div>`;
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+    const img = modal.querySelector('.izm-image') as HTMLImageElement;
+    const label = modal.querySelector('.izm-label')!;
+    const updateZoom = (n:number) => { zoom=Math.max(25,Math.min(400,n)); img.style.transform=`scale(${zoom/100})`; label.textContent=`${zoom}%`; };
+    const close = () => { document.body.style.overflow=''; modal.remove(); if(src.startsWith('blob:'))URL.revokeObjectURL(src); };
+    modal.querySelector('.izm-close')?.addEventListener('click', close);
+    modal.querySelector('.izm-backdrop')?.addEventListener('click', close);
+    modal.querySelector('[data-action="in"]')?.addEventListener('click', ()=>updateZoom(zoom+25));
+    modal.querySelector('[data-action="out"]')?.addEventListener('click', ()=>updateZoom(zoom-25));
+    const keyHandler = (e:KeyboardEvent) => { if(e.key==='Escape'){close();document.removeEventListener('keydown',keyHandler);} };
+    document.addEventListener('keydown', keyHandler);
+    modal.addEventListener('wheel', (e)=>{e.preventDefault();updateZoom(zoom+(e.deltaY<0?25:-25));},{passive:false});
+  }
+</script>
+
+<style is:global>
+  /* Table scroll wrapper for horizontal overflow */
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--color-surface-tertiary);
+  }
+
+  .table-scroll-wrapper table {
+    margin-bottom: 0;
+    border: none;
+  }
+
+  .table-scroll-wrapper:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Custom scrollbar for table wrapper */
+  .table-scroll-wrapper::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .table-scroll-wrapper::-webkit-scrollbar-track {
+    background: var(--color-surface-secondary);
+    border-radius: 4px;
+  }
+
+  .table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background: var(--color-content-tertiary);
+    border-radius: 4px;
+  }
+
+  .table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--color-content-secondary);
+  }
+</style>
+
+
+<style is:global>
+  /* ==========================================================================
+     Code Block Enhancements — Language label + Copy button
+     ========================================================================== */
+  .code-block-wrapper {
+    position: relative;
+    margin: 16px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--color-surface-tertiary);
+  }
+
+  .code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: #1a2332;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .dark .code-block-header {
+    background: #0c1322;
+  }
+
+  .code-lang-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(148, 163, 184, 0.1);
+  }
+
+  .code-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    color: #94a3b8;
+    font-size: 0.7rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .code-copy-btn:hover {
+    background: rgba(255,255,255,0.12);
+    color: #e2e8f0;
+  }
+
+  .code-copy-btn.copied {
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.1);
+  }
+
+  .code-block-wrapper pre {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* ==========================================================================
+     Image Zoom Modal
+     ========================================================================== */
+  .image-zoom-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .izm-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+  }
+
+  .izm-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    transition: background 150ms, transform 150ms;
+  }
+
+  .izm-close:hover {
+    background: rgba(255,255,255,0.2);
+    transform: scale(1.1);
+  }
+
+  .izm-content {
+    position: relative;
+    z-index: 5;
+    max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 120px);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .izm-image {
+    max-width: 100%;
+    max-height: calc(100vh - 120px);
+    object-fit: contain;
+    transition: transform 200ms ease;
+    border-radius: 8px;
+  }
+
+  .izm-controls {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .izm-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 150ms;
+  }
+
+  .izm-btn:hover {
+    background: rgba(255,255,255,0.16);
+  }
+
+  .izm-label {
+    color: rgba(255,255,255,0.9);
+    font-size: 0.8rem;
+    font-weight: 500;
+    min-width: 44px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Zoomable content cursor hint */
+  .content-renderer img[data-zoom-ready],
+  .mermaid-rendered-svg[data-zoom-ready] {
+    cursor: zoom-in;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .content-renderer img[data-zoom-ready]:hover {
+    transform: scale(1.01);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+</style>

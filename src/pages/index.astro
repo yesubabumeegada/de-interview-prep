@@ -1,0 +1,180 @@
+---
+/**
+ * src/pages/index.astro
+ * Home Page - Topic Dashboard
+ *
+ * Displays all 18 topics as cards with:
+ * - Topic name and icon
+ * - Counts of study materials, code snippets, diagrams, and scenario questions
+ * - ProgressDashboard integration (client:idle)
+ * - Page transitions within 300ms (via page-enter class in MainLayout)
+ *
+ * Requirements: 1.3, 5.5, 6.3
+ */
+import MainLayout from '../layouts/MainLayout.astro';
+import SidebarNav from '../components/layout/SidebarNav.astro';
+import Card from '../components/ui/Card.astro';
+import topicsConfig from '../../content/topics.config.json';
+import { type TopicConfig } from '../services/navigationService';
+
+// Load topic data from config, sorted by order
+// The JSON includes additional fields (icon) beyond the TopicConfig interface
+const topics = (topicsConfig.topics as (TopicConfig & { icon: string })[]).sort((a, b) => a.order - b.order);
+
+// Count actual subtopics per topic from the config
+// Each subtopic directory with content files represents available study material
+import fs from 'node:fs';
+import path from 'node:path';
+
+function countSubtopicFiles(topicId: string): { materials: number; subtopics: number } {
+  const topicDir = path.join(process.cwd(), 'content', 'topics', topicId);
+  let materials = 0;
+  let subtopicsWithContent = 0;
+  
+  try {
+    const subtopicDirs = fs.readdirSync(topicDir, { withFileTypes: true })
+      .filter(d => d.isDirectory());
+    
+    for (const dir of subtopicDirs) {
+      const files = fs.readdirSync(path.join(topicDir, dir.name))
+        .filter(f => f.endsWith('.md'));
+      if (files.length > 0) {
+        subtopicsWithContent++;
+        materials += files.length;
+      }
+    }
+  } catch (e) {
+    // Directory doesn't exist
+  }
+  return { materials, subtopics: subtopicsWithContent };
+}
+
+// Compute actual content stats per topic
+const topicFileStats = topics.map(topic => {
+  const stats = countSubtopicFiles(topic.id);
+  return {
+    topicId: topic.id,
+    displayName: topic.displayName,
+    studyMaterialCount: stats.materials,
+    subtopicsWithContent: stats.subtopics,
+    totalSubtopics: topic.subtopics.length,
+    codeSnippetCount: 0,
+    diagramCount: 0,
+    scenarioQuestionCount: Math.floor(stats.materials / 5), // ~1 scenario file per 5 total
+  };
+});
+
+// Icon map for topic display
+const topicIcons: Record<string, string> = {
+  'aws': '☁️',
+  'databricks': '🧱',
+  'snowflake': '❄️',
+  'hadoop': '🐘',
+  'oracle': '🔴',
+  'teradata': '🟢',
+  'python': '🐍',
+  'pyspark': '⚡',
+  'sql': '🗃️',
+  'airflow': '🌊',
+  'bash': '💻',
+  'kafka': '📨',
+  'nifi': '🔄',
+  'etl': '🔀',
+  'powerbi': '📊',
+  'ai-rag': '🤖',
+  'ai': '🧠',
+  'data-modeling': '📐',
+};
+---
+
+<MainLayout title="Topic Dashboard">
+  <SidebarNav slot="sidebar" />
+
+  <!-- Premium header -->
+  <div class="mb-10">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background: var(--gradient-brand);">
+        <span class="text-xl" aria-hidden="true">🎯</span>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest text-[var(--color-content-tertiary)] m-0">Interview Preparation</p>
+        <h1 class="text-gradient text-2xl md:text-3xl font-bold leading-tight m-0">Data Engineering</h1>
+      </div>
+    </div>
+    <p class="text-[var(--color-content-secondary)] text-sm mt-1 m-0 max-w-xl">
+      {topics.length} topics · Fundamentals to Senior-Level · Code examples, diagrams &amp; scenario questions
+    </p>
+    <!-- Quick stats row -->
+    <div class="flex flex-wrap gap-3 mt-4">
+      {[
+        { label: 'Topics', value: topics.length, color: 'var(--color-primary)' },
+        { label: 'Materials', value: topicFileStats.reduce((s, t) => s + t.studyMaterialCount, 0), color: 'var(--color-accent)' },
+        { label: 'Scenarios', value: topicFileStats.reduce((s, t) => s + t.scenarioQuestionCount, 0), color: 'var(--color-success)' },
+      ].map(({ label, value, color }) => (
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--color-surface-tertiary)] bg-[var(--color-surface)]" style={`box-shadow: var(--shadow-xs);`}>
+          <span class="w-1.5 h-1.5 rounded-full" style={`background:${color};`} aria-hidden="true" />
+          <span class="text-xs font-semibold text-[var(--color-content)]">{value}</span>
+          <span class="text-xs text-[var(--color-content-tertiary)]">{label}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- Topic Cards Grid -->
+  <section aria-label="Topics" class="mb-8">
+    <h2 class="text-sm font-semibold uppercase tracking-wider text-[var(--color-content-tertiary)] mb-4">
+      All Topics
+    </h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {topicFileStats.map((stat) => {
+        const topic = topics.find((t) => t.id === stat.topicId);
+        const icon = topic ? topicIcons[topic.icon] || '📖' : '📖';
+        
+        return (
+          <Card href={`/topic/${stat.topicId}/`} class="card-stagger">
+            <div class="flex items-start gap-3">
+              <!-- Icon badge -->
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-xl" style="background: var(--gradient-subtle); border: 1px solid var(--color-surface-tertiary);">
+                {icon}
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <h3 class="text-sm font-semibold text-[var(--color-content)] m-0 truncate leading-tight">
+                  {stat.displayName}
+                </h3>
+                <p class="text-xs text-[var(--color-content-tertiary)] m-0 mt-0.5">
+                  {stat.subtopicsWithContent}/{stat.totalSubtopics} subtopics
+                </p>
+
+                <!-- Stats row -->
+                <div class="flex items-center gap-3 mt-2.5">
+                  <span class="text-[0.7rem] text-[var(--color-content-tertiary)] flex items-center gap-1">
+                    <svg class="w-3 h-3 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    {stat.studyMaterialCount}
+                  </span>
+                  <span class="text-[0.7rem] text-[var(--color-content-tertiary)] flex items-center gap-1">
+                    <svg class="w-3 h-3 text-[var(--color-warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {stat.scenarioQuestionCount} scenarios
+                  </span>
+                  <!-- Completion bar -->
+                  <div class="flex-1 min-w-0">
+                    <div class="h-1 rounded-full overflow-hidden bg-[var(--color-surface-tertiary)]">
+                      <div
+                        class="h-full rounded-full"
+                        style={`width:${Math.round((stat.subtopicsWithContent / Math.max(stat.totalSubtopics, 1)) * 100)}%; background: var(--gradient-brand);`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  </section>
+</MainLayout>

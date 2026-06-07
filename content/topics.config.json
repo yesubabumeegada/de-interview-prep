@@ -1,0 +1,342 @@
+{
+  "topics": [
+    {
+      "id": "aws-services",
+      "displayName": "AWS Services",
+      "order": 1,
+      "icon": "aws",
+      "subtopics": [
+        { "id": "s3", "displayName": "S3", "order": 1 },
+        { "id": "glue", "displayName": "Glue", "order": 2 },
+        { "id": "emr", "displayName": "EMR", "order": 3 },
+        { "id": "kinesis", "displayName": "Kinesis", "order": 4 },
+        { "id": "redshift", "displayName": "Redshift", "order": 5 },
+        { "id": "lambda", "displayName": "Lambda", "order": 6 },
+        { "id": "step-functions", "displayName": "Step Functions", "order": 7 },
+        { "id": "lake-formation", "displayName": "Lake Formation", "order": 8 },
+        { "id": "cloudwatch", "displayName": "CloudWatch", "order": 9 },
+        { "id": "athena", "displayName": "Athena", "order": 10 },
+        { "id": "dynamodb", "displayName": "DynamoDB", "order": 11 },
+        { "id": "rds", "displayName": "RDS", "order": 12 },
+        { "id": "iam", "displayName": "IAM", "order": 13 },
+        { "id": "vpc", "displayName": "VPC", "order": 14 },
+        { "id": "cloudformation", "displayName": "CloudFormation", "order": 15 },
+        { "id": "sns-sqs", "displayName": "SNS/SQS", "order": 16 },
+        { "id": "eventbridge", "displayName": "EventBridge", "order": 17 },
+        { "id": "msk", "displayName": "MSK (Managed Kafka)", "order": 18 },
+        { "id": "mwaa", "displayName": "MWAA (Managed Airflow)", "order": 19 },
+        { "id": "secrets-manager", "displayName": "Secrets Manager", "order": 20 },
+        { "id": "batch", "displayName": "AWS Batch", "order": 21 }
+      ]
+    },
+    {
+      "id": "databricks",
+      "displayName": "Databricks",
+      "order": 2,
+      "icon": "databricks",
+      "subtopics": [
+        { "id": "delta-lake", "displayName": "Delta Lake", "order": 1 },
+        { "id": "unity-catalog", "displayName": "Unity Catalog", "order": 2 },
+        { "id": "lakeflow", "displayName": "Lakeflow", "order": 3 },
+        { "id": "auto-loader", "displayName": "Auto Loader", "order": 4 },
+        { "id": "structured-streaming", "displayName": "Structured Streaming", "order": 5 },
+        { "id": "databricks-sql", "displayName": "Databricks SQL", "order": 6 },
+        { "id": "workflows-jobs", "displayName": "Workflows/Jobs", "order": 7 },
+        { "id": "clusters-and-compute", "displayName": "Clusters and Compute", "order": 8 },
+        { "id": "delta-live-tables", "displayName": "Delta Live Tables", "order": 9 },
+        { "id": "repos-and-ci-cd", "displayName": "Repos and CI/CD", "order": 10 },
+        { "id": "photon-engine", "displayName": "Photon Engine", "order": 11 },
+        { "id": "lakehouse-architecture", "displayName": "Lakehouse Architecture", "order": 12 }
+      ]
+    },
+    {
+      "id": "snowflake",
+      "displayName": "Snowflake",
+      "order": 3,
+      "icon": "snowflake",
+      "subtopics": [
+        { "id": "architecture", "displayName": "Architecture", "order": 1 },
+        { "id": "streams-and-tasks", "displayName": "Streams and Tasks", "order": 2 },
+        { "id": "dynamic-tables", "displayName": "Dynamic Tables", "order": 3 },
+        { "id": "snowpipe", "displayName": "Snowpipe", "order": 4 },
+        { "id": "time-travel", "displayName": "Time Travel", "order": 5 },
+        { "id": "data-sharing", "displayName": "Data Sharing", "order": 6 },
+        { "id": "materialized-views", "displayName": "Materialized Views", "order": 7 },
+        { "id": "stored-procedures", "displayName": "Stored Procedures", "order": 8 },
+        { "id": "external-tables", "displayName": "External Tables", "order": 9 },
+        { "id": "performance-tuning", "displayName": "Performance Tuning", "order": 10 }
+      ]
+    },
+    {
+      "id": "hadoop",
+      "displayName": "Hadoop",
+      "order": 4,
+      "icon": "hadoop",
+      "subtopics": [
+        { "id": "hdfs", "displayName": "HDFS", "order": 1 },
+        { "id": "mapreduce", "displayName": "MapReduce", "order": 2 },
+        { "id": "yarn", "displayName": "YARN", "order": 3 },
+        { "id": "hive", "displayName": "Hive", "order": 4 },
+        { "id": "hbase", "displayName": "HBase", "order": 5 },
+        { "id": "sqoop", "displayName": "Sqoop", "order": 6 },
+        { "id": "oozie", "displayName": "Oozie", "order": 7 },
+        { "id": "pig", "displayName": "Pig", "order": 8 },
+        { "id": "zookeeper", "displayName": "ZooKeeper", "order": 9 },
+        { "id": "hadoop-ecosystem-architecture", "displayName": "Hadoop Ecosystem Architecture", "order": 10 }
+      ]
+    },
+    {
+      "id": "oracle",
+      "displayName": "Oracle",
+      "order": 5,
+      "icon": "oracle",
+      "subtopics": [
+        { "id": "sql-tuning", "displayName": "SQL Tuning", "order": 1 },
+        { "id": "pl-sql", "displayName": "PL/SQL", "order": 2 },
+        { "id": "partitioning", "displayName": "Partitioning", "order": 3 },
+        { "id": "exadata-architecture", "displayName": "Exadata Architecture", "order": 4 },
+        { "id": "rac", "displayName": "RAC", "order": 5 },
+        { "id": "data-guard", "displayName": "Data Guard", "order": 6 },
+        { "id": "awr-reports", "displayName": "AWR Reports", "order": 7 },
+        { "id": "materialized-views", "displayName": "Materialized Views", "order": 8 }
+      ]
+    },
+    {
+      "id": "teradata",
+      "displayName": "Teradata",
+      "order": 6,
+      "icon": "teradata",
+      "subtopics": [
+        { "id": "architecture", "displayName": "Architecture (AMPs, PEs)", "order": 1 },
+        { "id": "primary-index", "displayName": "Primary Index", "order": 2 },
+        { "id": "statistics", "displayName": "Statistics", "order": 3 },
+        { "id": "bteq", "displayName": "BTEQ", "order": 4 },
+        { "id": "fastload-multiload", "displayName": "FastLoad/MultiLoad", "order": 5 },
+        { "id": "temporal-tables", "displayName": "Temporal Tables", "order": 6 },
+        { "id": "workload-management", "displayName": "Workload Management", "order": 7 },
+        { "id": "query-optimization", "displayName": "Query Optimization", "order": 8 }
+      ]
+    },
+    {
+      "id": "python",
+      "displayName": "Python",
+      "order": 7,
+      "icon": "python",
+      "subtopics": [
+        { "id": "data-structures", "displayName": "Data Structures", "order": 1 },
+        { "id": "oop", "displayName": "OOP", "order": 2 },
+        { "id": "decorators", "displayName": "Decorators", "order": 3 },
+        { "id": "generators", "displayName": "Generators", "order": 4 },
+        { "id": "context-managers", "displayName": "Context Managers", "order": 5 },
+        { "id": "multithreading-multiprocessing", "displayName": "Multithreading/Multiprocessing", "order": 6 },
+        { "id": "error-handling", "displayName": "Error Handling", "order": 7 },
+        { "id": "testing-pytest", "displayName": "Testing (pytest)", "order": 8 },
+        { "id": "file-io", "displayName": "File I/O", "order": 9 },
+        { "id": "apis-requests-fastapi", "displayName": "APIs (requests/FastAPI)", "order": 10 },
+        { "id": "pandas", "displayName": "Pandas", "order": 11 },
+        { "id": "design-patterns", "displayName": "Design Patterns", "order": 12 },
+        { "id": "type-hints", "displayName": "Type Hints & Mypy", "order": 13 },
+        { "id": "logging", "displayName": "Logging", "order": 14 },
+        { "id": "regex", "displayName": "Regular Expressions", "order": 15 },
+        { "id": "packaging", "displayName": "Virtual Environments & Packaging", "order": 16 }
+      ]
+    },
+    {
+      "id": "pyspark",
+      "displayName": "PySpark",
+      "order": 8,
+      "icon": "pyspark",
+      "subtopics": [
+        { "id": "rdd-operations", "displayName": "RDD Operations", "order": 1 },
+        { "id": "dataframe-api", "displayName": "DataFrame API", "order": 2 },
+        { "id": "spark-sql", "displayName": "Spark SQL", "order": 3 },
+        { "id": "structured-streaming", "displayName": "Structured Streaming", "order": 4 },
+        { "id": "window-functions", "displayName": "Window Functions", "order": 5 },
+        { "id": "udfs", "displayName": "UDFs", "order": 6 },
+        { "id": "broadcast-variables", "displayName": "Broadcast Variables", "order": 7 },
+        { "id": "partitioning-and-bucketing", "displayName": "Partitioning and Bucketing", "order": 8 },
+        { "id": "catalyst-optimizer", "displayName": "Catalyst Optimizer", "order": 9 },
+        { "id": "adaptive-query-execution", "displayName": "Adaptive Query Execution", "order": 10 },
+        { "id": "memory-management", "displayName": "Memory Management", "order": 11 },
+        { "id": "performance-tuning", "displayName": "Performance Tuning", "order": 12 },
+        { "id": "data-sources", "displayName": "Data Sources API", "order": 13 },
+        { "id": "spark-connect", "displayName": "Spark Connect", "order": 14 },
+        { "id": "spark-kubernetes", "displayName": "Spark on Kubernetes", "order": 15 }
+      ]
+    },
+    {
+      "id": "sql",
+      "displayName": "SQL",
+      "order": 9,
+      "icon": "sql",
+      "subtopics": [
+        { "id": "window-functions", "displayName": "Window Functions", "order": 1 },
+        { "id": "ctes", "displayName": "CTEs", "order": 2 },
+        { "id": "recursive-queries", "displayName": "Recursive Queries", "order": 3 },
+        { "id": "query-optimization", "displayName": "Query Optimization", "order": 4 },
+        { "id": "indexing-strategies", "displayName": "Indexing Strategies", "order": 5 },
+        { "id": "joins", "displayName": "Joins (all types)", "order": 6 },
+        { "id": "subqueries", "displayName": "Subqueries", "order": 7 },
+        { "id": "stored-procedures", "displayName": "Stored Procedures", "order": 8 },
+        { "id": "transaction-isolation", "displayName": "Transaction Isolation", "order": 9 },
+        { "id": "partitioning", "displayName": "Partitioning", "order": 10 },
+        { "id": "execution-plans", "displayName": "Execution Plans", "order": 11 }
+      ]
+    },
+    {
+      "id": "airflow",
+      "displayName": "Airflow",
+      "order": 10,
+      "icon": "airflow",
+      "subtopics": [
+        { "id": "dag-design", "displayName": "DAG Design", "order": 1 },
+        { "id": "operators", "displayName": "Operators", "order": 2 },
+        { "id": "sensors", "displayName": "Sensors", "order": 3 },
+        { "id": "xcom", "displayName": "XCom", "order": 4 },
+        { "id": "connections-and-hooks", "displayName": "Connections and Hooks", "order": 5 },
+        { "id": "pools-and-queues", "displayName": "Pools and Queues", "order": 6 },
+        { "id": "task-dependencies", "displayName": "Task Dependencies", "order": 7 },
+        { "id": "dynamic-dags", "displayName": "Dynamic DAGs", "order": 8 },
+        { "id": "backfills", "displayName": "Backfills", "order": 9 },
+        { "id": "scheduler-tuning", "displayName": "Scheduler Tuning", "order": 10 },
+        { "id": "custom-operators", "displayName": "Custom Operators", "order": 11 },
+        { "id": "deployment-patterns", "displayName": "Deployment Patterns", "order": 12 }
+      ]
+    },
+    {
+      "id": "bash-scripting",
+      "displayName": "Bash Scripting",
+      "order": 11,
+      "icon": "bash",
+      "subtopics": [
+        { "id": "file-operations", "displayName": "File Operations", "order": 1 },
+        { "id": "text-processing", "displayName": "Text Processing (awk, sed, grep)", "order": 2 },
+        { "id": "process-management", "displayName": "Process Management", "order": 3 },
+        { "id": "cron-jobs", "displayName": "Cron Jobs", "order": 4 },
+        { "id": "environment-variables", "displayName": "Environment Variables", "order": 5 },
+        { "id": "shell-functions", "displayName": "Shell Functions", "order": 6 },
+        { "id": "error-handling", "displayName": "Error Handling", "order": 7 },
+        { "id": "pipelines", "displayName": "Pipelines", "order": 8 },
+        { "id": "automation-patterns", "displayName": "Automation Patterns", "order": 9 }
+      ]
+    },
+    {
+      "id": "kafka",
+      "displayName": "Kafka",
+      "order": 12,
+      "icon": "kafka",
+      "subtopics": [
+        { "id": "architecture", "displayName": "Architecture", "order": 1 },
+        { "id": "producers", "displayName": "Producers", "order": 2 },
+        { "id": "consumers", "displayName": "Consumers", "order": 3 },
+        { "id": "kafka-streams", "displayName": "Kafka Streams", "order": 4 },
+        { "id": "schema-registry", "displayName": "Schema Registry", "order": 5 },
+        { "id": "exactly-once-semantics", "displayName": "Exactly-Once Semantics", "order": 6 },
+        { "id": "kafka-connect", "displayName": "Kafka Connect", "order": 7 },
+        { "id": "retention-and-compaction", "displayName": "Retention and Compaction", "order": 8 },
+        { "id": "monitoring", "displayName": "Monitoring", "order": 9 },
+        { "id": "performance-tuning", "displayName": "Performance Tuning", "order": 10 }
+      ]
+    },
+    {
+      "id": "nifi",
+      "displayName": "NiFi",
+      "order": 13,
+      "icon": "nifi",
+      "subtopics": [
+        { "id": "processors", "displayName": "Processors", "order": 1 },
+        { "id": "flowfiles", "displayName": "FlowFiles", "order": 2 },
+        { "id": "controller-services", "displayName": "Controller Services", "order": 3 },
+        { "id": "back-pressure", "displayName": "Back Pressure", "order": 4 },
+        { "id": "clustering", "displayName": "Clustering", "order": 5 },
+        { "id": "provenance", "displayName": "Provenance", "order": 6 },
+        { "id": "expression-language", "displayName": "Expression Language", "order": 7 },
+        { "id": "record-based-processing", "displayName": "Record-Based Processing", "order": 8 }
+      ]
+    },
+    {
+      "id": "etl-concepts",
+      "displayName": "ETL Concepts",
+      "order": 14,
+      "icon": "etl",
+      "subtopics": [
+        { "id": "batch-vs-streaming", "displayName": "Batch vs Streaming", "order": 1 },
+        { "id": "incremental-loading", "displayName": "Incremental Loading", "order": 2 },
+        { "id": "cdc", "displayName": "CDC", "order": 3 },
+        { "id": "data-quality", "displayName": "Data Quality", "order": 4 },
+        { "id": "idempotency", "displayName": "Idempotency", "order": 5 },
+        { "id": "error-handling", "displayName": "Error Handling", "order": 6 },
+        { "id": "backfilling", "displayName": "Backfilling", "order": 7 },
+        { "id": "scd-implementation", "displayName": "SCD Implementation", "order": 8 },
+        { "id": "data-reconciliation", "displayName": "Data Reconciliation", "order": 9 },
+        { "id": "pipeline-design-patterns", "displayName": "Pipeline Design Patterns", "order": 10 }
+      ]
+    },
+    {
+      "id": "power-bi",
+      "displayName": "Power BI",
+      "order": 15,
+      "icon": "powerbi",
+      "subtopics": [
+        { "id": "dax", "displayName": "DAX", "order": 1 },
+        { "id": "data-modeling", "displayName": "Data Modeling", "order": 2 },
+        { "id": "power-query-m", "displayName": "Power Query (M)", "order": 3 },
+        { "id": "row-level-security", "displayName": "Row-Level Security", "order": 4 },
+        { "id": "incremental-refresh", "displayName": "Incremental Refresh", "order": 5 },
+        { "id": "dataflows", "displayName": "Dataflows", "order": 6 },
+        { "id": "paginated-reports", "displayName": "Paginated Reports", "order": 7 },
+        { "id": "performance-analyzer", "displayName": "Performance Analyzer", "order": 8 }
+      ]
+    },
+    {
+      "id": "rag-llm",
+      "displayName": "RAG/LLM",
+      "order": 16,
+      "icon": "ai-rag",
+      "subtopics": [
+        { "id": "embedding-models", "displayName": "Embedding Models", "order": 1 },
+        { "id": "vector-databases", "displayName": "Vector Databases", "order": 2 },
+        { "id": "chunking-strategies", "displayName": "Chunking Strategies", "order": 3 },
+        { "id": "retrieval-pipelines", "displayName": "Retrieval Pipelines", "order": 4 },
+        { "id": "prompt-engineering", "displayName": "Prompt Engineering", "order": 5 },
+        { "id": "fine-tuning", "displayName": "Fine-Tuning", "order": 6 },
+        { "id": "evaluation-metrics", "displayName": "Evaluation Metrics", "order": 7 },
+        { "id": "orchestration-frameworks", "displayName": "Orchestration Frameworks", "order": 8 }
+      ]
+    },
+    {
+      "id": "ai",
+      "displayName": "AI",
+      "order": 17,
+      "icon": "ai",
+      "subtopics": [
+        { "id": "machine-learning-pipelines", "displayName": "Machine Learning Pipelines", "order": 1 },
+        { "id": "feature-engineering", "displayName": "Feature Engineering", "order": 2 },
+        { "id": "model-serving", "displayName": "Model Serving", "order": 3 },
+        { "id": "mlops", "displayName": "MLOps", "order": 4 },
+        { "id": "experiment-tracking", "displayName": "Experiment Tracking", "order": 5 },
+        { "id": "data-versioning", "displayName": "Data Versioning", "order": 6 },
+        { "id": "bias-and-fairness", "displayName": "Bias and Fairness", "order": 7 },
+        { "id": "model-monitoring", "displayName": "Model Monitoring", "order": 8 }
+      ]
+    },
+    {
+      "id": "data-modeling",
+      "displayName": "Data Modeling",
+      "order": 18,
+      "icon": "data-modeling",
+      "subtopics": [
+        { "id": "star-schema", "displayName": "Star Schema", "order": 1 },
+        { "id": "snowflake-schema", "displayName": "Snowflake Schema", "order": 2 },
+        { "id": "data-vault", "displayName": "Data Vault", "order": 3 },
+        { "id": "dimensional-modeling", "displayName": "Dimensional Modeling", "order": 4 },
+        { "id": "normalization", "displayName": "Normalization", "order": 5 },
+        { "id": "slowly-changing-dimensions", "displayName": "Slowly Changing Dimensions", "order": 6 },
+        { "id": "fact-and-dimension-tables", "displayName": "Fact and Dimension Tables", "order": 7 },
+        { "id": "data-lineage", "displayName": "Data Lineage", "order": 8 },
+        { "id": "metadata-management", "displayName": "Metadata Management", "order": 9 },
+        { "id": "schema-design-patterns", "displayName": "Schema Design Patterns", "order": 10 }
+      ]
+    }
+  ]
+}

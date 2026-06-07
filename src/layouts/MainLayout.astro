@@ -1,0 +1,277 @@
+---
+/**
+ * MainLayout.astro
+ * Full layout with sidebar + main content responsive grid.
+ * Includes HTML skeleton, global CSS imports, meta tags, theme initialization,
+ * TopBar with ThemeToggle (visible on every page), and slots for page content.
+ *
+ * Props:
+ *   - title: Page title (required)
+ *   - description: Meta description (optional)
+ *
+ * Slots:
+ *   - default: Main content area
+ *   - sidebar: Sidebar navigation content
+ *
+ * Requirements: 5.2, 14.1, 14.6, 14.11
+ */
+import '../styles/global.css';
+import '../styles/animations.css';
+import TopBar from '../components/layout/TopBar.astro';
+import ThemeToggle from '../components/interactive/ThemeToggle.tsx';
+import BackToTop from '../components/interactive/BackToTop.tsx';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Data Engineer Interview Preparation - Comprehensive study materials, code snippets, diagrams, and scenario-based questions across 18 core DE topics.' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} | DE Interview Prep</title>
+
+    <!-- Performance: Preconnect to font CDNs if using web fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Load Inter and JetBrains Mono fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- Performance: DNS prefetch for any external resources -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
+    <!-- Performance: Resource hints for static hosting optimization -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="Cache-Control" content="public, max-age=31536000, immutable" />
+    <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#818cf8" media="(prefers-color-scheme: dark)" />
+
+    <!-- Prevent flash of unstyled content: apply stored theme before paint -->
+    <script is:inline>
+      (function() {
+        try {
+          const theme = localStorage.getItem('de-prep-theme');
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch(e) {}
+      })();
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script is:inline>
+      (function() {
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js')
+              .then(function(registration) {
+                // SW registered successfully - offline caching active
+                console.log('[SW] Service worker registered, scope:', registration.scope);
+
+                // Listen for updates
+                registration.addEventListener('updatefound', function() {
+                  var newWorker = registration.installing;
+                  if (newWorker) {
+                    newWorker.addEventListener('statechange', function() {
+                      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // New version available - auto-activate
+                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                      }
+                    });
+                  }
+                });
+              })
+              .catch(function(error) {
+                console.warn('[SW] Service worker registration failed:', error);
+                showOfflineUnavailableIndicator();
+              });
+
+            // If SW registered but took too long to control the page, warn after 30s
+            setTimeout(function() {
+              if (navigator.serviceWorker.controller) return;
+              console.warn('[SW] Service worker did not become controller within 30s');
+            }, 30000);
+          });
+        }
+
+        function showOfflineUnavailableIndicator() {
+          // Create and display a non-blocking notification that offline access is unavailable
+          var indicator = document.createElement('div');
+          indicator.id = 'offline-unavailable-indicator';
+          indicator.setAttribute('role', 'alert');
+          indicator.setAttribute('aria-live', 'polite');
+          indicator.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;padding:12px 20px;border-radius:8px;background:var(--color-accent,#f59e0b);color:#1a1a1a;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-width:320px;animation:fadeIn 300ms ease-in;';
+          indicator.innerHTML = '<strong>Offline access unavailable</strong><br><span style="font-size:12px;">Content caching failed. Online usage continues normally.</span><button onclick="this.parentElement.remove()" style="position:absolute;top:4px;right:8px;background:none;border:none;font-size:18px;cursor:pointer;color:#1a1a1a;" aria-label="Dismiss">&times;</button>';
+          document.body.appendChild(indicator);
+
+          // Auto-dismiss after 8 seconds
+          setTimeout(function() {
+            var el = document.getElementById('offline-unavailable-indicator');
+            if (el) el.remove();
+          }, 8000);
+        }
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen bg-[var(--color-surface)] text-[var(--color-content)] theme-transition">
+    <!-- Skip to main content link for keyboard accessibility (Requirement 5.4) -->
+    <a href="#main-content" class="skip-to-content">
+      Skip to main content
+    </a>
+
+    <!--
+      Responsive grid layout:
+      - Sidebar: max-width 280px, sticky, hidden on mobile (<768px)
+      - Main content: fills remaining space
+      - 16px minimum content margin on all sides
+      - 12px spacing between content blocks
+      
+      Performance optimizations:
+      - Images use loading="lazy" for below-fold content
+      - Non-critical interactive islands use client:idle hydration
+      - Critical CSS preloaded in head
+      - Inline theme script prevents flash of wrong theme
+    -->
+    <div class="flex min-h-screen">
+      <!-- Sidebar: fixed position, always full viewport height, 256px wide -->
+      <aside
+        id="main-sidebar"
+        class="hidden md:flex md:flex-col"
+        style="position: fixed; top: 0; left: 0; width: 256px; height: 100vh; z-index: 30; border-right: 1px solid var(--color-surface-tertiary); background: var(--color-surface-secondary); overflow: hidden; transition: transform 280ms cubic-bezier(0.4,0,0.2,1), width 280ms cubic-bezier(0.4,0,0.2,1);"
+        aria-label="Sidebar navigation"
+      >
+        <slot name="sidebar" />
+      </aside>
+
+      <!-- Desktop expand button — only visible when sidebar is collapsed -->
+      <button
+        id="desktop-sidebar-expand"
+        class="hidden"
+        aria-label="Expand sidebar"
+        title="Expand sidebar"
+        style="position:fixed;top:16px;left:12px;z-index:31;display:none;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--color-surface-tertiary);background:var(--color-surface-secondary);color:var(--color-content-secondary);cursor:pointer;font-size:0.78rem;font-weight:500;transition:background 150ms,color 150ms;box-shadow:0 2px 8px rgba(0,0,0,0.08);"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M13 5l7 7-7 7"/><path d="M20 12H3"/>
+        </svg>
+        <span>Menu</span>
+      </button>
+
+      <!-- Spacer to offset content by sidebar width on desktop -->
+      <div id="sidebar-spacer" class="hidden md:block shrink-0" style="width: 256px; min-width: 256px; transition: width 280ms cubic-bezier(0.4,0,0.2,1);"></div>
+
+      <!-- Main content area -->
+      <div class="flex-1 min-w-0 w-full">
+        <!-- TopBar with ThemeToggle visible on every page -->
+        <TopBar>
+          <ThemeToggle client:load slot="theme-toggle" />
+        </TopBar>
+
+        <main
+          id="main-content"
+          class="px-4 py-6 md:px-6 md:py-6 lg:px-8 lg:py-8 w-full page-enter"
+          style="overflow-x: hidden;"
+        >
+          <!-- Content blocks use 12px spacing via content-block class -->
+          <slot />
+        </main>
+
+        <!-- BackToTop: client:idle since it's non-critical and only visible after scrolling -->
+        <BackToTop client:idle />
+      </div>
+    </div>
+
+    <!-- Sidebar toggle script -->
+    <script is:inline>
+      (function() {
+        var SIDEBAR_KEY = 'de-prep-sidebar-collapsed';
+        var sidebar     = document.getElementById('main-sidebar');
+        var spacer      = document.getElementById('sidebar-spacer');
+        var collapseBtn = document.getElementById('desktop-sidebar-collapse');
+        var expandBtn   = document.getElementById('desktop-sidebar-expand');
+        if (!sidebar || !spacer) return;
+
+        var collapsed = localStorage.getItem(SIDEBAR_KEY) === 'true';
+
+        function apply(animate) {
+          var dur = animate ? '' : 'none';
+          if (!animate) {
+            sidebar.style.transition = 'none';
+            spacer.style.transition  = 'none';
+          }
+
+          if (collapsed) {
+            sidebar.style.transform = 'translateX(-256px)';
+            spacer.style.width      = '0px';
+            spacer.style.minWidth   = '0px';
+            if (expandBtn) expandBtn.style.display = 'flex';
+          } else {
+            sidebar.style.transform = 'translateX(0)';
+            spacer.style.width      = '256px';
+            spacer.style.minWidth   = '256px';
+            if (expandBtn) expandBtn.style.display = 'none';
+          }
+
+          if (!animate) {
+            sidebar.offsetHeight; // force reflow
+            sidebar.style.transition = '';
+            spacer.style.transition  = '';
+          }
+        }
+
+        apply(false);
+
+        if (collapseBtn) {
+          collapseBtn.addEventListener('click', function() {
+            collapsed = true;
+            localStorage.setItem(SIDEBAR_KEY, 'true');
+            apply(true);
+          });
+        }
+
+        if (expandBtn) {
+          expandBtn.addEventListener('click', function() {
+            collapsed = false;
+            localStorage.setItem(SIDEBAR_KEY, 'false');
+            apply(true);
+          });
+          expandBtn.addEventListener('mouseenter', function() {
+            expandBtn.style.background = 'var(--color-surface-tertiary)';
+            expandBtn.style.color = 'var(--color-content)';
+          });
+          expandBtn.addEventListener('mouseleave', function() {
+            expandBtn.style.background = 'var(--color-surface-secondary)';
+            expandBtn.style.color = 'var(--color-content-secondary)';
+          });
+        }
+      })();
+    </script>
+
+    <!-- Keyboard shortcuts script -->
+    <script is:inline>
+      (function() {
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+          if (e.key === '/' || (e.ctrlKey && e.key === 'k')) {
+            e.preventDefault();
+            var searchInput = document.querySelector('input[type="search"]');
+            if (searchInput) searchInput.focus();
+          }
+          if (e.key === 't' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            var themeBtn = document.querySelector('[data-testid="theme-toggle"]');
+            if (themeBtn) themeBtn.click();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

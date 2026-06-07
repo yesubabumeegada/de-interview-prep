@@ -1,0 +1,81 @@
+---
+/**
+ * Button.astro
+ * Reusable button component with hover animations that change visual properties
+ * (opacity, scale, shadow, color) within 150ms for responsive feedback.
+ *
+ * Props:
+ *   - variant: Visual style ('primary' | 'secondary' | 'ghost' | 'danger')
+ *   - size: Button size ('sm' | 'md' | 'lg')
+ *   - href: Optional URL (renders as <a> instead of <button>)
+ *   - disabled: Whether the button is disabled
+ *   - type: HTML button type ('button' | 'submit' | 'reset')
+ *   - class: Additional CSS classes
+ *
+ * Slots:
+ *   - default: Button label/content
+ *
+ * Requirements: 14.5, 14.7
+ */
+
+interface Props {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  href?: string;
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
+  class?: string;
+}
+
+const {
+  variant = 'primary',
+  size = 'md',
+  href,
+  disabled = false,
+  type = 'button',
+  class: className = '',
+} = Astro.props;
+
+const Tag = href ? 'a' : 'button';
+
+// Variant color styles
+const variantStyles: Record<string, string> = {
+  'primary': 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-dark)] dark:hover:bg-[var(--color-primary-light)] focus-visible:ring-[var(--color-primary-light)]',
+  'secondary': 'bg-[var(--color-surface-tertiary)] text-[var(--color-content)] border border-[var(--color-surface-tertiary)] hover:bg-[var(--color-surface-secondary)] hover:border-[var(--color-content-tertiary)] focus-visible:ring-[var(--color-secondary-light)]',
+  'ghost': 'bg-transparent text-[var(--color-content-secondary)] hover:bg-[var(--color-surface-tertiary)] hover:text-[var(--color-content)] focus-visible:ring-[var(--color-secondary-light)]',
+  'danger': 'bg-[var(--color-danger)] text-white hover:bg-[var(--color-danger-dark)] dark:hover:bg-[var(--color-danger-light)] focus-visible:ring-[var(--color-danger-light)]',
+};
+
+// Size styles with minimum 44x44px touch targets
+const sizeStyles: Record<string, string> = {
+  'sm': 'text-body-sm px-[12px] py-[4px] min-h-touch min-w-touch',
+  'md': 'text-body px-[16px] py-[8px] min-h-touch min-w-touch',
+  'lg': 'text-subheading px-[24px] py-[12px] min-h-touch min-w-touch',
+};
+
+const baseStyles = [
+  'inline-flex items-center justify-center gap-[8px]',
+  'rounded-md font-medium',
+  'cursor-pointer select-none no-underline',
+  'transition-all duration-150 ease-in-out',
+  'hover:scale-[1.02] hover:shadow-card-hover',
+  'active:scale-[0.98] active:shadow-card',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none',
+].join(' ');
+---
+
+<Tag
+  href={href}
+  type={!href ? type : undefined}
+  disabled={!href ? disabled : undefined}
+  aria-disabled={disabled ? 'true' : undefined}
+  class:list={[
+    baseStyles,
+    variantStyles[variant] || variantStyles['primary'],
+    sizeStyles[size] || sizeStyles['md'],
+    className,
+  ]}
+>
+  <slot />
+</Tag>

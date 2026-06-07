@@ -1,0 +1,156 @@
+---
+/**
+ * src/pages/topic/[topicId]/index.astro
+ * Topic Overview Page - Shows topic info with navigable subtopic list.
+ *
+ * Uses Astro's getStaticPaths() to generate pages for all topics at build time.
+ * Displays:
+ * - Breadcrumb navigation
+ * - Topic heading and description
+ * - Navigable subtopic list (sorted by order)
+ * - "Content not yet available" message for empty topics
+ * - ProgressDashboard integration with "Mark as Reviewed" control
+ *
+ * Requirements: 1.2, 1.5, 5.5, 6.1
+ */
+import MainLayout from '../../../layouts/MainLayout.astro';
+import SidebarNav from '../../../components/layout/SidebarNav.astro';
+import Breadcrumbs from '../../../components/layout/Breadcrumbs.astro';
+import topicsConfig from '../../../../content/topics.config.json';
+import { sortSubtopics } from '../../../services/navigationService';
+
+export function getStaticPaths() {
+  return topicsConfig.topics.map((topic) => ({
+    params: { topicId: topic.id },
+    props: { topic },
+  }));
+}
+
+interface Props {
+  topic: {
+    id: string;
+    displayName: string;
+    order: number;
+    icon: string;
+    subtopics: { id: string; displayName: string; order: number }[];
+  };
+}
+
+const { topicId } = Astro.params;
+const { topic } = Astro.props;
+
+// Sort subtopics by their order field (Requirement 1.2)
+const sortedSubtopics = sortSubtopics(topic.subtopics);
+
+// Check if topic has any subtopics
+const hasContent = sortedSubtopics.length > 0;
+
+// Icon map for display
+const topicIcons: Record<string, string> = {
+  'aws': '☁️',
+  'databricks': '🧱',
+  'snowflake': '❄️',
+  'hadoop': '🐘',
+  'oracle': '🔴',
+  'teradata': '🟢',
+  'python': '🐍',
+  'pyspark': '⚡',
+  'sql': '🗃️',
+  'airflow': '🌊',
+  'bash': '💻',
+  'kafka': '📨',
+  'nifi': '🔄',
+  'etl': '🔀',
+  'powerbi': '📊',
+  'ai-rag': '🤖',
+  'ai': '🧠',
+  'data-modeling': '📐',
+};
+
+const icon = topicIcons[topic.icon] || '📖';
+---
+
+<MainLayout title={topic.displayName}>
+  <SidebarNav slot="sidebar" activeTopic={topicId} />
+
+  <!-- Breadcrumb navigation -->
+  <Breadcrumbs
+    topicId={topicId}
+    topicDisplayName={topic.displayName}
+  />
+
+  <!-- Topic Header -->
+  <header class="mb-[32px]">
+    <div class="flex items-center gap-[16px] mb-[12px]">
+      <span class="text-[3rem] leading-none" aria-hidden="true">{icon}</span>
+      <h1 class="text-heading-1 text-[var(--color-content)] m-0">
+        {topic.displayName}
+      </h1>
+    </div>
+    <p class="text-body text-[var(--color-content-secondary)] m-0">
+      Explore subtopics, study materials, code snippets, and scenario-based interview questions for {topic.displayName}.
+    </p>
+  </header>
+
+  {/* Content not yet available message (Requirement 1.5) */}
+  {!hasContent && (
+    <div
+      class="rounded-lg border border-[var(--color-surface-tertiary)] bg-[var(--color-surface-secondary)] p-[32px] text-center"
+      role="status"
+      data-testid="empty-topic-message"
+    >
+      <svg
+        class="w-[48px] h-[48px] mx-auto mb-[16px] text-[var(--color-content-tertiary)]"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+        />
+      </svg>
+      <h2 class="text-heading-4 text-[var(--color-content)] mb-[8px]">
+        Content Not Yet Available
+      </h2>
+      <p class="text-body text-[var(--color-content-secondary)] m-0">
+        Study materials for {topic.displayName} are being prepared. Check back soon!
+      </p>
+    </div>
+  )}
+
+  {/* Navigable subtopic list (Requirement 1.2) */}
+  {hasContent && (
+    <section aria-label="Subtopics">
+      <h2 class="text-heading-3 text-[var(--color-content)] mb-[16px]">
+        Subtopics
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[12px]">
+        {sortedSubtopics.map((subtopic, index) => (
+          <a
+            href={`/topic/${topicId}/${subtopic.id}`}
+            class="group block rounded-lg border border-[var(--color-surface-tertiary)] bg-[var(--color-surface)] p-[16px] shadow-sm hover:shadow-card hover:border-[var(--color-primary)]/30 transition-all duration-150 no-underline min-h-touch focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2"
+            data-testid={`subtopic-link-${subtopic.id}`}
+          >
+            <div class="flex items-center gap-[12px]">
+              <span class="flex items-center justify-center w-[32px] h-[32px] rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-body-sm font-semibold shrink-0">
+                {index + 1}
+              </span>
+              <span class="text-body font-medium text-[var(--color-content)] group-hover:text-[var(--color-primary)] transition-colors duration-150">
+                {subtopic.displayName}
+              </span>
+            </div>
+            <div class="mt-[8px] pl-[44px]">
+              <span class="text-caption text-[var(--color-content-tertiary)] group-hover:text-[var(--color-content-secondary)] transition-colors duration-150">
+                View study materials →
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+</MainLayout>

@@ -1,0 +1,41 @@
+# Performance optimization headers for static hosting
+# Works with Netlify, Cloudflare Pages, and similar platforms
+# Requirements: 10.3, 10.4, 11.5
+
+# All assets: enable compression and caching
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; frame-ancestors 'none'
+
+# Static assets with hashed filenames: aggressive caching (1 year)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/chunks/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/entries/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML pages: short cache with revalidation for fresh content
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Search index: moderate caching (1 hour) since it changes with content
+/search-index.json
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+# Images: long cache (30 days)
+/images/*
+  Cache-Control: public, max-age=2592000
+
+# Service worker: no cache to ensure latest version
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Fonts: aggressive caching
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

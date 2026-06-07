@@ -1,0 +1,5 @@
+# Redirects for static hosting (Netlify / Cloudflare Pages)
+# Ensure clean URLs work correctly with directory format
+
+# SPA fallback not needed - this is a statically generated site
+# All routes are pre-rendered at build time

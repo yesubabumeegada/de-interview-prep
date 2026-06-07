@@ -1,0 +1,116 @@
+---
+/**
+ * Breadcrumbs.astro
+ * Generates a breadcrumb trail showing the current navigation hierarchy.
+ * Max 3 levels after Home: Topic → Subtopic → Content title.
+ *
+ * Props:
+ *   - topicId: The current topic's ID (required for topic-level and deeper)
+ *   - topicDisplayName: Display name for the topic (required for topic-level and deeper)
+ *   - subtopicId: The current subtopic's ID (optional, for subtopic-level and deeper)
+ *   - subtopicDisplayName: Display name for the subtopic (optional)
+ *   - contentTitle: Title of the current content item (optional, for content-level)
+ *
+ * Accessibility:
+ *   - Uses <nav aria-label="Breadcrumb"> for landmark navigation
+ *   - Uses <ol> structured list for screen readers
+ *   - Last item has aria-current="page" and is not a link
+ *
+ * URLs:
+ *   - Home: /
+ *   - Topic: /topic/{topicId}/
+ *   - Subtopic: /topic/{topicId}/{subtopicId}
+ *
+ * Requirements: 1.4, 5.1
+ */
+
+interface BreadcrumbItem {
+  label: string;
+  url: string;
+  level: 'home' | 'topic' | 'subtopic' | 'content';
+}
+
+interface Props {
+  topicId?: string;
+  topicDisplayName?: string;
+  subtopicId?: string;
+  subtopicDisplayName?: string;
+  contentTitle?: string;
+}
+
+const {
+  topicId,
+  topicDisplayName,
+  subtopicId,
+  subtopicDisplayName,
+  contentTitle,
+} = Astro.props;
+
+// Build breadcrumb items array
+const items: BreadcrumbItem[] = [
+  { label: 'Home', url: '/', level: 'home' },
+];
+
+if (topicId && topicDisplayName) {
+  items.push({
+    label: topicDisplayName,
+    url: `/topic/${topicId}/`,
+    level: 'topic',
+  });
+}
+
+if (subtopicId && subtopicDisplayName && topicId) {
+  items.push({
+    label: subtopicDisplayName,
+    url: `/topic/${topicId}/${subtopicId}`,
+    level: 'subtopic',
+  });
+}
+
+if (contentTitle) {
+  items.push({
+    label: contentTitle,
+    url: '#',
+    level: 'content',
+  });
+}
+---
+
+<nav aria-label="Breadcrumb" class="py-3 px-1 mb-2">
+  <ol class="flex items-center flex-wrap gap-1 text-sm text-[var(--color-content-secondary)]">
+    {items.map((item, index) => {
+      const isLast = index === items.length - 1;
+      return (
+        <li class="flex items-center">
+          {index > 0 && (
+            <svg class="w-4 h-4 mx-1 text-[var(--color-content-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          )}
+          {isLast ? (
+            <span
+              class="font-medium text-[var(--color-content)] truncate max-w-[200px] px-2 py-1 bg-[var(--color-primary)]/5 rounded-md text-[var(--color-primary)]"
+              aria-current="page"
+              title={item.label}
+            >
+              {item.label}
+            </span>
+          ) : (
+            <a
+              href={item.url}
+              class="hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-tertiary)] transition-colors duration-150 truncate max-w-[200px] px-2 py-1 rounded-md inline-flex items-center focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              title={item.label}
+            >
+              {index === 0 ? (
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              ) : null}
+              {item.label}
+            </a>
+          )}
+        </li>
+      );
+    })}
+  </ol>
+</nav>

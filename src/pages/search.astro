@@ -1,0 +1,37 @@
+---
+/**
+ * src/pages/search.astro
+ * Search Page - Dedicated search results page
+ *
+ * Provides a full-page search experience with:
+ * - SearchBar component (includes SearchResults internally)
+ * - Filter controls for content type and topic
+ * - Clean, centered layout for the search interface
+ *
+ * Requirements: 4.1
+ */
+import MainLayout from '../layouts/MainLayout.astro';
+import SidebarNav from '../components/layout/SidebarNav.astro';
+import SearchBar from '../components/interactive/SearchBar.tsx';
+---
+
+<MainLayout title="Search">
+  <SidebarNav slot="sidebar" />
+
+  <!-- Page header -->
+  <div class="mb-[32px]">
+    <h1 class="text-heading-1 text-[var(--color-content)] m-0">
+      Search
+    </h1>
+    <p class="text-body text-[var(--color-content-secondary)] mt-[8px] m-0">
+      Search across all topics, study materials, code snippets, and scenario questions.
+    </p>
+  </div>
+
+  <!-- Search interface (centered) -->
+  <div class="flex justify-center">
+    <div class="w-full max-w-[720px]">
+      <SearchBar client:load />
+    </div>
+  </div>
+</MainLayout>

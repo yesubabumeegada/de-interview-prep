@@ -1,0 +1,58 @@
+---
+/**
+ * Badge.astro
+ * Reusable badge component for difficulty levels and content type labels.
+ * Supports predefined variants for semantic meaning and consistent styling.
+ *
+ * Props:
+ *   - variant: Visual style variant ('junior' | 'mid-level' | 'senior' | 'study_material' | 'code_snippet' | 'scenario_question' | 'diagram' | 'default')
+ *   - size: Badge size ('sm' | 'md')
+ *   - class: Additional CSS classes
+ *
+ * Slots:
+ *   - default: Badge label text
+ *
+ * Requirements: 14.5, 14.7
+ */
+
+interface Props {
+  variant?: 'junior' | 'mid-level' | 'senior' | 'study_material' | 'code_snippet' | 'scenario_question' | 'diagram' | 'default';
+  size?: 'sm' | 'md';
+  class?: string;
+}
+
+const { variant = 'default', size = 'sm', class: className = '' } = Astro.props;
+
+// Map variants to color classes
+const variantStyles: Record<string, string> = {
+  // Difficulty levels
+  'junior': 'bg-[var(--color-success-light)] text-[var(--color-success-dark)] dark:bg-[var(--color-success-dark)] dark:text-[var(--color-success-light)]',
+  'mid-level': 'bg-[var(--color-warning-light)] text-[var(--color-warning-dark)] dark:bg-[var(--color-warning-dark)] dark:text-[var(--color-warning-light)]',
+  'senior': 'bg-[var(--color-danger-light)] text-[var(--color-danger-dark)] dark:bg-[var(--color-danger-dark)] dark:text-[var(--color-danger-light)]',
+  // Content types
+  'study_material': 'bg-[var(--color-primary-light)] text-[var(--color-primary-dark)] dark:bg-[var(--color-primary-dark)] dark:text-[var(--color-primary-light)]',
+  'code_snippet': 'bg-[var(--color-accent-light)] text-[var(--color-accent-dark)] dark:bg-[var(--color-accent-dark)] dark:text-[var(--color-accent-light)]',
+  'scenario_question': 'bg-[var(--color-secondary-light)] text-[var(--color-secondary-dark)] dark:bg-[var(--color-secondary-dark)] dark:text-[var(--color-secondary-light)]',
+  'diagram': 'bg-[var(--color-success-light)] text-[var(--color-success-dark)] dark:bg-[var(--color-success-dark)] dark:text-[var(--color-success-light)]',
+  // Default
+  'default': 'bg-[var(--color-surface-tertiary)] text-[var(--color-content-secondary)]',
+};
+
+const sizeStyles: Record<string, string> = {
+  'sm': 'text-caption px-[8px] py-[2px]',
+  'md': 'text-body-sm px-[12px] py-[4px]',
+};
+
+const baseStyles = 'inline-flex items-center rounded-sm font-medium whitespace-nowrap select-none';
+---
+
+<span
+  class:list={[
+    baseStyles,
+    variantStyles[variant] || variantStyles['default'],
+    sizeStyles[size] || sizeStyles['sm'],
+    className,
+  ]}
+>
+  <slot />
+</span>

@@ -1,0 +1,404 @@
+---
+/**
+ * SidebarNav.astro
+ * Premium sidebar navigation with smooth CSS-grid expand/collapse.
+ *
+ * Features:
+ *   - CSS grid-template-rows transition (exact-height, no max-height hack)
+ *   - Staggered subtopic item reveal on expand
+ *   - Active topic accent bar + gradient background
+ *   - localStorage state persistence
+ *   - Mobile slide-in overlay with focus trap + keyboard nav
+ */
+import topicsConfig from '../../../content/topics.config.json';
+
+interface Props {
+  activeTopic?: string;
+  activeSubtopic?: string;
+}
+
+const { activeTopic, activeSubtopic } = Astro.props;
+const topics = topicsConfig.topics.sort((a, b) => a.order - b.order);
+---
+
+<!-- Mobile overlay backdrop -->
+<div
+  id="sidebar-backdrop"
+  class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm hidden md:hidden"
+  aria-hidden="true"
+></div>
+
+<!-- Mobile slide-in overlay panel -->
+<div
+  id="sidebar-overlay"
+  class="fixed top-0 left-0 z-50 h-full w-[300px] max-w-[85vw] overflow-y-auto scrollbar-thin hidden md:hidden -translate-x-full"
+  style="background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-right: 1px solid var(--glass-border);"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Navigation menu"
+>
+  <!-- Mobile header -->
+  <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--color-surface-tertiary)]/50">
+    <div class="flex items-center gap-2">
+      <span class="text-xl leading-none" aria-hidden="true">🎯</span>
+      <span class="text-sm font-semibold text-[var(--color-content)]">DE Interview Prep</span>
+    </div>
+    <button
+      id="sidebar-close"
+      type="button"
+      class="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--color-content-secondary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)] interactive"
+      aria-label="Close navigation menu"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile nav -->
+  <nav aria-label="Main navigation" class="p-2">
+    <ul class="list-none m-0 p-0 space-y-0.5" role="list">
+      {topics.map((topic) => {
+        const isActive = topic.id === activeTopic;
+        const sortedSubtopics = [...topic.subtopics].sort((a, b) => a.order - b.order);
+        return (
+          <li data-topic-id={topic.id}>
+            <button
+              type="button"
+              class:list={[
+                'sidebar-topic-btn w-full flex items-center justify-between min-h-[40px] px-3 py-2 rounded-lg text-left text-sm font-medium interactive relative',
+                isActive
+                  ? 'text-[var(--color-primary)] font-semibold'
+                  : 'text-[var(--color-content-secondary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)]',
+              ]}
+              aria-expanded={isActive ? 'true' : 'false'}
+              aria-controls={`mobile-subtopics-${topic.id}`}
+              data-topic={topic.id}
+              style={isActive ? 'background: linear-gradient(90deg, rgba(79,70,229,0.10) 0%, rgba(79,70,229,0.03) 100%);' : ''}
+            >
+              {isActive && (
+                <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-[var(--color-primary)]" aria-hidden="true" />
+              )}
+              <span class="truncate pl-0.5">{topic.displayName}</span>
+              <svg
+                class:list={['sidebar-chevron w-3.5 h-3.5 ml-2 text-[var(--color-content-tertiary)]', isActive && 'open']}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <!-- Grid wrapper for smooth expand -->
+            <div
+              id={`mobile-subtopics-${topic.id}`}
+              class:list={['sidebar-subtopics-grid pl-3', isActive && 'expanded']}
+            >
+              <div class="sidebar-subtopics-inner">
+                <ul class="list-none m-0 p-0 py-1 space-y-0.5" role="list">
+                  {sortedSubtopics.map((subtopic) => {
+                    const isSubActive = isActive && subtopic.id === activeSubtopic;
+                    return (
+                      <li class="sidebar-subtopic-item">
+                        <a
+                          href={`/topic/${topic.id}/${subtopic.id}`}
+                          class:list={[
+                            'flex items-center gap-2 px-3 py-[5px] rounded-md text-[0.78rem] leading-tight transition-colors duration-100',
+                            isSubActive
+                              ? 'text-[var(--color-primary)] font-medium bg-[var(--color-primary)]/8'
+                              : 'text-[var(--color-content-tertiary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)]',
+                          ]}
+                          aria-current={isSubActive ? 'page' : undefined}
+                        >
+                          {isSubActive && <span class="w-1 h-1 rounded-full bg-[var(--color-primary)] shrink-0" aria-hidden="true" />}
+                          {subtopic.displayName}
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  </nav>
+</div>
+
+<!-- Desktop sidebar nav (md+) -->
+<nav aria-label="Main navigation" class="sidebar-nav-desktop hidden md:flex md:flex-col" style="flex: 1 1 0%; min-height: 0; overflow: hidden;">
+  <!-- Brand header -->
+  <div class="px-4 py-3 border-b border-[var(--color-surface-tertiary)]/60 shrink-0 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2.5 no-underline group min-w-0">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background: var(--gradient-brand);">
+        <span class="text-base leading-none" aria-hidden="true">🎯</span>
+      </div>
+      <div class="min-w-0">
+        <span class="block text-[0.82rem] font-bold text-[var(--color-content)] group-hover:text-[var(--color-primary)] transition-colors leading-tight">DE Interview Prep</span>
+        <span class="block text-[0.68rem] text-[var(--color-content-tertiary)] leading-tight">{topics.length} Topics · All Levels</span>
+      </div>
+    </a>
+    <!-- Desktop collapse button -->
+    <button
+      id="desktop-sidebar-collapse"
+      type="button"
+      title="Collapse sidebar"
+      aria-label="Collapse sidebar"
+      class="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-[var(--color-content-secondary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)] transition-colors"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M11 19l-7-7 7-7"/><path d="M21 12H4"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Topic list — scrollable, fills remaining sidebar height -->
+  <div class="flex-1 overflow-y-auto scrollbar-thin px-2 py-2 pb-16" style="min-height:0;">
+    <ul class="list-none m-0 p-0 space-y-0.5" role="list">
+      {topics.map((topic) => {
+        const isActive = topic.id === activeTopic;
+        const sortedSubtopics = [...topic.subtopics].sort((a, b) => a.order - b.order);
+        return (
+          <li data-topic-id={topic.id}>
+            <button
+              type="button"
+              class:list={[
+                'sidebar-topic-btn w-full flex items-center justify-between min-h-[36px] px-3 py-1.5 rounded-lg text-left text-[0.8rem] font-medium interactive relative overflow-hidden',
+                isActive
+                  ? 'text-[var(--color-primary)] font-semibold'
+                  : 'text-[var(--color-content-secondary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)]',
+              ]}
+              aria-expanded={isActive ? 'true' : 'false'}
+              aria-controls={`desktop-subtopics-${topic.id}`}
+              data-topic={topic.id}
+              style={isActive ? 'background: linear-gradient(90deg, rgba(79,70,229,0.10) 0%, rgba(79,70,229,0.03) 100%);' : ''}
+            >
+              {isActive && (
+                <span class="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-[var(--color-primary)]" aria-hidden="true" />
+              )}
+              <span class="truncate pl-1">{topic.displayName}</span>
+              <svg
+                class:list={['sidebar-chevron w-3.5 h-3.5 ml-1.5 text-[var(--color-content-tertiary)]', isActive && 'open']}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <!-- CSS Grid expand wrapper — animates to exact content height -->
+            <div
+              id={`desktop-subtopics-${topic.id}`}
+              class:list={['sidebar-subtopics-grid pl-3', isActive && 'expanded']}
+            >
+              <div class="sidebar-subtopics-inner">
+                <ul class="list-none m-0 p-0 py-1 space-y-0.5" role="list">
+                  {sortedSubtopics.map((subtopic) => {
+                    const isSubActive = isActive && subtopic.id === activeSubtopic;
+                    return (
+                      <li class="sidebar-subtopic-item">
+                        <a
+                          href={`/topic/${topic.id}/${subtopic.id}`}
+                          class:list={[
+                            'flex items-center gap-2 px-3 py-[5px] rounded-md text-[0.75rem] leading-snug transition-all duration-100',
+                            isSubActive
+                              ? 'text-[var(--color-primary)] font-medium bg-[var(--color-primary)]/8'
+                              : 'text-[var(--color-content-tertiary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)]',
+                          ]}
+                          aria-current={isSubActive ? 'page' : undefined}
+                        >
+                          {isSubActive
+                            ? <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] shrink-0" aria-hidden="true" />
+                            : <span class="w-1.5 h-1.5 shrink-0" aria-hidden="true" />
+                          }
+                          {subtopic.displayName}
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+</nav>
+
+<style is:global>
+  /* Sidebar expand uses CSS grid rows — animates to exact content height */
+  .sidebar-subtopics-grid {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 260ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .sidebar-subtopics-grid.expanded {
+    grid-template-rows: 1fr;
+  }
+  .sidebar-subtopics-inner {
+    overflow: hidden;
+  }
+
+  /* Active subtopic background opacity token */
+  .bg-\[var\(--color-primary\)\/8\] {
+    background-color: rgba(79, 70, 229, 0.08);
+  }
+  .dark .bg-\[var\(--color-primary\)\/8\] {
+    background-color: rgba(129, 140, 248, 0.12);
+  }
+</style>
+
+<script>
+  (function () {
+    const STORAGE_KEY = 'de-prep-sidebar-state';
+
+    function getStoredState(): { expandedTopics: string[] } {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.expandedTopics)) return parsed;
+        }
+      } catch {}
+      return { expandedTopics: [] };
+    }
+
+    function saveState(expandedTopics: string[]) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ expandedTopics })); } catch {}
+    }
+
+    function getExpandedTopics(): Set<string> {
+      return new Set(getStoredState().expandedTopics);
+    }
+
+    function setExpanded(btn: HTMLButtonElement, expand: boolean) {
+      const topicId = btn.getAttribute('data-topic');
+      if (!topicId) return;
+
+      const listItem = btn.closest('li[data-topic-id]') as HTMLElement;
+      if (!listItem) return;
+
+      const grid    = listItem.querySelector('.sidebar-subtopics-grid')  as HTMLElement;
+      const chevron = btn.querySelector('.sidebar-chevron')              as HTMLElement;
+
+      if (!grid) return;
+
+      if (expand) {
+        grid.classList.add('expanded');
+        chevron?.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        grid.classList.remove('expanded');
+        chevron?.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    function toggleTopic(btn: HTMLButtonElement) {
+      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+      const topicId    = btn.getAttribute('data-topic');
+      if (!topicId) return;
+
+      setExpanded(btn, !isExpanded);
+
+      const expanded = getExpandedTopics();
+      if (isExpanded) {
+        expanded.delete(topicId);
+      } else {
+        expanded.add(topicId);
+      }
+      saveState(Array.from(expanded));
+    }
+
+    function initializeExpandState() {
+      const expandedTopics = getExpandedTopics();
+
+      document.querySelectorAll<HTMLButtonElement>('.sidebar-topic-btn').forEach((btn) => {
+        const topicId     = btn.getAttribute('data-topic');
+        const isActiveInHTML = btn.getAttribute('aria-expanded') === 'true';
+
+        if (!topicId) return;
+
+        if (expandedTopics.has(topicId) && !isActiveInHTML) {
+          setExpanded(btn, true);
+        } else if (!expandedTopics.has(topicId) && isActiveInHTML) {
+          // Active page topic: preserve HTML-rendered expanded state and save it
+          expandedTopics.add(topicId);
+          saveState(Array.from(expandedTopics));
+        }
+      });
+    }
+
+    function attachTopicListeners() {
+      document.querySelectorAll<HTMLButtonElement>('.sidebar-topic-btn').forEach((btn) => {
+        btn.addEventListener('click', () => toggleTopic(btn));
+        btn.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleTopic(btn);
+          }
+        });
+      });
+    }
+
+    // --- Mobile overlay ---
+    const overlay   = document.getElementById('sidebar-overlay');
+    const backdrop  = document.getElementById('sidebar-backdrop');
+    const closeBtn  = document.getElementById('sidebar-close');
+    let   prevFocus: HTMLElement | null = null;
+
+    function openMobileNav() {
+      if (!overlay || !backdrop) return;
+      prevFocus = document.activeElement as HTMLElement;
+      backdrop.classList.remove('hidden');
+      overlay.classList.remove('hidden', '-translate-x-full');
+      overlay.classList.add('sidebar-slide-in');
+      overlay.classList.remove('sidebar-slide-out');
+      document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', 'true');
+      setTimeout(() => closeBtn?.focus(), 120);
+      document.addEventListener('keydown', trapFocus);
+    }
+
+    function closeMobileNav() {
+      if (!overlay || !backdrop) return;
+      overlay.classList.remove('sidebar-slide-in');
+      overlay.classList.add('sidebar-slide-out');
+      document.getElementById('sidebar-toggle')?.setAttribute('aria-expanded', 'false');
+      overlay.addEventListener('animationend', () => {
+        if (overlay.classList.contains('sidebar-slide-out')) {
+          overlay.classList.add('hidden', '-translate-x-full');
+          overlay.classList.remove('sidebar-slide-out');
+          backdrop.classList.add('hidden');
+        }
+      }, { once: true });
+      document.removeEventListener('keydown', trapFocus);
+      prevFocus?.focus();
+    }
+
+    function trapFocus(e: KeyboardEvent) {
+      if (!overlay) return;
+      if (e.key === 'Escape') { e.preventDefault(); closeMobileNav(); return; }
+      if (e.key !== 'Tab') return;
+      const focusable = overlay.querySelectorAll<HTMLElement>(
+        'button, a[href], [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+      else           { if (document.activeElement === last)  { e.preventDefault(); first.focus(); } }
+    }
+
+    document.addEventListener('toggle-sidebar', () => {
+      if (overlay?.classList.contains('hidden')) openMobileNav();
+      else closeMobileNav();
+    });
+
+    closeBtn?.addEventListener('click', closeMobileNav);
+    backdrop?.addEventListener('click', closeMobileNav);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) closeMobileNav();
+    });
+
+    attachTopicListeners();
+    initializeExpandState();
+  })();
+</script>

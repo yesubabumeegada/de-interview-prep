@@ -1,0 +1,55 @@
+---
+/**
+ * TopBar.astro
+ * Premium glassmorphism sticky top bar.
+ *
+ * Slots:
+ *   - search: SearchBar component
+ *   - theme-toggle: ThemeToggle component
+ */
+---
+
+<header
+  class="sticky top-0 z-10 flex items-center gap-3 px-4 py-2.5"
+  style="
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: 0 1px 0 0 rgba(0,0,0,0.04), var(--shadow-sm);
+  "
+>
+  <!-- Mobile hamburger -->
+  <button
+    id="sidebar-toggle"
+    type="button"
+    class="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-[var(--color-content-secondary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)] interactive shrink-0"
+    aria-label="Open navigation menu"
+    aria-expanded="false"
+    aria-controls="sidebar-overlay"
+  >
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  </button>
+
+  <!-- Search slot — flex grows to fill space -->
+  <div class="flex-1 min-w-0">
+    <slot name="search" />
+  </div>
+
+  <!-- Right slot -->
+  <div class="flex items-center shrink-0 gap-2">
+    <slot name="theme-toggle" />
+  </div>
+</header>
+
+<script>
+  const btn = document.getElementById('sidebar-toggle');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('toggle-sidebar', { bubbles: true }));
+      btn.setAttribute('aria-expanded', btn.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
+    });
+  }
+</script>
