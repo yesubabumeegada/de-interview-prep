@@ -71,7 +71,7 @@ const { title, description = 'Data Engineer Interview Preparation - Comprehensiv
       (function() {
         if ('serviceWorker' in navigator) {
           window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js')
               .then(function(registration) {
                 // SW registered successfully - offline caching active
                 console.log('[SW] Service worker registered, scope:', registration.scope);
