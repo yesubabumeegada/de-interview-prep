@@ -1,0 +1,153 @@
+---
+title: "Governance Fundamentals — Scenarios"
+topic: data-governance
+subtopic: governance-fundamentals
+content_type: study_material
+difficulty_level: mid-level
+layer: scenarios
+tags: [data-governance, interview, scenarios, framework, compliance]
+---
+
+# Governance Fundamentals — Interview Scenarios
+
+## Scenario 1 (Junior): Missing Data Owner
+
+**Question:** A dashboard breaks and no one knows who owns the underlying table. How do you handle this short-term, and what governance fix prevents this in the future?
+
+**Answer:**
+
+**Short-term:**
+1. Check the git blame on the dbt model file — the last committer is likely the de-facto owner
+2. Check Airflow for who created/last modified the DAG writing to that table
+3. Check Slack history for the table name — who talks about it?
+4. Escalate to data engineering lead to assign a temporary owner
+
+**Long-term governance fix:**
+```yaml
+# Require in ALL dbt models (enforced via CI check)
+models:
+  - name: orders
+    meta:
+      owner: revenue-team          # team Slack handle
+      steward: jane.smith@co.com   # individual accountable
+      on_call: "@data-revenue-oncall"
+```
+
+```python
+# CI check that blocks merge if owner is missing
+def check_model_ownership(manifest_path: str) -> bool:
+    import json
+    with open(manifest_path) as f:
+        manifest = json.load(f)
+    
+    failures = []
+    for name, node in manifest["nodes"].items():
+        if node["resource_type"] == "model" and node.get("config", {}).get("materialized") != "ephemeral":
+            if not node.get("meta", {}).get("owner"):
+                failures.append(name)
+    
+    if failures:
+        print(f"❌ Missing owner in {len(failures)} models: {failures}")
+        return False
+    return True
+```
+
+**Prevention:** Ownership must be set at deploy time. No owner = no deploy.
+
+---
+
+## Scenario 2 (Mid-level): Governance Policy Conflict
+
+**Question:** The security team wants all PII masked in non-production. The ML team needs real emails for model training in staging. How do you resolve this?
+
+**Answer:**
+
+This is a genuine policy conflict requiring escalation and a structured exception process:
+
+**Step 1: Escalate to right stakeholders**
+- DPO (Data Privacy Officer): legal authority on PII usage
+- ML team lead: clarify why real emails are needed (model accuracy? Or habit?)
+- Security team: understand exact risk they're mitigating
+
+**Step 2: Evaluate alternatives**
+```
+Option A: Synthetic data generation
+  - Generate realistic fake emails with same distribution
+  - Libraries: Faker, SDV (Synthetic Data Vault)
+  - No real PII exposure, but may degrade model quality slightly
+
+Option B: Privacy-preserving transforms
+  - Hash emails consistently → ML model learns email → outcome mapping
+  - Format-preserving pseudonymization: real-looking but not real
+  
+Option C: Approved exception with controls
+  - Specific staging env with strict IAM access
+  - Audit logging enabled
+  - Data deleted after training run
+  - DPO signs off in writing
+```
+
+**Step 3: Document the decision**
+```yaml
+# governance/exceptions/ml-team-staging-pii.yaml
+exception_id: EXC-2024-003
+policy: POL-001 (PII Masking in Non-Prod)
+requestor: ml-team
+approved_by: dpo@company.com
+scope: staging only, ml_training_* tables
+rationale: Synthetic data reduces model accuracy below acceptable threshold
+controls:
+  - IAM restricted to ml-team group only
+  - Audit logging enabled
+  - Data purged after 30 days
+expires: 2024-06-30
+```
+
+---
+
+## Scenario 3 (Senior): Building a Governance Program from Scratch
+
+**Question:** You've joined a 200-person company with no data governance. There are 500 tables, no owners documented, unknown PII, and the CTO wants a governance program. Where do you start?
+
+**Answer:**
+
+```mermaid
+flowchart LR
+    A[Month 1: Discovery] --> B[Month 2: Quick Wins]
+    B --> C[Month 3-6: Foundation]
+    C --> D[Month 6-12: Maturity]
+```
+
+**Month 1: Discovery**
+- Inventory all tables (catalog scan)
+- Interview domain leads to identify data owners
+- Run PII scanner to find sensitive columns
+- Review current access controls
+- Identify the 20 tables that matter most (used by 80% of queries)
+
+**Month 2: Quick wins**
+- Assign owners to the top-20 tables
+- Tag PII columns found by scanner
+- Set up a simple data catalog (DataHub or Amundsen)
+- Write and socialize a one-page governance policy
+
+**Month 3-6: Foundation**
+```
+✓ Governance committee formed (1 rep per domain)
+✓ Policy set codified (access, retention, quality)
+✓ Catalog deployed with all production tables
+✓ PII fully tagged — access-controlled via IAM groups
+✓ dbt governance CI checks block undocumented deploys
+✓ Governance KPI dashboard (catalog coverage, PII tagging, DQ)
+```
+
+**Month 6-12: Maturity**
+```
+✓ Lineage tracked (OpenLineage → DataHub)
+✓ Automated compliance scanner runs nightly
+✓ Self-service data access request workflow
+✓ Quarterly governance reviews with domain leads
+✓ Governance score by domain, publicly visible
+```
+
+**Key insight:** Don't boil the ocean. Start with the tables that matter most, assign clear owners, and make compliance easy before making it mandatory.

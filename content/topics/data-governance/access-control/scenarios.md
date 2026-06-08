@@ -1,0 +1,175 @@
+---
+title: "Access Control & RBAC — Scenarios"
+topic: data-governance
+subtopic: access-control
+content_type: study_material
+difficulty_level: mid-level
+layer: scenarios
+tags: [access-control, rbac, interview, scenarios, iam]
+---
+
+# Access Control & RBAC — Interview Scenarios
+
+## Scenario 1 (Junior): Setting Up Access for a New Analyst
+
+**Question:** A new revenue analyst joins the team. Walk through how you grant them appropriate data access.
+
+**Answer:**
+
+**Step 1: Determine what access they need**
+```
+Revenue analyst needs:
+- READ access to gold.orders, gold.revenue_daily, gold.customers
+- NO access to gold.payroll, finance.sensitive_*, or raw bronze tables
+- Masked PII (email should be hashed, not visible)
+```
+
+**Step 2: Use the existing analyst_revenue role**
+```sql
+-- Don't create custom access per user — use roles
+-- Grant the existing role to the new user
+GRANT ROLE ANALYST_REVENUE TO USER jane.new_analyst;
+
+-- Verify what they'll see
+USE ROLE ANALYST_REVENUE;
+SELECT email FROM gold.customers LIMIT 5;
+-- → 'e3b0c44...' (hashed, PII masked as expected)
+```
+
+**Step 3: Submit access request for any additional access**
+```
+If they need PII access:
+→ Submit access request via governance portal
+→ Business justification required
+→ DPO review and approval
+→ Time-limited (90 days), not permanent
+```
+
+**Step 4: Verify and document**
+```sql
+-- Confirm grants
+SHOW GRANTS TO USER jane.new_analyst;
+-- Should show: ANALYST_REVENUE only
+
+-- No overprivileged access:
+USE ROLE ANALYST_REVENUE;
+SELECT * FROM gold.payroll;  -- Should fail: "Insufficient privileges"
+```
+
+---
+
+## Scenario 2 (Mid-level): Access Breach Investigation
+
+**Question:** Your anomaly detection system flags that a data analyst ran 500 queries on PII tables in a single day — their normal is 5-10. How do you investigate?
+
+**Answer:**
+
+**Step 1: Gather facts before assuming the worst**
+```sql
+-- What queries did they run?
+SELECT query_text, table_name, rows_returned, queried_at
+FROM query_logs
+WHERE user_email = 'suspect@company.com'
+  AND DATE(queried_at) = '2024-01-15'
+  AND table_name IN (SELECT table_name FROM data_catalog.assets WHERE 'pii' = ANY(tags))
+ORDER BY queried_at;
+```
+
+**Step 2: Check if the queries are legitimate**
+```
+Scenarios:
+A) Analyst ran a loop in Python that sent 500 identical queries → coding error, not malicious
+B) Analyst was building a new report requiring many small queries → legitimate, but fix to batch
+C) Analyst downloaded entire customer table → potential data exfiltration, escalate to security
+D) Queries all from unusual IP or at 3AM → potential account compromise
+```
+
+**Step 3: Determine next action based on evidence**
+```
+If A or B: Coach on best practices (use LIMIT, batch queries, use Spark for large analysis)
+If C: 
+  1. Immediately revoke access
+  2. Escalate to Information Security
+  3. Check if data was copied to external location
+  4. Notify DPO (GDPR breach notification may be required)
+If D:
+  1. Lock account
+  2. Force password reset
+  3. Review all actions taken during suspicious window
+```
+
+**Step 4: Prevention**
+```sql
+-- Add row limit policy for non-admin roles
+CREATE OR REPLACE ROW ACCESS POLICY pii_row_limit AS (val VARCHAR) RETURNS BOOLEAN ->
+  -- Enforce max rows via query limit at session level
+  -- (use Snowflake Resource Monitor or query tag enforcement)
+  TRUE;
+
+-- Better: alert on excessive downloads
+-- If rows_returned > 10000 on PII table → alert security immediately
+```
+
+---
+
+## Scenario 3 (Senior): Designing RBAC for 200 Teams
+
+**Question:** Your company has 200 domain teams each with analysts, engineers, and data scientists. How do you design an RBAC system that scales without needing per-team role configuration?
+
+**Answer:**
+
+**Design: Attribute-driven role hierarchy**
+
+```
+Base roles (platform-defined):
+  analyst_read:     SELECT on gold tables (masked PII)
+  engineer_write:   read + write bronze/silver, read gold
+  scientist_gpu:    analyst_read + access to ML datasets
+  admin_platform:   full access
+  pii_approved:     SELECT on PII columns unmasked (requires DPO approval)
+
+Domain modifier roles (auto-generated per domain):
+  domain_sales:     grants access to sales/* tables only
+  domain_finance:   grants access to finance/* tables only
+  domain_marketing: grants access to marketing/* tables only
+
+Combined via role grants:
+  ANALYST_SALES = analyst_read + domain_sales
+  ENGINEER_FINANCE = engineer_write + domain_finance
+```
+
+```python
+# Terraform generator: auto-create domain roles from config
+def generate_domain_roles(domains: list[str], base_roles: list[str]) -> str:
+    """Generate Terraform for all domain×base_role combinations."""
+    tf_blocks = []
+    
+    for domain in domains:
+        for base_role in base_roles:
+            combined_role = f"{base_role.upper()}_{domain.upper()}"
+            tf_blocks.append(f"""
+resource "snowflake_role" "{combined_role.lower()}" {{
+  name    = "{combined_role}"
+  comment = "Auto-generated: {base_role} access for {domain} domain"
+}}
+
+resource "snowflake_role_grants" "{combined_role.lower()}_base" {{
+  role_name = snowflake_role.{combined_role.lower()}.name
+  roles     = [snowflake_role.{base_role}.name, snowflake_role.domain_{domain}.name]
+}}
+""")
+    
+    return "\n".join(tf_blocks)
+
+# Result: 200 domains × 4 base roles = 800 roles, all auto-managed
+# User assignment: HR system webhook assigns role on hire based on team/role attributes
+```
+
+**Key scalability principles:**
+```
+1. Never create per-user grants — always via roles
+2. Role names encode function + domain (parseable by automation)
+3. Terraform manages all role definitions (PR review = access review)
+4. HR system auto-provisions on hire, auto-revokes on departure
+5. Quarterly review: anomaly detection flags unused grants for cleanup
+```
