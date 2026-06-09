@@ -2,185 +2,347 @@
 title: "Storage Optimization — Scenarios"
 topic: data-lakehouse
 subtopic: storage-optimization
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
-tags: [storage, scenarios, interview, optimization, cost]
+content_type: scenario_question
+tags: [storage, parquet, compaction, scenarios]
 ---
 
 # Storage Optimization — Interview Scenarios
 
-## Scenario 1: Fix a Poorly Partitioned Lakehouse Table
+<article data-difficulty="junior">
 
-**Question:** A Delta table `events` was partitioned by `(user_id, event_date)`. After 6 months, there are 50M partitions (10M users × 180 days), each containing 1-5 records. Queries like `SELECT COUNT(*) FROM events WHERE event_date = '2024-01-15'` take 45 minutes. Fix this.
+## 🟢 Junior: Parquet File Format Fundamentals
 
-**Answer:**
+**Scenario:** Your team is moving from CSV files to Parquet for the data lake. Your manager asks you to explain why Parquet is better for analytical workloads and what settings you should configure when writing Parquet files.
+
+<details>
+<summary>💡 Hint</summary>
+
+Focus on columnar storage (analytics reads few columns from many rows), compression (Snappy vs ZSTD vs GZIP trade-offs), and row group size. Also mention predicate pushdown via column statistics and dictionary encoding.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Why Parquet for Analytics?**
+
+Parquet is columnar — data for each column is stored together. For analytical queries that read 3 of 100 columns, Parquet only reads those 3 columns from disk. CSV reads all 100.
 
 ```
-Root cause analysis:
-  50M partitions = 50M S3 prefix paths
-  Query filters by event_date (not user_id) → must scan all 10M user prefixes for one day
-  Each partition: 1-5 records × ~200 bytes = ~1KB per partition
-  50M × 1KB = 50GB stored as 50M tiny files
-  Spark: 50M files × 1 task/file = 50M Spark tasks → massive scheduling overhead
+CSV (row-oriented):
+row1: id,name,age,city,...  ← must read entire row
+row2: id,name,age,city,...
 
-Fix plan:
-
-Step 1: Re-partition by event_date only (drop user_id from partition key)
-  new_df = spark.read.format("delta").load("s3://bucket/events")
-  new_df.write.format("delta") \
-      .partitionBy("event_date") \  # only event_date
-      .option("overwriteSchema", "true") \
-      .mode("overwrite") \
-      .save("s3://bucket/events_v2")
-
-Step 2: OPTIMIZE + ZORDER on new table
-  spark.sql("""
-    OPTIMIZE delta.`s3://bucket/events_v2`
-    ZORDER BY (user_id)
-  """)
-  -- After OPTIMIZE: 1 day's events (1M × 200 bytes = 200MB) → 2 × 128MB files
-  -- Z-order by user_id: queries like WHERE user_id=123 AND event_date='...' are efficient
-
-Step 3: Validate
-  old_count = spark.read.format("delta").load("s3://bucket/events").count()
-  new_count = spark.read.format("delta").load("s3://bucket/events_v2").count()
-  assert old_count == new_count
-
-Step 4: Redirect consumers
-  -- Update all downstream jobs and dashboards to s3://bucket/events_v2
-  -- Keep v1 read-only for 30 days (rollback safety)
-  -- After 30 days: VACUUM v1, delete bucket prefix
-
-Expected improvement:
-  Query: SELECT COUNT(*) FROM events WHERE event_date='2024-01-15'
-  Before: 45 min (50M S3 GETs, 50M Spark tasks)
-  After:  5 seconds (1 partition, 2 files, 2 Spark tasks)
-  
-  Storage:
-  Before: 50MB (data) + 10GB overhead (S3 metadata for 50M objects)
-  After:  50MB data + 2 files overhead (negligible)
-  
-  Cost reduction: 200× fewer S3 requests per query
+Parquet (columnar):
+[id block][name block][age block][city block]
+          ↑ skip if not needed
 ```
+
+**Key Parquet Settings:**
+
+```python
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.getOrCreate()
+
+# Optimal settings for analytics workloads
+spark.conf.set("spark.sql.parquet.compression.codec", "zstd")
+spark.conf.set("spark.sql.parquet.block.size", str(128 * 1024 * 1024))  # 128MB row group
+spark.conf.set("spark.sql.parquet.page.size", str(1 * 1024 * 1024))     # 1MB pages
+
+df.write     .option("compression", "zstd")     .option("parquet.block.size", 134217728)     .parquet("s3://bucket/table/")
+```
+
+**Compression Comparison:**
+
+| Codec | Ratio | Speed | Best For |
+|-------|-------|-------|---------|
+| SNAPPY | Medium | Fast | Hot data, frequent reads |
+| ZSTD | High | Medium | Balanced — recommended default |
+| GZIP | High | Slow | Archive/cold data |
+| LZ4 | Low | Very Fast | Streaming, low-latency |
+
+**Predicate Pushdown:**
+Parquet stores min/max statistics per row group. Query engines can skip entire row groups without reading them:
+
+```python
+# This filter uses Parquet statistics to skip 95% of data
+df = spark.read.parquet("s3://bucket/events/")     .filter("event_date = '2024-01-15'")
+```
+
+</details>
+
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Solving the Small File Problem
+
+**Scenario:** Your Spark streaming job writes 1,000 micro-batches per day to an S3 data lake. Each batch produces 200 files of ~1MB each. After 30 days you have 6 million files totaling 6TB. Query performance has collapsed and S3 LIST operations are timing out. Design a compaction strategy.
+
+<details>
+<summary>💡 Hint</summary>
+
+Small files are the most common data lake performance killer. Consider: target file size (128MB-1GB for Parquet), compaction scheduling, Iceberg's built-in rewrite procedures vs custom Spark jobs, and partitioning strategy to limit files per partition.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Root Cause:**
+
+Each micro-batch writes `num_spark_partitions` files. With default `spark.sql.shuffle.partitions=200` and 1,000 batches/day:
+- 200 files × 1,000 batches × 30 days = 6,000,000 files
+
+**Solution 1: Fix at the Source — Coalesce Before Write**
+
+```python
+def write_batch(batch_df, batch_id):
+    # Calculate target partitions: aim for 256MB files
+    target_file_size_mb = 256
+    avg_row_size_bytes = 500  # estimate
+    
+    target_rows_per_file = (target_file_size_mb * 1024 * 1024) // avg_row_size_bytes
+    num_partitions = max(1, batch_df.count() // target_rows_per_file)
+    
+    batch_df.coalesce(num_partitions)         .write.format("iceberg")         .mode("append")         .saveAsTable("prod.events")
+```
+
+**Solution 2: Iceberg Compaction (Recommended)**
+
+```python
+# Schedule daily compaction via Airflow
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+
+compaction_task = SparkSubmitOperator(
+    task_id='compact_events_table',
+    application='/jobs/iceberg_compaction.py',
+    conf={
+        'spark.sql.extensions': 'org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions',
+    },
+    schedule_interval='0 3 * * *'  # 3am daily
+)
+```
+
+```python
+# iceberg_compaction.py
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.getOrCreate()
+
+# Compact all partitions modified in last 2 days
+result = spark.sql("""
+  CALL prod.system.rewrite_data_files(
+    table => 'prod.events',
+    strategy => 'binpack',
+    where => 'event_date >= current_date - 2',
+    options => map(
+      'target-file-size-bytes', '268435456',
+      'min-input-files', '10',
+      'max-concurrent-file-group-rewrites', '50'
+    )
+  )
+""")
+
+print(f"Rewritten: {result.collect()[0]['rewritten_files_count']} files")
+print(f"Added: {result.collect()[0]['added_files_count']} files")
+```
+
+**Solution 3: Partition Strategy to Limit Files/Partition**
+
+```sql
+-- Poor: date+hour partitioning with 200 spark tasks = 200 files per hour partition
+-- 200 files × 24 hours × 365 days = 1.7M files/year
+
+-- Better: date-only partitioning for daily compaction boundary
+CREATE TABLE prod.events (
+    event_id BIGINT,
+    event_type STRING,
+    event_time TIMESTAMP,
+    payload STRING
+) USING ICEBERG
+PARTITIONED BY (days(event_time));  -- Iceberg hidden partition transform
+```
+
+**Solution 4: Monitor File Health**
+
+```python
+def file_health_report(table: str):
+    df = spark.sql(f"""
+        SELECT 
+            partition,
+            count(*) as file_count,
+            round(avg(file_size_in_bytes)/1e6, 1) as avg_size_mb,
+            round(sum(file_size_in_bytes)/1e9, 2) as total_size_gb,
+            countif(file_size_in_bytes < 10*1024*1024) as small_files_under_10mb
+        FROM {table}.files
+        GROUP BY partition
+        ORDER BY small_files_under_10mb DESC
+        LIMIT 20
+    """)
+    return df
+
+# Alert if any partition has >1000 small files
+health = file_health_report("prod.events")
+bad_partitions = health.filter("small_files_under_10mb > 1000")
+if bad_partitions.count() > 0:
+    send_alert("Small file issue detected", bad_partitions)
+```
+
+</details>
+
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Storage Cost Optimization for a Petabyte-Scale Data Lake
+
+**Scenario:** Your data lake stores 5PB across S3. The annual storage bill is $1.4M. Your VP asks you to reduce costs by 40% without degrading query SLAs. Analyze the cost drivers and design a comprehensive optimization strategy.
+
+<details>
+<summary>💡 Hint</summary>
+
+S3 costs: storage ($0.023/GB standard), requests (LIST/GET costs add up with small files), and data transfer. Optimization levers: storage tiering (S3 IA, Glacier), compression improvement (GZIP→ZSTD), deduplication, partition pruning to reduce scans, and data retention policies.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Cost Breakdown Analysis:**
+
+```python
+import boto3
+
+def analyze_s3_costs(bucket: str, prefix: str):
+    s3 = boto3.client('s3')
+    cw = boto3.client('cloudwatch')
+    
+    # Get storage by class
+    paginator = s3.get_paginator('list_objects_v2')
+    
+    storage_by_class = {}
+    old_objects = []  # not accessed in 90+ days
+    
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get('Contents', []):
+            storage_class = obj.get('StorageClass', 'STANDARD')
+            storage_by_class[storage_class] =                 storage_by_class.get(storage_class, 0) + obj['Size']
+            
+            days_since_modified = (datetime.now() - obj['LastModified'].replace(tzinfo=None)).days
+            if days_since_modified > 90:
+                old_objects.append(obj['Key'])
+    
+    return storage_by_class, old_objects
+```
+
+**Optimization Strategy:**
+
+**1. S3 Intelligent-Tiering (Immediate Win: ~30% savings)**
+
+```python
+# Apply Intelligent-Tiering to entire lake via lifecycle policy
+s3 = boto3.client('s3')
+
+s3.put_bucket_lifecycle_configuration(
+    Bucket='datalake-prod',
+    LifecycleConfiguration={
+        'Rules': [{
+            'ID': 'intelligent-tiering-all',
+            'Status': 'Enabled',
+            'Filter': {'Prefix': ''},
+            'Transitions': [
+                {'Days': 0, 'StorageClass': 'INTELLIGENT_TIERING'}
+            ],
+            # Archive infrequently accessed after 90 days
+            'NoncurrentVersionExpiration': {'NoncurrentDays': 90}
+        }]
+    }
+)
+```
+
+**2. Compression Upgrade: SNAPPY → ZSTD (~20% storage reduction)**
+
+```python
+# Identify SNAPPY-compressed files and recompress
+def recompress_partition(source_path: str, target_path: str):
+    df = spark.read         .option("mergeSchema", "true")         .parquet(source_path)
+    
+    # Rewrite with ZSTD + better row group size
+    df.write         .option("compression", "zstd")         .option("parquet.block.size", 268435456) \  # 256MB row groups
+        .mode("overwrite")         .parquet(target_path)
+    
+    # Validate
+    original_count = df.count()
+    new_count = spark.read.parquet(target_path).count()
+    assert original_count == new_count
+
+# Schedule for cold partitions (> 30 days old)
+recompress_partition(
+    "s3://datalake-prod/events/event_date=2023-01-01/",
+    "s3://datalake-prod/events-zstd/event_date=2023-01-01/"
+)
+```
+
+**3. Deduplication Detection**
+
+```python
+def find_duplicate_data(table: str):
+    """Find partitions duplicated across raw/silver/gold without cleanup."""
+    raw = spark.sql(f"SELECT count(*), sum(file_size_in_bytes) FROM {table}_raw.files")
+    silver = spark.sql(f"SELECT count(*), sum(file_size_in_bytes) FROM {table}_silver.files")
+    
+    # If raw and silver have identical data, raw can be archived
+    raw_size = raw.collect()[0][1]
+    silver_size = silver.collect()[0][1]
+    
+    # Typically silver = 0.7x raw after dedup/compact
+    print(f"Raw: {raw_size/1e12:.2f}TB, Silver: {silver_size/1e12:.2f}TB")
+    print(f"Archive candidate: {raw_size/1e12:.2f}TB of raw data")
+```
+
+**4. Retention Policy Enforcement**
+
+```sql
+-- Audit data with no reads in 180+ days
+SELECT 
+    table_name,
+    partition_path,
+    round(sum(file_size)/1e12, 2) as size_tb,
+    max(last_accessed) as last_read
+FROM data_catalog.access_logs
+GROUP BY 1, 2
+HAVING last_read < CURRENT_DATE - 180
+ORDER BY size_tb DESC;
+```
+
+**5. Request Cost Reduction (S3 GET costs)**
+
+Small files generate expensive S3 GET requests. Post-compaction (Solution 2 above):
+- 6M files → 12K files (500x reduction in GET requests)
+- S3 request costs drop from ~$50K/month to ~$100/month
+
+**Projected Savings Summary:**
+
+| Initiative | Annual Savings | Effort |
+|-----------|---------------|--------|
+| S3 Intelligent-Tiering | $420K (30%) | Low |
+| ZSTD recompression | $280K (20%) | Medium |
+| Compaction (request costs) | $180K (13%) | Medium |
+| Retention enforcement | $120K (9%) | Low |
+| **Total** | **$1M (71%)** | |
+
+Target: 40% reduction ($560K). Intelligent-Tiering + ZSTD alone achieves 50%.
+
+</details>
+
+</article>
 
 ---
 
-## Scenario 2: Reduce a $50K/Month S3 Bill
+## Interview Tips
 
-**Question:** Your company spends $50,000/month on S3 for a 2PB data lake. Breakdown: Bronze 800TB, Silver 600TB, Gold 200TB, checkpoints/temp 400TB. After 2 years, most Bronze data is never accessed. Propose a cost reduction plan.
-
-**Answer:**
-
-```
-Current cost breakdown:
-  Bronze 800TB × $0.023/GB = $18,400/month
-  Silver 600TB × $0.023/GB = $13,800/month
-  Gold 200TB × $0.023/GB = $4,600/month
-  Temp/checkpoints 400TB × $0.023/GB = $9,200/month
-  Total: ~$46,000/month + request/transfer charges ≈ $50,000
-
-Optimization plan:
-
-Action 1: Tiered storage for Bronze (highest impact)
-  Bronze > 90 days old → Standard-IA ($0.0125)
-  Bronze > 365 days old → Glacier Instant ($0.004)
-  Savings estimate:
-    800TB Bronze: 200TB recent (Standard), 600TB old (split IA/Glacier)
-    300TB → Standard-IA: 300TB × $0.0125 = $3,750 (was $6,900) → save $3,150
-    300TB → Glacier IR:  300TB × $0.004 = $1,200 (was $6,900) → save $5,700
-  Bronze savings: ~$8,850/month
-
-Action 2: Tiered storage for Silver
-  Silver > 180 days → Standard-IA
-  Savings: 300TB old × ($0.023 - $0.0125) = $3,150/month
-
-Action 3: Clean up checkpoints and temp (lowest-hanging fruit)
-  Temp files: set TTL 7 days (lifecycle rule: Expiration: {Days: 7})
-  Old checkpoints: set TTL 30 days
-  Savings: 400TB × $0.023 × 80% reduction = $7,360/month (most temp is old)
-
-Action 4: Compress uncompressed Bronze files
-  If Bronze ingested as JSON/CSV, convert to Parquet+Zstd
-  10× compression: 800TB → 80TB (real data, now stored at lower tier)
-  This is a one-time compute cost but permanent storage savings
-  Savings after compression: (720TB eliminated) × $0.023 = $16,560/month ← huge
-
-Action 5: VACUUM and orphan cleanup
-  Run VACUUM on all Delta tables with RETAIN 168 HOURS
-  Removes orphan files from failed jobs, old compaction artifacts
-  Estimate: 5-10% reduction in each zone
-
-Total projected savings:
-  Actions 1-3: $19,360/month (immediate, no compute needed)
-  Action 4: $16,560/month (after compression job, 1-2 month project)
-  Action 5: ~$2,300/month (VACUUM cleanup)
-  
-  Total: ~$38,220/month savings → new bill: ~$11,780/month (76% reduction)
-  
-  Timeline: Actions 1-3 + 5 deployable in 1 week; Action 4 requires 1-2 months
-```
-
----
-
-## Scenario 3: Design Storage Layout for 10B Events/Day
-
-**Question:** A ride-sharing company generates 10 billion ride events per day. Events include: ride_id, driver_id, rider_id, pickup_lat, pickup_lng, status, amount, timestamp. Design the lakehouse storage layout to support: (1) dashboard queries by city + day, (2) per-driver earnings queries, (3) ML training on full historical data, (4) real-time fraud detection (last 5 minutes).
-
-**Answer:**
-
-```
-Scale calculation:
-  10B events × 500 bytes avg = 5TB/day
-  Annual growth: 5TB × 365 = 1.8PB/year
-
-Storage layout:
-
-Bronze Zone (s3://lake/bronze/rides/):
-  Partition by: ingest_date (one day per partition)
-  Format: Parquet + Snappy (preserve as-received)
-  File size: ~128MB (Flink writes with target size)
-  Daily size: 5TB → ~40,000 files per day
-  Lifecycle: Standard 90d → Glacier IR 2y → Deep Archive forever
-  Compaction: OPTIMIZE weekly on last 7 days
-
-Silver Zone (s3://lake/silver/rides/):
-  Partition by: event_date, city_code
-  (city_code reduces partition size: 200 cities × 25GB/day = 25GB/city/day → manageable)
-  Format: Delta/Iceberg + Zstd
-  Compaction: OPTIMIZE daily with ZORDER BY (driver_id, rider_id)
-  Why ZORDER: dashboard queries filter city+date (partition), but also driver_id (ZORDER)
-  Daily size: 3TB (Zstd compression from 5TB)
-
-Gold Zone (s3://lake/gold/):
-  gold/city_daily_metrics/ → partitioned by (city_code, event_date)
-    Columns: city, rides, revenue, avg_wait_time, etc.
-    Size: small (aggregated), 10GB/day
-  
-  gold/driver_earnings/ → partitioned by (event_date)
-    Columns: driver_id, city, hours_online, rides, earnings
-    Z-ordered by driver_id
-    Size: 500GB/day
-  
-  gold/rider_activity/ → partitioned by (event_date)
-    Z-ordered by rider_id
-    Size: 200GB/day
-
-ML Zone (s3://lake/ml/):
-  Point-in-time correct feature snapshots (weekly)
-  Partitioned by snapshot_date
-  Format: Parquet + Zstd (ML reads don't benefit from Delta overhead)
-
-Real-time (s3://lake/realtime/fraud_window/):
-  Last 5 minutes of events only (TTL: 10 minutes)
-  Written by Flink (append, 1-sec checkpoint)
-  Read by fraud detection Redis cache loader
-  Size: 5min × 5TB/day / 1440min = ~17GB
-  Lifecycle: Expiration 15 minutes
-
-Query engine mapping:
-  City+date dashboard: Trino → gold/city_daily_metrics/ (seconds)
-  Driver earnings query: Trino → gold/driver_earnings/ + ZORDER = fast
-  ML training: Spark → ml/features/ (weekly batch job)
-  Fraud detection: Flink → Bronze stream → Redis
-```
+> **Tip 1:** "What is the ideal Parquet file size?" — 128MB to 1GB is the sweet spot. Below 128MB causes small file problems (too many S3 requests, query planning overhead). Above 1GB means less parallelism and slower individual task completion.
+> **Tip 2:** "What is Z-ordering and when should you use it?" — Z-ordering (or Z-order clustering) sorts data by multiple columns simultaneously to co-locate related data in files. Use it for Iceberg/Delta tables where queries frequently filter on multiple columns (e.g., `WHERE customer_id = X AND event_type = Y`). It reduces data scanned by 10-100x for selective queries.
+> **Tip 3:** "How do you handle the trade-off between compression ratio and query speed?" — ZSTD is the modern default: better compression than Snappy with similar read speed. Use Snappy only if write latency is critical (e.g., high-throughput streaming). Use GZIP only for archival data that's rarely queried.

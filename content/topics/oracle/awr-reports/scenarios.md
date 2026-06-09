@@ -2,17 +2,20 @@
 title: "AWR Reports — Scenarios"
 topic: oracle
 subtopic: awr-reports
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [oracle, awr, interview, scenarios, performance-investigation, wait-events]
 ---
 
 # AWR Reports — Interview Scenarios
 
-## Scenario 1 (Junior): Interpret an AWR Report
 
-**Question:** You're shown this AWR Top 5 Events section. What does it tell you and what do you do next?
+
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Interpret an AWR Report
+
+**Scenario:** You're shown this AWR Top 5 Events section. What does it tell you and what do you do next?
 
 ```
 Top 5 Timed Foreground Events:
@@ -24,7 +27,15 @@ log file sync                 85,000      1,200     14.1      7.0%
 db file scattered read        120,000     800       6.7       4.7%
 ```
 
-**Answer:**
+<details>
+<summary>💡 Hint</summary>
+
+**Reading the report:** 1. **52% of DB time in row lock contention** — this is a blocking issue, not a performance issue. Sessions are waiting for other sessions to release row locks. Average 718ms per wait = sessions are blocked for over half a second each time.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Reading the report:**
 1. **52% of DB time in row lock contention** — this is a blocking issue, not a performance issue. Sessions are waiting for other sessions to release row locks. Average 718ms per wait = sessions are blocked for over half a second each time.
@@ -62,13 +73,25 @@ ORDER BY lmode DESC;
 - Deadlock-prone application logic → fix: access tables in consistent order
 - Forgotten transaction (application crashed while holding lock) → fix: kill the session
 
----
+</details>
 
-## Scenario 2 (Mid-level): Performance Degraded After Stats Gather
+</article>
 
-**Question:** AWR shows query 'abc123xyz' went from 0.5 seconds average to 8 seconds average after last night's statistics gather job. How do you diagnose and fix this?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Performance Degraded After Stats Gather
+
+**Scenario:** AWR shows query 'abc123xyz' went from 0.5 seconds average to 8 seconds average after last night's statistics gather job. How do you diagnose and fix this?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Compare execution plans (before vs after)**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Compare execution plans (before vs after)**
 ```sql
@@ -134,13 +157,25 @@ END;
 -- Profile corrects cardinality estimates without touching the SQL text
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Build an AWR-Based Performance Monitoring System
+</article>
 
-**Question:** Management wants a weekly performance scorecard showing: top queries, resource trends, and whether performance is degrading week-over-week. How do you build this?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Build an AWR-Based Performance Monitoring System
+
+**Scenario:** Management wants a weekly performance scorecard showing: top queries, resource trends, and whether performance is degrading week-over-week. How do you build this?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Architecture:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Architecture:**
 ```
@@ -234,9 +269,8 @@ END;
 **Key metrics to track in the scorecard:**
 
 | Metric | Green | Yellow | Red |
-|---|---|---|---|
-| DB Time change week-over-week | < 10% change | 10-30% change | > 30% change |
-| Hard parse rate | < 2% | 2-10% | > 10% |
-| Buffer cache hit rate | > 95% | 90-95% | < 90% |
-| Avg log file sync (ms) | < 5ms | 5-15ms | > 15ms |
-| Top SQL avg elapsed change | < 20% change | 20-50% | > 50% worse |
+|
+
+</details>
+
+</article>

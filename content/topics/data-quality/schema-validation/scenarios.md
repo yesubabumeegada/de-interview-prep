@@ -2,19 +2,31 @@
 title: "Schema Validation — Scenarios"
 topic: data-quality
 subtopic: schema-validation
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [schema-validation, interview, scenarios]
 ---
 
 # Schema Validation — Interview Scenarios
 
-## Scenario 1 (Junior): Type Mismatch Crash
 
-**Question:** Your pipeline crashes because `amount` is a string in today's file but was always a float. How do you handle this?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Type Mismatch Crash
+
+**Scenario:** Your pipeline crashes because `amount` is a string in today's file but was always a float. How do you handle this?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Prevention:** Always specify schema at read time and register it in a schema registry. Any type change should trigger a compatibility alert.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
 ```python
 import pandas as pd
 
@@ -39,13 +51,25 @@ def safe_read_with_type_coercion(path: str) -> pd.DataFrame:
 
 **Prevention:** Always specify schema at read time and register it in a schema registry. Any type change should trigger a compatibility alert.
 
----
+</details>
 
-## Scenario 2 (Mid-level): Adding a Required Column
+</article>
 
-**Question:** You need to add a `region_id` (required, not null) column to the `orders` table. How do you manage this safely?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Adding a Required Column
+
+**Scenario:** You need to add a `region_id` (required, not null) column to the `orders` table. How do you manage this safely?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Option 1: Add as optional first, make required later**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Option 1: Add as optional first, make required later**
 ```python
@@ -73,13 +97,25 @@ df["region_id"] = df["country_code"].map(COUNTRY_TO_REGION)
 
 **Key principle:** Never add a required column without a migration plan for existing data.
 
----
+</details>
 
-## Scenario 3 (Senior): Schema Registry Outage
+</article>
 
-**Question:** Your Kafka consumers use Schema Registry to deserialize Avro messages. The registry goes down. What happens and how do you design for resilience?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Schema Registry Outage
+
+**Scenario:** Your Kafka consumers use Schema Registry to deserialize Avro messages. The registry goes down. What happens and how do you design for resilience?
+
+<details>
+<summary>💡 Hint</summary>
+
+**What happens without resilience:** - Consumers fail to deserialize (can't fetch schema by ID) - Consumer lag grows - If no retry, messages pile up or are lost
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **What happens without resilience:**
 - Consumers fail to deserialize (can't fetch schema by ID)
@@ -136,3 +172,7 @@ def prewarm_schema_cache(client: ResilientSchemaRegistryClient, schema_ids: list
 2. Messages are not committed until successfully deserialized
 3. After N retries, route to dead letter queue
 4. Schema registry is deployed with HA (multi-node) and separate from Kafka broker health
+
+</details>
+
+</article>

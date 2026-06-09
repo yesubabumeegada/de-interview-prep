@@ -2,15 +2,32 @@
 title: "PySpark Structured Streaming - Interview Scenarios"
 topic: pyspark
 subtopic: structured-streaming
-content_type: study_material
-difficulty_level: mid-level
-layer: real-world
+content_type: scenario_question
 tags: [pyspark, structured-streaming, interview-scenarios, kafka, watermarks, exactly-once]
 ---
 
 # PySpark Structured Streaming — Interview Scenarios
 
-## Junior Scenario: Basic Streaming from Kafka to Console
+
+
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Scenario: Basic Streaming from Kafka to Console
+
+**Scenario:** **Question:** "Write a Spark Structured Streaming job that reads JSON messages from a Kafka topic called 'user_clicks', parses them, filters for click events, and prints results to the console."
+
+###
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "Write a Spark Structured Streaming job that reads JSON messages from a Kafka topic called 'user_clicks', parses them, filters for click events, and prints results to the console."
 
@@ -71,9 +88,25 @@ query.awaitTermination()
 - `awaitTermination()` keeps the driver alive
 - For production: add checkpointLocation and error handling
 
----
+</details>
 
-## Mid-Level Scenario: Windowed Aggregation with Watermarks
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Scenario: Windowed Aggregation with Watermarks
+
+**Scenario:** **Question:** "You're tracking website page views. Compute the number of unique visitors per page per 5-minute window. Data can arrive up to 10 minutes late. The results should be written to Delta Lak
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "You're tracking website page views. Compute the number of unique visitors per page per 5-minute window. Data can arrive up to 10 minutes late. The results should be written to Delta Lake. How do you handle late data and prevent unbounded state growth?"
 
@@ -152,9 +185,25 @@ graph TD
 - Partition checkpoint separately from data
 - State cleanup happens automatically when watermark advances past a window
 
----
+</details>
 
-## Senior Scenario: Design Exactly-Once Streaming Pipeline
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Scenario: Design Exactly-Once Streaming Pipeline
+
+**Scenario:** **Question:** "Design a streaming pipeline that processes payment transactions from Kafka, enriches with customer data, applies fraud detection rules, and writes to both a Delta Lake table and a downs
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "Design a streaming pipeline that processes payment transactions from Kafka, enriches with customer data, applies fraud detection rules, and writes to both a Delta Lake table and a downstream Kafka topic. Requirements: exactly-once, handle 1M events/sec, recover from failures without data loss or duplication."
 
@@ -295,3 +344,13 @@ query.awaitTermination()
 > **Tip 2:** "For watermark questions, explain the state cleanup mechanism." — "Without watermarks, Spark keeps state for ALL windows forever. With a 10-minute watermark, once max_event_time advances to 10:20, all state for windows ending before 10:10 is cleaned up. Late events for those windows are dropped. The tradeoff is clear: longer watermarks keep more state (memory) but accept more late data."
 
 > **Tip 3:** "For exactly-once questions, distinguish the three guarantees." — "At-most-once: fire and forget, data loss possible. At-least-once: replay on failure, duplicates possible. Exactly-once: replay on failure + idempotent writes = no loss, no duplication. In Spark: checkpoint enables replay (at-least-once), idempotent sinks like Delta Lake upgrade it to exactly-once. Kafka sinks are only at-least-once unless downstream deduplicates."
+
+</details>
+
+</article>
+
+
+
+---
+
+## Interview Tips

@@ -2,19 +2,30 @@
 title: "Partitioning — Scenarios"
 topic: oracle
 subtopic: partitioning
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [oracle, partitioning, interview, scenarios, design, troubleshooting]
 ---
 
 # Partitioning — Interview Scenarios
 
-## Scenario 1 (Junior): Choose the Right Partition Strategy
 
-**Question:** You have a 200GB `customer_orders` table with columns: order_id, order_date, customer_id, region, amount. Queries are 90% date-range queries for the last 1-3 months. You also need to purge data older than 3 years. What partition strategy do you choose?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Choose the Right Partition Strategy
+
+**Scenario:** You have a 200GB `customer_orders` table with columns: order_id, order_date, customer_id, region, amount. Queries are 90% date-range queries for the last 1-3 months. You also need to purge data older than 3 years. What partition strategy do you choose?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Best choice: Range-Interval on `order_date`**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Best choice: Range-Interval on `order_date`**
 
@@ -54,13 +65,25 @@ CREATE INDEX idx_co_customer ON customer_orders(customer_id, order_date) LOCAL;
 ALTER TABLE customer_orders DROP PARTITION p2021_01 UPDATE GLOBAL INDEXES;
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Query Not Using Partition Pruning
+</article>
 
-**Question:** You partitioned `sales` by `sale_date` (monthly partitions). A developer reports their query is doing a full scan across all 48 partitions even though it has a date filter. What are the possible causes?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Query Not Using Partition Pruning
+
+**Scenario:** You partitioned `sales` by `sale_date` (monthly partitions). A developer reports their query is doing a full scan across all 48 partitions even though it has a date filter. What are the possible causes?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Run the explain plan first:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Run the explain plan first:**
 ```sql
@@ -111,13 +134,25 @@ UNION ALL
 SELECT * FROM sales WHERE customer_id = 42 AND sale_date != DATE '2024-06-15';
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Online Repartitioning of a Live Production Table
+</article>
 
-**Question:** You need to repartition a live 2TB `transactions` table from hash partitioning to range-interval monthly partitioning. The table can't have downtime. How do you do it?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Online Repartitioning of a Live Production Table
+
+**Scenario:** You need to repartition a live 2TB `transactions` table from hash partitioning to range-interval monthly partitioning. The table can't have downtime. How do you do it?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Use Online Redefinition (DBMS_REDEFINITION) — zero-downtime repartitioning:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Use Online Redefinition (DBMS_REDEFINITION) — zero-downtime repartitioning:**
 
@@ -201,3 +236,7 @@ EXEC DBMS_STATS.GATHER_TABLE_STATS('FINANCE_SCHEMA', 'TRANSACTIONS', degree => 1
 - Monitor progress via `dba_redefinition_progress` (19c+) or by checking new table row counts
 - If something goes wrong during redefinition: `DBMS_REDEFINITION.ABORT_REDEF_TABLE` to clean up
 - Always test on a dev environment first — the procedure can fail on complex table structures
+
+</details>
+
+</article>

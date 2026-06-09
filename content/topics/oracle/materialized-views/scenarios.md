@@ -2,19 +2,30 @@
 title: "Materialized Views — Scenarios"
 topic: oracle
 subtopic: materialized-views
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [oracle, materialized-views, interview, scenarios, query-rewrite, refresh-design]
 ---
 
 # Materialized Views — Interview Scenarios
 
-## Scenario 1 (Junior): Design MVs for a Reporting Dashboard
 
-**Question:** A financial dashboard shows: total revenue by region (current month), top 10 customers by revenue (current year), and daily transaction count trend (last 90 days). The underlying tables have 500M+ rows. How would you design MVs for this?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Design MVs for a Reporting Dashboard
+
+**Scenario:** A financial dashboard shows: total revenue by region (current month), top 10 customers by revenue (current year), and daily transaction count trend (last 90 days). The underlying tables have 500M+ rows. How would you design MVs for this?
+
+<details>
+<summary>💡 Hint</summary>
+
+-- MV 1: Monthly revenue by region (refreshed nightly)
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```sql
 -- MV 1: Monthly revenue by region (refreshed nightly)
@@ -80,13 +91,25 @@ END;
 /
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Query Rewrite Isn't Working
+</article>
 
-**Question:** You created `mv_sales_monthly` with `ENABLE QUERY REWRITE`. The explain plan for `SELECT region, SUM(amount_usd) FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY region` still shows a full join instead of the MV. Why?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Query Rewrite Isn't Working
+
+**Scenario:** You created `mv_sales_monthly` with `ENABLE QUERY REWRITE`. The explain plan for `SELECT region, SUM(amount_usd) FROM orders o JOIN customers c ON o.customer_id = c.customer_id GROUP BY region` still shows a full join instead of the MV. Why?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Systematic diagnosis:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Systematic diagnosis:**
 
@@ -127,20 +150,27 @@ SELECT message FROM rewrite_table WHERE statement_id = 'test1' ORDER BY seq;
 **Common EXPLAIN_REWRITE messages and fixes:**
 
 | Message | Meaning | Fix |
-|---|---|---|
-| "MV is stale" | MV needs refresh | `DBMS_MVIEW.REFRESH(...)` |
-| "MV does not contain column referenced in query" | Query uses column not in MV | Add column to MV or modify query |
-| "Query references table not in MV" | Query joins a table not in MV | Add table to MV or create separate MV |
-| "No matching grouping in MV" | Query groups at different granularity | Create MV at right grain or use finer-grain MV |
-| "QUERY_REWRITE_INTEGRITY prevents rewrite" | Integrity setting blocks stale rewrite | Refresh MV or change integrity setting |
+|
 
----
+</details>
 
-## Scenario 3 (Senior): MV Refresh Failing in Production
+</article>
 
-**Question:** A critical MV `mv_financial_summary` has been failing to fast-refresh for 3 nights with ORA-12034: "materialized view log on table TRANSACTIONS younger than last refresh." Investigate and fix.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: MV Refresh Failing in Production
+
+**Scenario:** A critical MV `mv_financial_summary` has been failing to fast-refresh for 3 nights with ORA-12034: "materialized view log on table TRANSACTIONS younger than last refresh." Investigate and fix.
+
+<details>
+<summary>💡 Hint</summary>
+
+**ORA-12034 explanation:** The MV log was truncated or recreated AFTER the last MV refresh — Oracle can't determine what changed. Fast refresh is impossible; only COMPLETE refresh can recover.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **ORA-12034 explanation:** The MV log was truncated or recreated AFTER the last MV refresh — Oracle can't determine what changed. Fast refresh is impossible; only COMPLETE refresh can recover.
 
@@ -216,3 +246,7 @@ END;
 -- Add monitoring: alert if MV hasn't refreshed in > 25 hours
 -- (from the MV health check view pattern)
 ```
+
+</details>
+
+</article>

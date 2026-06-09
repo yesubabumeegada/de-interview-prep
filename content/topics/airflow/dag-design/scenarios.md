@@ -362,4 +362,32 @@ with DAG(
 
 </details>
 
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between `execution_date` and `start_date`?**
+A: `start_date` is the date the DAG first becomes eligible to run (a static DAG property). `execution_date` (called `logical_date` in Airflow 2.2+) is the start of the data interval for a specific DAG run — it represents the period of data being processed, not when the task physically ran. A daily DAG with `start_date=2024-01-01` has its first run's `execution_date` set to `2024-01-01`, but it runs at the end of that interval.
+
+**Q: What does `depends_on_past=True` do?**
+A: It prevents a task from running if its previous DAG run instance failed or is still running. Useful for sequential pipelines where running out-of-order would produce incorrect results. Use carefully — a single failure blocks all future runs until manually cleared.
+
+**Q: What is the difference between BashOperator and PythonOperator?**
+A: `BashOperator` executes a shell command string in a subprocess. `PythonOperator` calls a Python callable directly in the worker process. Use `PythonOperator` for Python logic (cleaner, testable, native access to Airflow context). Use `BashOperator` for system commands, scripts, or CLI tool invocations.
+
+**Q: What is XCom and when should you NOT use it?**
+A: XCom (cross-communication) allows tasks to share small values by pushing/pulling from the Airflow metadata database. Do NOT use XCom for large data (DataFrames, large files) — it bloats the metadata DB and causes performance issues. Use XCom only for small values: row counts, file paths, status flags, IDs.
+
+**Q: What is a sensor in Airflow?**
+A: A sensor is a special operator that waits for a condition to be true before succeeding — e.g., `FileSensor` (wait for a file), `S3KeySensor` (wait for an S3 key), `ExternalTaskSensor` (wait for another DAG's task). Sensors periodically poll their condition via `poke_interval` and hold a worker slot until they succeed or timeout.
+
+**Q: What happens when a task fails and `retries=3`?**
+A: Airflow retries the task up to 3 times, waiting `retry_delay` between each attempt. After 3 failures, the task is marked as `failed`. The DAG run's downstream tasks that depend on this task will be skipped (marked `upstream_failed`). You can configure `retry_exponential_backoff=True` for exponential wait between retries.
+
+**Q: What is backfilling?**
+A: Backfilling runs a DAG for historical `execution_date` intervals that were missed — either because the DAG didn't exist yet or runs were skipped. Use `airflow dags backfill -s <start> -e <end> <dag_id>`. Backfills respect `depends_on_past` and run in chronological order. Useful when onboarding historical data or recovering from a gap in pipeline runs.
+
+**Q: What is the Airflow scheduler and what does it do?**
+A: The scheduler is the core Airflow process that parses DAG files, determines which DAG runs and tasks are ready to execute, and enqueues them to the executor. It runs on a heartbeat cycle (default 5s). It does NOT execute tasks itself — it delegates to the executor (LocalExecutor, CeleryExecutor, KubernetesExecutor). The scheduler is a potential bottleneck: slow DAG parsing or too many DAGs can delay task scheduling.
+
 </article>

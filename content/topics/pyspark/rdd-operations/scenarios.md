@@ -2,15 +2,35 @@
 title: "PySpark RDD Operations - Interview Scenarios"
 topic: pyspark
 subtopic: rdd-operations
-content_type: study_material
-difficulty_level: mid-level
-layer: real-world
+content_type: scenario_question
 tags: [pyspark, rdd, interview-scenarios, map, flatmap, reduceByKey, groupByKey, performance]
 ---
 
 # PySpark RDD Operations — Interview Scenarios
 
-## Junior Scenario: Map vs FlatMap
+
+
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Scenario: Map vs FlatMap
+
+**Scenario:** **Question:** "You have an RDD of sentences. Explain the difference between using `map` and `flatMap` to get individual words. What would each return?"
+
+### Setup
+
+```python
+from pyspark import SparkC
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "You have an RDD of sentences. Explain the difference between using `map` and `flatMap` to get individual words. What would each return?"
 
@@ -62,9 +82,25 @@ print(words_flat.collect())
 - `flatMap` is used when each input produces a collection you want to unnest
 - Word count uses `flatMap` because one sentence produces many words
 
----
+</details>
 
-## Mid-Level Scenario: reduceByKey vs groupByKey Performance
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Scenario: reduceByKey vs groupByKey Performance
+
+**Scenario:** **Question:** "Your Spark job aggregating 500 million clickstream events by user_id is taking 3 hours and spilling heavily to disk. You're using `groupByKey().mapValues(list)` followed by a custom agg
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "Your Spark job aggregating 500 million clickstream events by user_id is taking 3 hours and spilling heavily to disk. You're using `groupByKey().mapValues(list)` followed by a custom aggregation. How would you fix this?"
 
@@ -148,9 +184,25 @@ result = aggregated.mapValues(lambda acc: {
 - Eliminates OOM risk because reducer never holds all values in memory
 - Also mention: check partition count, consider repartitioning input if skewed
 
----
+</details>
 
-## Senior Scenario: When to Use RDD Over DataFrame
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Scenario: When to Use RDD Over DataFrame
+
+**Scenario:** **Question:** "You're building a pipeline that needs to: (1) process raw binary files from IoT sensors, (2) apply a custom graph algorithm to find device clusters, and (3) enrich with dimension data.
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "You're building a pipeline that needs to: (1) process raw binary files from IoT sensors, (2) apply a custom graph algorithm to find device clusters, and (3) enrich with dimension data. Your team wants everything in DataFrames. When would you push back and use RDDs?"
 
@@ -263,3 +315,13 @@ graph TD
 > **Tip 2:** "For reduceByKey vs groupByKey, quantify the difference." — "With 500M records and 1M unique keys, groupByKey shuffles all 500M records. reduceByKey with 200 partitions shuffles only 200M partial aggregates (1M keys × 200 partitions maximum). That's potentially 250x less network I/O. Always mention the local combiner analogy from MapReduce."
 
 > **Tip 3:** "For RDD vs DataFrame decisions, show you know both APIs." — "Don't be dogmatic. The right answer is hybrid: RDD for unstructured data and iterative algorithms, DataFrame for structured operations and joins. Show you understand the performance implications — DataFrames benefit from Catalyst optimization, Tungsten memory management, and whole-stage code generation that RDDs can't access. Convert at the boundary where data becomes structured."
+
+</details>
+
+</article>
+
+
+
+---
+
+## Interview Tips

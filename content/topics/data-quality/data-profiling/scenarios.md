@@ -2,19 +2,31 @@
 title: "Data Profiling — Scenarios"
 topic: data-quality
 subtopic: data-profiling
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [data-profiling, interview, scenarios]
 ---
 
 # Data Profiling — Interview Scenarios
 
-## Scenario 1 (Junior): Profiling a New Dataset
 
-**Question:** You receive a CSV file from an external vendor for the first time. What do you do before building a pipeline?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Profiling a New Dataset
+
+**Scenario:** You receive a CSV file from an external vendor for the first time. What do you do before building a pipeline?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Before building the pipeline, document:** 1. Assumed primary key and uniqueness check 2. Required vs optional columns 3. Expected value ranges for numeric columns 4. Accepted values for categorical columns 5. Expected row count range per delivery 6. Freshness expectation (how old can this data...
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
 ```python
 import pandas as pd
 from ydata_profiling import ProfileReport
@@ -48,13 +60,25 @@ profile.to_file("vendor_profile.html")
 5. Expected row count range per delivery
 6. Freshness expectation (how old can this data be?)
 
----
+</details>
 
-## Scenario 2 (Mid-level): Profile Comparison After Migration
+</article>
 
-**Question:** You migrated 500M rows from Oracle to Snowflake. How do you validate the migration was complete and accurate?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Profile Comparison After Migration
+
+**Scenario:** You migrated 500M rows from Oracle to Snowflake. How do you validate the migration was complete and accurate?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Checks beyond aggregate stats:** 1. Sample 1000 random rows from both, join on PK, compare field-by-field 2. Check all date ranges match (no partitions missing) 3. Verify encoding for special characters (Oracle vs UTF-8) 4. Check for trailing spaces in string columns (common Oracle issue)
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```python
 import pandas as pd
@@ -104,13 +128,25 @@ for metric in ["row_count", "distinct_orders", "total_amount", "null_customers"]
 3. Verify encoding for special characters (Oracle vs UTF-8)
 4. Check for trailing spaces in string columns (common Oracle issue)
 
----
+</details>
 
-## Scenario 3 (Senior): Profiling-Driven DQ System
+</article>
 
-**Question:** Explain how you'd build a system where profiling automatically generates and maintains DQ rules as data evolves.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Profiling-Driven DQ System
+
+**Scenario:** Explain how you'd build a system where profiling automatically generates and maintains DQ rules as data evolves.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Architecture:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Architecture:**
 ```
@@ -148,3 +184,7 @@ def handle_profile_drift(col: str, metric: str, old_val: float, new_val: float):
 ```
 
 **Key insight:** Profiling is not a one-time activity. It's a continuous feedback loop that keeps DQ rules aligned with the reality of your data.
+
+</details>
+
+</article>

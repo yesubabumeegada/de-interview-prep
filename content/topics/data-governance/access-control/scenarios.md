@@ -2,19 +2,30 @@
 title: "Access Control & RBAC — Scenarios"
 topic: data-governance
 subtopic: access-control
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [access-control, rbac, interview, scenarios, iam]
 ---
 
 # Access Control & RBAC — Interview Scenarios
 
-## Scenario 1 (Junior): Setting Up Access for a New Analyst
 
-**Question:** A new revenue analyst joins the team. Walk through how you grant them appropriate data access.
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Setting Up Access for a New Analyst
+
+**Scenario:** A new revenue analyst joins the team. Walk through how you grant them appropriate data access.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Determine what access they need**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Determine what access they need**
 ```
@@ -56,13 +67,25 @@ USE ROLE ANALYST_REVENUE;
 SELECT * FROM gold.payroll;  -- Should fail: "Insufficient privileges"
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Access Breach Investigation
+</article>
 
-**Question:** Your anomaly detection system flags that a data analyst ran 500 queries on PII tables in a single day — their normal is 5-10. How do you investigate?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Access Breach Investigation
+
+**Scenario:** Your anomaly detection system flags that a data analyst ran 500 queries on PII tables in a single day — their normal is 5-10. How do you investigate?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Gather facts before assuming the worst**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Gather facts before assuming the worst**
 ```sql
@@ -110,13 +133,25 @@ CREATE OR REPLACE ROW ACCESS POLICY pii_row_limit AS (val VARCHAR) RETURNS BOOLE
 -- If rows_returned > 10000 on PII table → alert security immediately
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Designing RBAC for 200 Teams
+</article>
 
-**Question:** Your company has 200 domain teams each with analysts, engineers, and data scientists. How do you design an RBAC system that scales without needing per-team role configuration?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing RBAC for 200 Teams
+
+**Scenario:** Your company has 200 domain teams each with analysts, engineers, and data scientists. How do you design an RBAC system that scales without needing per-team role configuration?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Design: Attribute-driven role hierarchy**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Design: Attribute-driven role hierarchy**
 
@@ -173,3 +208,7 @@ resource "snowflake_role_grants" "{combined_role.lower()}_base" {{
 4. HR system auto-provisions on hire, auto-revokes on departure
 5. Quarterly review: anomaly detection flags unused grants for cleanup
 ```
+
+</details>
+
+</article>

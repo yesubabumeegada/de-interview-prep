@@ -2,19 +2,30 @@
 title: "Data Lineage — Scenarios"
 topic: data-governance
 subtopic: data-lineage
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [data-lineage, interview, scenarios, impact-analysis, compliance]
 ---
 
 # Data Lineage — Interview Scenarios
 
-## Scenario 1 (Junior): Safe Table Deletion
 
-**Question:** A team wants to delete an old table `legacy.orders_v1`. How do you ensure it's safe to delete?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Safe Table Deletion
+
+**Scenario:** A team wants to delete an old table `legacy.orders_v1`. How do you ensure it's safe to delete?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Check lineage (does anyone depend on it?)**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Check lineage (does anyone depend on it?)**
 ```python
@@ -53,13 +64,25 @@ catalog.deprecate("legacy.orders_v1",
 
 **Rule of thumb:** Never delete immediately. Deprecate → wait 30 days → confirm no queries → delete.
 
----
+</details>
 
-## Scenario 2 (Mid-level): Root Cause via Lineage
+</article>
 
-**Question:** Your revenue dashboard is showing wrong numbers for 2 days. The dashboard reads from `gold.revenue_daily`. How do you use lineage to find the root cause?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Root Cause via Lineage
+
+**Scenario:** Your revenue dashboard is showing wrong numbers for 2 days. The dashboard reads from `gold.revenue_daily`. How do you use lineage to find the root cause?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Finding:** `gold.revenue_daily` transformation job has a bug — row count normal in silver but wrong in gold → transformation layer issue.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```python
 # Step 1: Get full upstream lineage of gold.revenue_daily
@@ -95,13 +118,25 @@ WHERE job_name = 'gold_revenue_daily_transform'
 
 **Result:** A recent commit changed the GROUP BY clause — removing `channel` column broke the aggregation logic. Lineage helped identify exactly which transformation was the culprit.
 
----
+</details>
 
-## Scenario 3 (Senior): Designing a Lineage Platform
+</article>
 
-**Question:** Your company processes 500 pipelines daily, uses Spark, Airflow, dbt, and Looker. Design a lineage platform that captures end-to-end lineage from source to dashboard.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing a Lineage Platform
+
+**Scenario:** Your company processes 500 pipelines daily, uses Spark, Airflow, dbt, and Looker. Design a lineage platform that captures end-to-end lineage from source to dashboard.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Key design decisions:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```mermaid
 flowchart TD
@@ -169,3 +204,7 @@ def check_lineage_coverage(engine) -> float:
         alert(f"Lineage coverage dropped to {coverage:.0%} — check OpenLineage emitters")
     return coverage
 ```
+
+</details>
+
+</article>

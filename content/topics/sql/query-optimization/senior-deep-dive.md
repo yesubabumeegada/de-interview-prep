@@ -319,3 +319,58 @@ ORDER BY pct_change DESC;
 > **Tip 2:** "How do you handle data skew in distributed SQL?" — "First, detect it: GROUP BY the join key and check for hot keys. Then mitigate: broadcast join if the small side fits in memory, salting technique for known hot keys, or Spark's Adaptive Query Execution which detects and splits skewed partitions at runtime."
 
 > **Tip 3:** "What's the most impactful optimization you've done?" — Structure your answer: "I had a query doing [X] that took [Y time]. I looked at the plan and found [specific problem — full scan/bad join/skew]. I fixed it by [adding index/broadcasting/repartitioning]. Result: [before] → [after] (quantify the improvement with actual numbers)."
+
+---
+
+## ⚡ Cheat Sheet
+
+### Execution Plan Operators
+
+| Operator | What it means |
+|---|---|
+| Seq Scan | Full table scan — no index used; every row read |
+| Index Scan | Reads index then fetches rows from heap; good for selective queries |
+| Index Only Scan | All needed columns in index — zero heap access (fastest) |
+| Bitmap Heap Scan | Used after Bitmap Index Scan; batch-fetches heap pages by physical order |
+| Hash Join | Builds hash table from smaller side; probes with larger side — good for large unsorted inputs |
+| Nested Loop | For each outer row, scans inner; efficient only when inner is small or indexed |
+| Merge Join | Requires both inputs sorted; fast when inputs are already ordered |
+| Sort | Explicit sort step — expensive; avoid on large inputs |
+| Aggregate | GROUP BY / aggregate function computation |
+| Gather / Gather Merge | Parallel worker results collected by leader (PostgreSQL parallel plans) |
+
+### Red Flags in EXPLAIN ANALYZE
+
+| What you see | What it means | Action |
+|---|---|---|
+| Seq Scan on large table | Missing or unused index | Add index on filter/join column |
+| Rows estimated: 1 actual: 500000 | Stale statistics | Run `ANALYZE table` or `VACUUM ANALYZE` |
+| Hash Join (rows > 10M on both sides) | Large-large join with no pruning | Filter before join; check if one side can be smaller |
+| Nested Loop with large outer | O(n²) — will not scale | Ensure inner side has index; reconsider join strategy |
+| Sort (actual rows > 1M) | No index for ORDER BY / merge join | Add index covering sort columns |
+| execution time >> planning time | Tight loop or poor plan | Check statistics; force plan with hints if needed |
+| Buffers: read >> hit | Low cache hit rate | Increase `shared_buffers`; check for missing indexes |
+| actual loops >> 1 (Nested Loop inner) | Inner executed N times | Add index on inner join column |
+
+### Index Types and When to Use
+
+| Index Type | Best for | Avoid when |
+|---|---|---|
+| B-tree | Equality (`=`), range (`<`, `>`), `BETWEEN`, `ORDER BY` | Low-cardinality columns (few distinct values) |
+| Hash | Equality only (`=`) — slightly faster than B-tree for pure equality | Range queries (not supported) |
+| GIN | Array contains (`@>`), full-text search (`@@`), JSONB key lookup | Frequently updated columns (slow writes) |
+| BRIN | Very large tables with physical sort correlation (e.g., timestamp inserted in order) | Tables without physical clustering (random inserts) |
+| Partial index | Subset of rows frequently queried (e.g., `WHERE status = 'active'`) | When the filtered set is large (>20% of rows) |
+| Composite index | Multi-column filters/sorts — follow column order (most selective first) | When leading column is rarely in queries |
+
+### Quick Rules: If You See X → Do Y
+
+| If you see... | Then do... |
+|---|---|
+| Seq Scan on a filtered column | `CREATE INDEX ON table(column)` |
+| Bad row estimate (orders of magnitude off) | `ANALYZE table` to refresh statistics |
+| Slow join — both tables large | Filter rows before the join; try broadcasting smaller side |
+| `ORDER BY` causing Sort node | Add index matching sort columns (and direction) |
+| Index Scan but still slow | Check if Index Only Scan is possible (add covering columns) |
+| Many Nested Loop iterations | Add index on inner join key |
+| Query regressed after data growth | Statistics stale — `VACUUM ANALYZE`; check `autovacuum` is running |

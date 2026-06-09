@@ -348,4 +348,32 @@ With headroom: 72 partitions (evenly divisible by 9 brokers)
 
 </details>
 
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the role of ZooKeeper / KRaft in Kafka?**
+A: ZooKeeper (legacy) managed cluster metadata: broker registration, leader election, topic configs, and consumer group offsets (early versions). KRaft (Kafka 2.8+, default in Kafka 3.3+) replaces ZooKeeper — Kafka manages its own metadata via a Raft-based consensus log. KRaft removes the ZooKeeper dependency, simplifying operations and enabling faster controller failover.
+
+**Q: What's the difference between a topic and a partition?**
+A: A topic is a named, logical category of messages — the unit producers and consumers interact with. A partition is the physical unit of storage and parallelism inside a topic. A topic is split into N partitions, each an ordered, immutable log. Parallelism scales with partition count.
+
+**Q: Can you decrease the number of partitions?**
+A: No. You can only increase partitions. Decreasing partitions would require redistributing existing data and would break key-based ordering guarantees. Plan your partition count carefully upfront.
+
+**Q: What is consumer lag?**
+A: Consumer lag is the difference between the latest offset in a partition (log end offset) and the consumer's committed offset. Lag > 0 means the consumer is behind — it has not yet processed all available messages. High lag indicates the consumer is too slow or the producer throughput has increased.
+
+**Q: What is the difference between at-least-once, at-most-once, and exactly-once?**
+A: At-most-once: messages may be lost but never duplicated (commit offset before processing). At-least-once: messages are never lost but may be duplicated (commit offset after processing). Exactly-once: no loss and no duplication — achieved in Kafka via idempotent producers + transactional APIs, or in consumers via idempotent processing logic (dedup key in the sink).
+
+**Q: What happens if a consumer crashes mid-processing?**
+A: With at-least-once semantics (manual commit after processing), the uncommitted offsets will be re-consumed by another consumer in the group after rebalancing. The messages will be processed again — consumers must be idempotent to handle this safely.
+
+**Q: What is log compaction?**
+A: Log compaction retains only the latest value for each key in a topic, rather than expiring by time/size. Older records with duplicate keys are removed during background compaction. Used for changelog topics (e.g., CDC, materialized views) where only the latest state matters — not for event streams.
+
+**Q: What is ISR (In-Sync Replicas)?**
+A: ISR is the set of replicas that are fully caught up with the partition leader. A replica falls out of ISR if it lags behind by more than `replica.lag.time.max.ms`. `min.insync.replicas` specifies how many ISR replicas must acknowledge a write for it to succeed. If ISR drops below this threshold, producers with `acks=all` will receive an error — protecting data durability.
+
 </article>

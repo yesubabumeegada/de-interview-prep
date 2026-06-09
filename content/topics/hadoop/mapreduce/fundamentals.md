@@ -300,3 +300,74 @@ mapred job -history job_1234_0001
 > **Tip 4:** When explaining MapReduce vs Spark, don't just say "Spark is faster." Explain WHY: MapReduce writes to HDFS between every stage (map output → shuffle → reduce output), whereas Spark keeps data in memory across transformations. For iterative algorithms (ML), this difference is enormous.
 
 > **Tip 5:** Python Streaming is important to know — many data teams use it for quick scripting without Java. The framework handles the coordination; your scripts just read stdin and write stdout.
+
+---
+
+## 🔄 Modern Context & Migration Path
+
+### Why MapReduce Is Being Replaced by Spark
+
+MapReduce writes intermediate results to HDFS after every Map phase and every Reduce phase. For multi-stage pipelines or iterative algorithms, this means repeated disk writes and reads between each stage. Spark keeps data in memory across transformations — the same logical pipeline that takes 10 minutes in MapReduce often runs in 10–60 seconds in Spark. Beyond speed:
+
+- **API simplicity:** Spark's DataFrame/SQL API is far more expressive than writing Mapper and Reducer classes in Java
+- **Unified engine:** Spark handles batch, streaming, ML, and graph workloads; MapReduce handles batch only
+- **Ecosystem:** Spark integrates natively with Delta Lake, MLlib, Structured Streaming, and all major cloud platforms
+
+### When You Still Encounter MapReduce
+
+| Scenario | Why MapReduce persists |
+|---|---|
+| Legacy Hive on MapReduce | Old Hive installations configured with `hive.execution.engine=mr` |
+| Old enterprise Hadoop clusters | Org hasn't migrated; Spark not approved/installed |
+| Compliance-locked environments | Specific certified Hadoop distributions freeze the stack |
+| HBase bulk load jobs | `HFileOutputFormat2` / `importtsv` use MapReduce |
+| Historical job maintenance | Existing MapReduce jobs in production with no business case to rewrite |
+
+### Interview Framing
+
+> "MapReduce taught the industry how to do distributed data processing at scale — the Map/Shuffle/Reduce pattern is a fundamental contribution. Spark is MapReduce done right: the same concepts (map, shuffle, reduce) but executed in-memory with a better API. Understanding MapReduce makes you a better Spark developer because you understand what's happening under the hood during shuffles and why wide transformations are expensive."
+
+### Migration Pattern: Word Count
+
+**MapReduce (Python Streaming):**
+```python
+# mapper.py
+import sys
+for line in sys.stdin:
+    for word in line.strip().split():
+        print(f"{word}\t1")
+
+# reducer.py
+import sys
+current_word, count = None, 0
+for line in sys.stdin:
+    word, val = line.strip().split("\t")
+    if word == current_word:
+        count += int(val)
+    else:
+        if current_word:
+            print(f"{current_word}\t{count}")
+        current_word, count = word, int(val)
+if current_word:
+    print(f"{current_word}\t{count}")
+```
+
+**Equivalent PySpark:**
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
+spark = SparkSession.builder.getOrCreate()
+
+word_counts = (
+    spark.read.text("hdfs:///input/")
+    .select(F.explode(F.split("value", r"\s+")).alias("word"))
+    .filter(F.col("word") != "")
+    .groupBy("word")
+    .count()
+    .orderBy("count", ascending=False)
+)
+word_counts.write.csv("hdfs:///output/")
+```
+
+The PySpark version is shorter, more readable, runs in-memory across stages, and can be extended to read from S3/ADLS/GCS with a one-line change to the input path.

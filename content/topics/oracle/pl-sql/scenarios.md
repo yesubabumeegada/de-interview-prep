@@ -2,19 +2,30 @@
 title: "PL/SQL — Scenarios"
 topic: oracle
 subtopic: pl-sql
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [oracle, pl-sql, interview, scenarios, etl, debugging]
 ---
 
 # PL/SQL — Interview Scenarios
 
-## Scenario 1 (Junior): Write a Procedure to Archive Old Orders
 
-**Question:** Write a PL/SQL procedure that moves orders older than 2 years from the `orders` table to the `orders_archive` table, then deletes them from the source. It should process in batches of 10,000 and log the result.
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Write a Procedure to Archive Old Orders
+
+**Scenario:** Write a PL/SQL procedure that moves orders older than 2 years from the `orders` table to the `orders_archive` table, then deletes them from the source. It should process in batches of 10,000 and log the result.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Key points the interviewer looks for:** - BULK COLLECT + FORALL (not row-by-row) - LIMIT on BULK COLLECT (not loading millions of IDs into memory) - COMMIT per batch (not one giant transaction) - Exception handling with cursor cleanup - Parameterized cutoff date (not hardcoded)
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```plsql
 CREATE OR REPLACE PROCEDURE archive_old_orders(
@@ -77,13 +88,25 @@ END archive_old_orders;
 - Exception handling with cursor cleanup
 - Parameterized cutoff date (not hardcoded)
 
----
+</details>
 
-## Scenario 2 (Mid-level): Trigger Is Causing ORA-04091 Mutation Error
+</article>
 
-**Question:** You deployed a trigger on `order_items` that should update the parent `orders.total_amount` whenever a line item is inserted or updated. It throws `ORA-04091: table ORDERS is mutating`. How do you fix it?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Trigger Is Causing ORA-04091 Mutation Error
+
+**Scenario:** You deployed a trigger on `order_items` that should update the parent `orders.total_amount` whenever a line item is inserted or updated. It throws `ORA-04091: table ORDERS is mutating`. How do you fix it?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Root cause:** The row-level trigger tries to query `order_items` (the table being modified) to calculate the total. This causes the mutation error.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Root cause:** The row-level trigger tries to query `order_items` (the table being modified) to calculate the total. This causes the mutation error.
 
@@ -160,13 +183,25 @@ BEGIN
 END;
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): ETL Procedure Runs 4 Hours — Optimize It
+</article>
 
-**Question:** A nightly ETL procedure takes 4 hours. It processes 5 million rows from a staging table into a fact table using a cursor FOR loop with individual INSERT statements. How do you optimize it to run in under 30 minutes?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: ETL Procedure Runs 4 Hours — Optimize It
+
+**Scenario:** A nightly ETL procedure takes 4 hours. It processes 5 million rows from a staging table into a fact table using a cursor FOR loop with individual INSERT statements. How do you optimize it to run in under 30 minutes?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Current slow code:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Current slow code:**
 ```plsql
@@ -256,3 +291,7 @@ COMMIT;
 - Row-by-row → BULK COLLECT/FORALL: **4h → ~45 min** (80% reduction)
 - Add APPEND + PARALLEL: **45 min → ~15 min** (additional 65% reduction)
 - Pure set-based INSERT with PARALLEL: **4h → ~10 min** (if no row logic needed)
+
+</details>
+
+</article>

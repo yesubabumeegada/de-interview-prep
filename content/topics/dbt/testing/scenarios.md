@@ -3,18 +3,26 @@ title: "dbt Testing - Scenarios"
 topic: dbt
 subtopic: testing
 content_type: scenario_question
-difficulty_level: mid-level
-layer: scenarios
 tags: [dbt, testing, interview, scenarios, data-quality]
 ---
 
-# dbt Testing — Scenario Questions
+# dbt Testing — Interview Scenarios
 
-## Scenario 1 (Junior): Writing Your First Tests
+<article data-difficulty="junior">
 
-**Situation:** You built `dim_products` with columns: `product_id`, `product_name`, `category`, `price`. Write the appropriate tests for this model.
+## 🟢 Junior: Writing Tests for a New Model
 
-**Answer:**
+**Scenario:** You built `dim_products` with columns: `product_id`, `product_name`, `category`, `price`. Write the appropriate tests for this model.
+
+<details>
+<summary>💡 Hint</summary>
+
+Think about what makes each column valid: primary keys need unique + not_null, categorical columns need accepted_values, and numeric columns can use range checks from dbt_expectations.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```yaml
 models:
@@ -49,19 +57,30 @@ models:
               max_value: 100000  # Reasonable upper bound
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-Level): Test Fails in Production
+</article>
 
-**Situation:** Monday morning, `dbt test` fails with:
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Responding to a Failing Uniqueness Test in Production
+
+**Scenario:** Monday morning, `dbt test` fails with:
 ```
 Failure in test unique_fct_orders_order_id (models/marts/schema.yml)
   Got 1523 results, configured to fail if != 0
 ```
-
 There are 1,523 duplicate `order_id` values in `fct_orders`. The model is incremental with `unique_key='order_id'`. How do you respond?
 
-**Answer:**
+<details>
+<summary>💡 Hint</summary>
+
+Investigate first — find which order_ids are duplicated and when they appeared. Then fix the data in place, and determine the root cause before running the model again.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Immediate investigation:**
 ```sql
@@ -110,13 +129,25 @@ dbt test --select fct_orders
 - Add `--fail-fast` to CI pipeline
 - Monitor with `elementary.volume_anomalies` to catch unexpected row count spikes
 
----
+</details>
 
-## Scenario 3 (Senior): Design Test Strategy for New Project
+</article>
 
-**Situation:** You're leading a new dbt project at a fintech company with 30 source tables, 80 models, and strict data quality SLAs (financial reporting must be 100% accurate). Design the complete testing strategy.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing a Complete Testing Strategy for a Fintech Project
+
+**Scenario:** You're leading a new dbt project at a fintech company with 30 source tables, 80 models, and strict data quality SLAs (financial reporting must be 100% accurate). Design the complete testing strategy.
+
+<details>
+<summary>💡 Hint</summary>
+
+Layer the testing strategy: source tests (upstream data quality), staging tests (schema contracts), mart tests (business rules), unit tests (logic correctness), and reporting tests (SLA-level reconciliation against source systems).
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Layer 1 — Source Tests (defensive, catch upstream issues early):**
 - Freshness checks: error after 4 hours for payment sources, 12 hours for CRM
@@ -162,3 +193,17 @@ HAVING variance_pct > 0.0001  -- Fail if >0.01% discrepancy
 - Merge to main: run ALL tests before deployment
 - Daily: run full suite including anomaly detection
 - Weekly: run reconciliation tests against source systems
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "What tests do you always add to a new dbt model?" — At minimum: `unique` and `not_null` on the primary key, `not_null` on any column used in downstream joins, and `accepted_values` on any status or category columns. For financial models, add range checks and reconciliation tests.
+
+> **Tip 2:** "How do you respond to a failing uniqueness test in production?" — Investigate first: find the duplicate IDs and when they appeared. Fix the data in place with a ROW_NUMBER deduplication query. Then find the root cause before rerunning — otherwise you'll get duplicates again.
+
+> **Tip 3:** "How do you design testing at scale?" — Layer it: source tests catch upstream issues early, staging tests enforce schema contracts, mart tests validate business rules, and reconciliation tests verify financial accuracy. Don't test everything at every layer — focus on what can break at each layer and would cause the most damage undetected.

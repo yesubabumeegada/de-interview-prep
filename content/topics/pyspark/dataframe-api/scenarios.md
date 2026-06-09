@@ -825,4 +825,33 @@ for tenant, config in tenant_configs.items():
 - Production enhancement: store configs in Delta/DynamoDB with versioning for audit trails
 
 </details>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What's the difference between `map()` and `flatMap()`?**
+A: `map()` applies a function to each element and returns one output per input (1-to-1). `flatMap()` applies a function that returns a list/iterator per input and flattens the results into a single collection (1-to-many). Use `flatMap` when each input produces multiple outputs (e.g., splitting a sentence into words).
+
+**Q: When does a Spark job actually execute?**
+A: Only when an action is called (e.g., `collect()`, `count()`, `write()`, `show()`). Transformations like `filter()`, `map()`, `join()` are lazy — they build a logical plan but do no work until an action triggers execution.
+
+**Q: What is a narrow vs wide transformation?**
+A: A narrow transformation (e.g., `filter`, `map`, `select`) processes each partition independently — no data movement across partitions. A wide transformation (e.g., `groupBy`, `join`, `repartition`) requires a shuffle — data moves between partitions across the network. Wide transformations are expensive.
+
+**Q: What's the difference between `cache()` and `persist()`?**
+A: `cache()` is shorthand for `persist(StorageLevel.MEMORY_AND_DISK)`. `persist()` lets you specify the storage level: `MEMORY_ONLY`, `MEMORY_AND_DISK`, `DISK_ONLY`, etc. Use `persist` when you need control over where data is stored (e.g., disk-only for very large DataFrames).
+
+**Q: How do you handle null values in PySpark?**
+A: Use `df.na.drop()` to remove rows with nulls, `df.na.fill(value)` to replace nulls, `F.coalesce(col1, col2)` to pick first non-null, and `F.when(F.col("x").isNull(), default).otherwise(F.col("x"))` for conditional logic.
+
+**Q: What is the difference between `select()` and `withColumn()`?**
+A: `select()` returns a new DataFrame with only the specified columns (can rename/transform). `withColumn()` returns a new DataFrame with all existing columns plus one added or replaced column. `withColumn` is convenient for adding/updating a single column without rewriting all column names.
+
+**Q: What does `repartition()` vs `coalesce()` do?**
+A: Both change the number of partitions. `repartition(n)` does a full shuffle and can increase or decrease partition count — produces evenly sized partitions. `coalesce(n)` only decreases partitions without a full shuffle (merges adjacent partitions) — faster but may produce uneven partitions. Use `coalesce` when reducing partitions before writing; use `repartition` when you need balanced partitions or are increasing count.
+
+**Q: What is a shuffle and why is it expensive?**
+A: A shuffle is the process of redistributing data across partitions — all executors write their map outputs to disk, then data is transferred over the network and re-read by the receiving executors. It is expensive because it involves disk I/O, network transfer, and deserialization/re-serialization. Wide transformations (groupBy, join, repartition) trigger shuffles.
+
 </article>

@@ -272,3 +272,33 @@ def test_extract_task():
 > **Tip 2:** "How do you ensure a DAG is safe to re-run?" — "Idempotency at every layer: partition-level overwrite in the data lake, MERGE/upsert for warehouse loads, and templated dates ({{ ds }}) so each run is scoped. I never use datetime.now() in tasks."
 
 > **Tip 3:** "How do you scale Airflow?" — "Three levels: (1) Optimize DAG parsing (defer imports, fewer files), (2) Use CeleryExecutor with auto-scaling workers, (3) KubernetesExecutor for task-level isolation and infinite scaling. The metadata DB (PostgreSQL) is usually the bottleneck — use connection pooling and regular cleanup of old task instances."
+
+---
+
+## ⚡ Cheat Sheet
+
+### Common DAG Pitfalls
+
+| Pitfall | Why it's bad | Fix |
+|---|---|---|
+| Top-level code in DAG file (e.g., DB calls, API requests) | Executes on every scheduler heartbeat (every 5–30s) — causes latency spikes and resource exhaustion | Move all I/O into task callables; keep DAG file to DAG definition only |
+| Dynamic task count changing between runs | Causes task instance mismatch — Airflow can't reconcile old runs with new structure | Use static task structure; parameterize via task arguments, not task count |
+| XCom for large data | XCom stored in metadata DB — large payloads bloat DB, cause slow queries | Use XCom for small values only (IDs, counts, paths); pass large data via S3/GCS |
+| Not setting `retries` | Transient failures (network blip, API timeout) cause permanent DAG failure | Set `retries=3` with `retry_delay=timedelta(minutes=5)` as default |
+| Using `datetime.now()` instead of `{{ ds }}` | Tasks are not idempotent — backfills and re-runs produce wrong results | Always use Jinja templated macros (`{{ ds }}`, `{{ execution_date }}`) for date logic |
+| Missing `task_id` uniqueness | Duplicate task IDs within a DAG raise errors at parse time | Ensure all `task_id` values are unique per DAG |
+| SLA misses not alerting | SLA callback fires but nobody configured `sla_miss_callback` | Set `sla` on tasks and configure `sla_miss_callback` to send alerts |
+| Large `default_args` with missing `start_date` | DAG won't be scheduled — silently no-ops | Always set `start_date` in `default_args` or DAG constructor |
+
+### Key Airflow Configuration Settings
+
+| Config | Default | Tuned value | What it controls |
+|---|---|---|---|
+| `parallelism` | 32 | 64–128 | Max concurrent task instances across ALL DAGs |
+| `max_active_runs_per_dag` | 16 | 1–3 | Prevents same DAG from queuing up many concurrent runs |
+| `dagbag_import_timeout` | 30s | 60s | Time allowed to parse a DAG file before timeout |
+| `dag_file_processor_timeout` | 50s | 120s | Total time for file processor per DAG file |
+| `min_file_process_interval` | 30s | 60s | Min gap between re-parsing the same DAG file |
+| `scheduler_heartbeat_sec` | 5s | 5s | Keep default; lower increases DB pressure |
+| `worker_concurrency` (Celery) | 16 | 8–32 | Concurrent tasks per Celery worker process |
+| `pool` (default pool) | 128 | Per-resource | Use pools to limit concurrent DB connections or API calls |

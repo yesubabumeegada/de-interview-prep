@@ -2,15 +2,35 @@
 title: "PySpark UDFs - Interview Scenarios"
 topic: pyspark
 subtopic: udfs
-content_type: study_material
-difficulty_level: mid-level
-layer: real-world
+content_type: scenario_question
 tags: [pyspark, udf, interview-scenarios, pandas-udf, optimization, native-functions]
 ---
 
 # PySpark UDFs — Interview Scenarios
 
-## Junior Scenario: Write a Simple UDF
+
+
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Scenario: Write a Simple UDF
+
+**Scenario:** **Question:** "Write a UDF that takes a full name string (e.g., 'John Michael Smith') and returns the initials (e.g., 'JMS'). Register it for both SQL and DataFrame use."
+
+### Solution
+
+```python
+from
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "Write a UDF that takes a full name string (e.g., 'John Michael Smith') and returns the initials (e.g., 'JMS'). Register it for both SQL and DataFrame use."
 
@@ -87,9 +107,30 @@ native_result = (test_df
     .drop("parts"))
 ```
 
----
+</details>
 
-## Mid-Level Scenario: Convert Python UDF to Pandas UDF
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Scenario: Convert Python UDF to Pandas UDF
+
+**Scenario:** **Question:** "This Python UDF processes 200 million rows and takes 90 minutes. Convert it to a Pandas UDF and explain the expected performance improvement."
+
+### The Slow Python UDF
+
+```python
+import
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "This Python UDF processes 200 million rows and takes 90 minutes. Convert it to a Pandas UDF and explain the expected performance improvement."
 
@@ -182,9 +223,25 @@ result = (logs_df
 - Further improvement: native `regexp_extract` runs in JVM with codegen
 - Mention that native is preferred but Pandas UDF is acceptable when logic is too complex
 
----
+</details>
 
-## Senior Scenario: Eliminate UDF with Native Functions
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Scenario: Eliminate UDF with Native Functions
+
+**Scenario:** **Question:** "This pipeline has 5 UDFs that process 2 billion rows daily. Each UDF adds 15-30 minutes to the job. Your task: eliminate as many UDFs as possible using native Spark functions. Which one
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "This pipeline has 5 UDFs that process 2 billion rows daily. Each UDF adds 15-30 minutes to the job. Your task: eliminate as many UDFs as possible using native Spark functions. Which ones can be eliminated, and which ones truly need UDFs?"
 
@@ -302,3 +359,13 @@ def tokenize_fast(batch_iter: Iterator[pd.Series]) -> Iterator[pd.Series]:
 > **Tip 2:** "For UDF conversion, explain the Arrow mechanism." — "Pandas UDFs use Apache Arrow to transfer data in columnar batches of 10K rows. Instead of serializing one row at a time, we get a pandas Series backed by a numpy array. The pandas string methods (str.extract, str.contains) are implemented in C, not Python, so they're much faster than Python regex per-row. The combined effect: Arrow transfer + vectorized C operations = 5-50x speedup."
 
 > **Tip 3:** "For UDF elimination, show systematic analysis." — "I categorize each UDF: (1) Has a direct native equivalent (regex → rlike, JSON → get_json_object, hash → sha2), (2) Can be expressed with combinations of native functions (when/otherwise, array functions), (3) Needs vectorization (convert to Pandas UDF), (4) Truly needs row-level Python (external APIs, complex libraries). Most UDFs I encounter in production fall into categories 1 or 2 — they're written by people who didn't know the native function existed."
+
+</details>
+
+</article>
+
+
+
+---
+
+## Interview Tips

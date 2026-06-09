@@ -2,19 +2,30 @@
 title: "Data Classification — Scenarios"
 topic: data-governance
 subtopic: data-classification
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [data-classification, interview, scenarios, sensitivity, governance]
 ---
 
 # Data Classification — Interview Scenarios
 
-## Scenario 1 (Junior): Classify a New Table
 
-**Question:** A new table `gold.employee_records` is being created with columns: `employee_id`, `full_name`, `department`, `salary`, `manager_email`, `performance_rating`. How would you classify this table and its columns?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Classify a New Table
+
+**Scenario:** A new table `gold.employee_records` is being created with columns: `employee_id`, `full_name`, `department`, `salary`, `manager_email`, `performance_rating`. How would you classify this table and its columns?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Controls to apply:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```yaml
 table: gold.employee_records
@@ -66,13 +77,25 @@ columns:
 - Regulatory: GDPR lawful basis = employee contract
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Classification Inconsistency Discovered
+</article>
 
-**Question:** During an audit, you discover that `gold.customers` is classified as 'internal' but contains a `customer_email` column that has no PII tag. How did this happen and how do you fix it?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Classification Inconsistency Discovered
+
+**Scenario:** During an audit, you discover that `gold.customers` is classified as 'internal' but contains a `customer_email` column that has no PII tag. How did this happen and how do you fix it?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Root cause analysis:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Root cause analysis:**
 ```
@@ -118,13 +141,25 @@ def check_classification_consistency(engine) -> list[str]:
     return violations
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Building Classification for 50,000 Columns
+</article>
 
-**Question:** Your company has 500 tables with an average of 100 columns each — 50,000 columns total. You need to classify all of them. How do you approach this at scale?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Building Classification for 50,000 Columns
+
+**Scenario:** Your company has 500 tables with an average of 100 columns each — 50,000 columns total. You need to classify all of them. How do you approach this at scale?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Phase 1: Automated first pass (Week 1)**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Phase 1: Automated first pass (Week 1)**
 ```python
@@ -171,3 +206,7 @@ FROM column_classifications;
 ```
 
 **Key insight:** Don't aim for 100% on day 1. Start with coverage of the highest-risk and highest-traffic tables. Use automation to handle scale, humans for edge cases and appeals. Classification is an ongoing program, not a one-time project.
+
+</details>
+
+</article>

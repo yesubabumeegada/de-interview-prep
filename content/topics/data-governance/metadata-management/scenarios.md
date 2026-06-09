@@ -2,19 +2,30 @@
 title: "Metadata Management — Scenarios"
 topic: data-governance
 subtopic: metadata-management
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [metadata, interview, scenarios, catalog, glossary]
 ---
 
 # Metadata Management — Interview Scenarios
 
-## Scenario 1 (Junior): Inconsistent Metric Definitions
 
-**Question:** Finance says Q4 revenue is $12M. Sales says it's $14M. Both are reading from "gold.revenue" but getting different numbers. How does metadata management help here?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Inconsistent Metric Definitions
+
+**Scenario:** Finance says Q4 revenue is $12M. Sales says it's $14M. Both are reading from "gold.revenue" but getting different numbers. How does metadata management help here?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Root cause:** No agreed definition of "revenue" — each team is applying different filters.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Root cause:** No agreed definition of "revenue" — each team is applying different filters.
 
@@ -69,13 +80,25 @@ models:
 
 **Prevention:** Any "revenue" metric must link to this glossary term. Finance and Sales must use the canonical definition. Disputes escalated to CFO (term owner).
 
----
+</details>
 
-## Scenario 2 (Mid-level): Metadata Drift After Acquisition
+</article>
 
-**Question:** Your company acquired a startup. Their data is being merged into your data lake. They have 80 tables with no documentation, no owners, mixed naming conventions. How do you onboard their data?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Metadata Drift After Acquisition
+
+**Scenario:** Your company acquired a startup. Their data is being merged into your data lake. They have 80 tables with no documentation, no owners, mixed naming conventions. How do you onboard their data?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Week 1: Automated discovery**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Week 1: Automated discovery**
 ```python
@@ -130,13 +153,25 @@ def pre_query_check(user_email: str, table_name: str) -> dict:
     return {"allowed": True}
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Metadata at Scale — 10,000 Tables
+</article>
 
-**Question:** You're the data platform lead at a large company with 10,000 tables. Your metadata quality score is 45% (many tables undocumented, no owners). Leadership wants it at 85% in 6 months. How?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Metadata at Scale — 10,000 Tables
+
+**Scenario:** You're the data platform lead at a large company with 10,000 tables. Your metadata quality score is 45% (many tables undocumented, no owners). Leadership wants it at 85% in 6 months. How?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Baseline analysis (Week 1)**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Baseline analysis (Week 1)**
 ```python
@@ -195,3 +230,7 @@ Overall: ~84% — target achieved
 ```
 
 **Key lesson:** Don't wait for perfect descriptions. A 2-sentence auto-generated description reviewed by a human is infinitely better than none.
+
+</details>
+
+</article>

@@ -2,19 +2,30 @@
 title: "PII & Compliance — Scenarios"
 topic: data-governance
 subtopic: pii-and-compliance
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [pii, gdpr, compliance, interview, scenarios]
 ---
 
 # PII & Compliance — Interview Scenarios
 
-## Scenario 1 (Junior): PII Found in Wrong Place
 
-**Question:** A developer just pushed a dbt model that logs customer emails in a debug table `dev.debug_email_trace`. Anyone on the team can query it. What do you do?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: PII Found in Wrong Place
+
+**Scenario:** A developer just pushed a dbt model that logs customer emails in a debug table `dev.debug_email_trace`. Anyone on the team can query it. What do you do?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Immediate response (within 1 hour):**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Immediate response (within 1 hour):**
 ```sql
@@ -60,13 +71,25 @@ def check_pii_in_dev_schemas(manifest_path: str) -> list[str]:
     return violations
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): GDPR Erasure Request
+</article>
 
-**Question:** An EU customer emails saying they want all their data deleted under GDPR Article 17. Your CTO asks you to implement this. Walk through your approach.
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: GDPR Erasure Request
+
+**Scenario:** An EU customer emails saying they want all their data deleted under GDPR Article 17. Your CTO asks you to implement this. Walk through your approach.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Understand scope (within 24 hours)**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Understand scope (within 24 hours)**
 ```python
@@ -109,13 +132,25 @@ Note: certain data may be retained as required by law (e.g., financial records f
 
 **Key nuance:** GDPR allows retention of data required for legal compliance (tax, accounting records). Not everything must be deleted — you can retain anonymized or legally required records.
 
----
+</details>
 
-## Scenario 3 (Senior): PII Compliance Architecture
+</article>
 
-**Question:** Your company is expanding to the EU and must become GDPR-compliant. You have 200 tables in Snowflake, PII scattered everywhere, no consent management, and no erasure process. Design the technical architecture.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: PII Compliance Architecture
+
+**Scenario:** Your company is expanding to the EU and must become GDPR-compliant. You have 200 tables in Snowflake, PII scattered everywhere, no consent management, and no erasure process. Design the technical architecture.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Phase 1: Discovery**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```mermaid
 flowchart TD
@@ -173,3 +208,7 @@ GROUP BY purpose;
 ```
 
 **Timeline:** 6 months to GDPR compliance. Present to DPO and legal at each phase gate before proceeding.
+
+</details>
+
+</article>

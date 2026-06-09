@@ -2,19 +2,30 @@
 title: "Data Catalog — Scenarios"
 topic: data-governance
 subtopic: data-catalog
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [data-catalog, interview, scenarios, datahub, governance]
 ---
 
 # Data Catalog — Interview Scenarios
 
-## Scenario 1 (Junior): Finding the Right Table
 
-**Question:** An analyst messages you: "I need order data, but I found 6 different 'orders' tables. Which one should I use?" How do you handle this and what catalog feature fixes this long-term?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Finding the Right Table
+
+**Scenario:** An analyst messages you: "I need order data, but I found 6 different 'orders' tables. Which one should I use?" How do you handle this and what catalog feature fixes this long-term?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Immediate answer:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Immediate answer:**
 ```
@@ -52,13 +63,25 @@ legacy.orders_v1:
     decommissionTime: 1704067200000
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Catalog Adoption Problem
+</article>
 
-**Question:** You've deployed DataHub six months ago, but only 20% of the team uses it. How do you drive adoption?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Catalog Adoption Problem
+
+**Scenario:** You've deployed DataHub six months ago, but only 20% of the team uses it. How do you drive adoption?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Root cause diagnosis:** - Search doesn't return useful results → improve metadata quality - Teams don't know it exists → awareness problem - No incentive to update metadata → motivation problem - Catalog is inaccurate → trust problem (chicken-and-egg)
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Root cause diagnosis:**
 - Search doesn't return useful results → improve metadata quality
@@ -96,13 +119,25 @@ legacy.orders_v1:
 - Success story: "The analytics team saved 3 weeks using catalog search"
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Designing a Catalog for 50 Teams
+</article>
 
-**Question:** Your company has 50 domain teams and 10,000+ tables. Design a catalog system that scales without becoming a maintenance burden.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing a Catalog for 50 Teams
+
+**Scenario:** Your company has 50 domain teams and 10,000+ tables. Design a catalog system that scales without becoming a maintenance burden.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Key design decisions:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```mermaid
 flowchart TD
@@ -162,3 +197,7 @@ register_table(
 - Search performance: Elasticsearch needs tuning as corpus grows — weight recency and usage
 - Lineage graph: prune edges for deprecated tables, limit graph traversal depth
 - Schema sync: use Kafka/event-driven ingestion rather than polling for large orgs
+
+</details>
+
+</article>

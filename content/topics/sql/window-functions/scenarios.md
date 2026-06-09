@@ -746,4 +746,32 @@ ORDER BY user_id, view_date;
 
 </details>
 
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What's the difference between RANK, DENSE_RANK, and ROW_NUMBER?**
+A: All assign a number to each row within a partition. `ROW_NUMBER` always gives a unique sequential number (1, 2, 3...). `RANK` gives the same number to ties but skips the next rank (1, 1, 3). `DENSE_RANK` gives the same number to ties but does NOT skip (1, 1, 2).
+
+**Q: What does `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` mean?**
+A: It defines the window frame — include all rows from the start of the partition up to and including the current row. This is the standard frame for running totals and running counts.
+
+**Q: Can you use a window function in a WHERE clause?**
+A: No. Window functions are evaluated after WHERE/GROUP BY, so you cannot filter on them directly. Wrap the query in a CTE or subquery, then filter in the outer query.
+
+**Q: What's the difference between PARTITION BY and GROUP BY?**
+A: `GROUP BY` collapses rows into one row per group (aggregation). `PARTITION BY` in a window function defines the grouping for the calculation but keeps all original rows in the output.
+
+**Q: How do you calculate a 7-day moving average?**
+A: Use `AVG(value) OVER (PARTITION BY ... ORDER BY date_col ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)`. The `ROWS BETWEEN` clause defines a 7-row rolling window.
+
+**Q: What is `LAG(col, 2)` vs `LAG(col, 1)`?**
+A: `LAG(col, 1)` returns the value from the previous row. `LAG(col, 2)` returns the value from two rows back. The second argument is the offset; default is 1.
+
+**Q: Can window functions use aggregation functions?**
+A: Yes. Standard aggregate functions like `SUM`, `AVG`, `COUNT`, `MIN`, `MAX` can all be used with `OVER()` to become window functions — they compute the aggregate over the window frame without collapsing rows.
+
+**Q: What does `NTILE(4)` do?**
+A: Divides the partition into 4 equal-sized buckets (quartiles) and assigns each row a bucket number 1–4. Useful for percentile-based segmentation (e.g., top/bottom quartile analysis).
+
 </article>

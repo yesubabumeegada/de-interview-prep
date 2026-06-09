@@ -2,19 +2,30 @@
 title: "SQL Tuning — Scenarios"
 topic: oracle
 subtopic: sql-tuning
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [oracle, sql-tuning, interview, scenarios, troubleshooting]
 ---
 
 # SQL Tuning — Interview Scenarios
 
-## Scenario 1 (Junior): A Report Query Is Running Slowly
 
-**Question:** A nightly report query that aggregates 2 years of order data runs for 45 minutes. Users are complaining. How do you approach this?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: A Report Query Is Running Slowly
+
+**Scenario:** A nightly report query that aggregates 2 years of order data runs for 45 minutes. Users are complaining. How do you approach this?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Get the execution plan**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Get the execution plan**
 ```sql
@@ -61,13 +72,25 @@ EXEC DBMS_STATS.GATHER_TABLE_STATS('APP', 'ORDER_ITEMS', degree => 8);
 
 **Result:** After index + stats: 45 minutes → 2 minutes.
 
----
+</details>
 
-## Scenario 2 (Mid-level): Query Runs Fine for Some Users, Slow for Others
+</article>
 
-**Question:** The same ORDER lookup query runs in 0.01 seconds for most users but 30 seconds for user `jsmith`. Same SQL text. What do you investigate?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Query Runs Fine for Some Users, Slow for Others
+
+**Scenario:** The same ORDER lookup query runs in 0.01 seconds for most users but 30 seconds for user `jsmith`. Same SQL text. What do you investigate?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Root cause hypothesis: bind variable peeking + skewed data**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Root cause hypothesis: bind variable peeking + skewed data**
 
@@ -118,13 +141,25 @@ Option C — Application-level fix (if you can change code):
 -- Use customer order count as routing condition
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Plan Regression After Database Upgrade
+</article>
 
-**Question:** After upgrading from Oracle 19c to Oracle 21c, three critical queries are running 5× slower. How do you stabilize them quickly without rolling back?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Plan Regression After Database Upgrade
+
+**Scenario:** After upgrading from Oracle 19c to Oracle 21c, three critical queries are running 5× slower. How do you stabilize them quickly without rolling back?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Immediate action — use SPM to pin the old plans:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Immediate action — use SPM to pin the old plans:**
 
@@ -202,26 +237,6 @@ ORDER BY name;
 -- Compare plan content: new plan might use an anti-join or semi-join where 19c used NL
 ```
 
----
+</details>
 
-## Key Tuning Decision Tree
-
-```
-Query is slow?
-├── No plan? → EXPLAIN PLAN or DISPLAY_CURSOR
-├── Full scan on large table?
-│   ├── Yes, low selectivity (>20% rows) → Full scan is correct; consider parallel
-│   └── Yes, high selectivity (<5% rows) → Add index
-├── Bad cardinality estimates? (E-Rows >> A-Rows)
-│   ├── Stale stats → GATHER_TABLE_STATS
-│   └── Skewed data → Add histogram
-├── Wrong join method?
-│   ├── Nested loops on large tables → USE_HASH hint or fix selectivity
-│   └── Hash join on tiny tables → USE_NL hint
-├── Plan changed recently?
-│   ├── After stats gather → Restore old stats or use SQL Profile
-│   └── After upgrade → Load SPM baselines from pre-upgrade
-└── Can't change SQL text?
-    ├── SQL Profile → fix cardinality estimates
-    └── SPM Baseline → pin a good plan
-```
+</article>

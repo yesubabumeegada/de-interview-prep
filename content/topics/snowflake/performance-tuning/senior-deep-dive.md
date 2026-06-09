@@ -185,3 +185,69 @@ SELECT * FROM table_a a, table_b b;  -- |a| × |b| rows!
 > **Tip 2:** "How do you handle query spill in Snowflake?" — Spill = operation exceeds available memory. Solutions: (1) larger warehouse (more memory per node), (2) reduce data before expensive ops (filter first, then sort/join), (3) break multi-table joins into stages. Monitor: bytes_spilled in QUERY_HISTORY. Spill to local disk = moderate issue. Spill to remote storage = severe (10x slower than local).
 
 > **Tip 3:** "Workload isolation strategy?" — Separate warehouses: ETL (large, scheduled, short runs), BI (medium, multi-cluster for concurrency), ML (x-large, long-running). Each has: own resource monitor (budget control), own sizing (right-sized for workload), own auto-suspend (cost control). Prevents: ETL starving dashboards, runaway ML queries eating BI budget.
+
+---
+
+## ⚡ Cheat Sheet
+
+### Query Profile Node Types
+
+| Node Type | What it means |
+|---|---|
+| TableScan | Reading micro-partitions from storage; check partition pruning % |
+| Filter | Row-level filtering; should happen as early as possible |
+| Join | Hash join between two inputs; watch for large build side |
+| Aggregate | GROUP BY / aggregate computation |
+| Sort | Explicit sort; can spill if large |
+| WindowFunction | OVER() clause computation |
+| Flatten | Lateral flatten of VARIANT/ARRAY columns |
+| ExternalScan | Reading from external stage (S3/ADLS) — slower than native tables |
+| Result | Final output; large result sets indicate need for LIMIT or downstream pagination |
+
+### Red Flags in Query Profile
+
+| Red flag | What it means | Fix |
+|---|---|---|
+| Spillage to local disk | Operation exceeded node memory | Use larger warehouse; filter/aggregate before the expensive op |
+| Spillage to remote storage | Severe memory shortage; 10–50× slower than local | Use X-Large+ warehouse; redesign query to reduce intermediate data |
+| Partition pruning < 50% | WHERE clause not matching clustering key | Review clustering keys; ensure filter columns match cluster key order |
+| TableScan reading millions of rows, few returned | Missing partition pruning | Add clustering on frequently-filtered column |
+| Exploding join (output rows >> input rows) | Accidental cross join or duplicate keys | Inspect join keys for NULLs, duplicates; add explicit join conditions |
+| Bytes spilled >> bytes processed | Near-total spill; warehouse completely undersized | Increase warehouse size by 2–4 sizes; check for Cartesian products |
+| Single node processing all work | No parallelism | Check if table is too small to distribute; may be unavoidable |
+
+### Clustering Key Selection Rules
+
+| Rule | Guidance |
+|---|---|
+| Best columns for clustering | Columns most frequently used in WHERE / JOIN conditions |
+| Cardinality | High enough to create distinct ranges (date, region) — not booleans |
+| Column order | Most filtered column first; secondary sort column second |
+| Anti-pattern | Clustering on a column with low cardinality (e.g., status with 3 values) |
+| When NOT to cluster | Tables < 1 TB — overhead exceeds benefit; auto-clustering costs money |
+| Automatic clustering | Enable for tables queried with consistent filter patterns; monitor credit usage |
+
+### Warehouse Sizing Decision Table
+
+| Query type | Recommended size | Reasoning |
+|---|---|---|
+| Simple BI / dashboard queries | XS – S | Low compute; concurrency handled by multi-cluster |
+| Complex analytical queries (many joins) | M – L | More memory per node reduces spill |
+| Large table scans (TB+) | L – XL | Parallelism across more nodes |
+| ETL / data loading | M – XL | Depends on transformation complexity |
+| ML feature engineering / heavy aggregation | XL – 4XL | Memory-intensive operations |
+| Concurrent BI users (10+) | M multi-cluster | Scale out (more clusters) vs scale up (larger size) |
+
+### Credit Consumption Reference
+
+| Warehouse size | Credits/hour | Approx. cost/hour (USD) |
+|---|---|---|
+| XS | 1 | ~$2–3 |
+| S | 2 | ~$4–6 |
+| M | 4 | ~$8–12 |
+| L | 8 | ~$16–24 |
+| XL | 16 | ~$32–48 |
+| 2XL | 32 | ~$64–96 |
+| 4XL | 64 | ~$128–192 |
+
+> **Formula reminder:** Total credits = (warehouse size in credits/hr) × (runtime in hours) × (number of clusters). Auto-suspend on idle — even 1 minute of idle time consumes credits proportionally.

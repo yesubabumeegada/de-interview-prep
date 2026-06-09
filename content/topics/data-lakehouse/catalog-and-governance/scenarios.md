@@ -1,218 +1,338 @@
 ---
-title: "Catalog & Governance — Scenarios"
+title: "Catalog and Governance — Scenarios"
 topic: data-lakehouse
 subtopic: catalog-and-governance
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
-tags: [governance, catalog, scenarios, pii, access-control]
+content_type: scenario_question
+tags: [catalog, unity-catalog, iceberg-catalog, governance, scenarios]
 ---
 
-# Catalog & Governance — Interview Scenarios
+# Catalog and Governance — Interview Scenarios
 
-## Scenario 1: Implement Data Governance for a Multi-Tenant SaaS Company
+<article data-difficulty="junior">
 
-**Question:** Your company is a B2B SaaS with 50 enterprise customers. You store all customer data in a single Snowflake data warehouse. Analysts from each customer company will have read access. Design the governance architecture to ensure: (1) Customer A's analysts cannot see Customer B's data, (2) PII is masked for junior analysts, (3) Full audit trail of all data access.
+## 🟢 Junior: What is a Data Catalog and Why Does It Matter?
 
-**Answer:**
+**Scenario:** You join a data team where analysts frequently complain they don't know what tables exist, what columns mean, or whether data is fresh. The team has no data catalog. Explain what a data catalog is and what immediate value it would provide.
 
-```
-Architecture:
+<details>
+<summary>💡 Hint</summary>
 
-1. Row-Level Security (tenant isolation):
-   -- Create row access policy in Snowflake
-   CREATE OR REPLACE ROW ACCESS POLICY tenant_isolation
-   AS (tenant_id STRING) RETURNS BOOLEAN ->
-     CURRENT_ROLE() LIKE CONCAT('TENANT_', tenant_id, '%')
-     OR CURRENT_ROLE() = 'INTERNAL_ADMIN';
-   
-   -- Apply to all tenant-scoped tables
-   ALTER TABLE silver.orders ADD ROW FILTER tenant_isolation ON (tenant_id);
-   ALTER TABLE silver.customers ADD ROW FILTER tenant_isolation ON (tenant_id);
-   ALTER TABLE silver.events ADD ROW FILTER tenant_isolation ON (tenant_id);
-   
-   -- Each customer gets a dedicated role:
-   CREATE ROLE TENANT_ACME_ANALYST;  -- Acme Corp analysts
-   CREATE ROLE TENANT_GLOBEX_ANALYST; -- Globex Corp analysts
-   GRANT ROLE TENANT_ACME_ANALYST TO USER jane_doe_acme;
+A data catalog is both a technical system (metadata store) and an organizational tool (discoverability, lineage, ownership). Think about the pain points: duplicate tables, undocumented schemas, no ownership, no freshness SLAs.
 
-2. Column Masking (PII for junior analysts):
-   -- Masking policy based on role
-   CREATE OR REPLACE MASKING POLICY mask_pii_email
-   AS (email STRING) RETURNS STRING ->
-     CASE
-       WHEN CURRENT_ROLE() LIKE '%_ADMIN%' THEN email
-       WHEN CURRENT_ROLE() LIKE '%_SENIOR_ANALYST' THEN email
-       ELSE REGEXP_REPLACE(email, '(.).*@', '$1***@')
-     END;
-   
-   ALTER TABLE silver.customers MODIFY COLUMN email
-     SET MASKING POLICY mask_pii_email;
-   
-   -- Senior analysts: TENANT_ACME_SENIOR_ANALYST (see raw PII)
-   -- Junior analysts: TENANT_ACME_ANALYST (see masked PII)
+</details>
 
-3. Audit Trail:
-   -- Snowflake: all queries auto-logged in QUERY_HISTORY
-   -- Create governance view for compliance team
-   CREATE OR REPLACE VIEW governance.data_access_audit AS
-   SELECT
-     query_id,
-     user_name,
-     role_name,
-     query_text,
-     database_name || '.' || schema_name AS schema,
-     start_time,
-     end_time,
-     rows_produced,
-     execution_status
-   FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
-   WHERE database_name NOT IN ('SNOWFLAKE')
-     AND start_time >= DATEADD('days', -90, CURRENT_TIMESTAMP());
-   
-   -- Alert on anomalies: one user reading more rows than usual
-   CREATE ALERT unusual_data_access
-     WAREHOUSE = 'ADMIN_WH'
-     SCHEDULE = '15 MINUTES'
-     IF (EXISTS (
-       SELECT user_name, SUM(rows_produced)
-       FROM governance.data_access_audit
-       WHERE start_time > DATEADD('hours', -1, CURRENT_TIMESTAMP())
-       GROUP BY user_name
-       HAVING SUM(rows_produced) > 1000000  -- alert if > 1M rows in 1 hour
-     ))
-     THEN CALL notify_security_team();
+<details>
+<summary>✅ Solution</summary>
 
-4. Catalog Integration:
-   -- Register tables in Atlan/DataHub with tenant ownership metadata
-   -- Tag all tenant columns: tenant_id → classification=TENANT_SCOPE
-   -- Analysts see only their tenant's tables in catalog (filtered by role)
-```
+**What is a Data Catalog?**
 
----
+A data catalog is a metadata management system that provides:
+1. **Discovery** — searchable inventory of all data assets (tables, dashboards, ML models)
+2. **Documentation** — column descriptions, business definitions, owners
+3. **Lineage** — where data comes from and where it flows
+4. **Governance** — access policies, PII tagging, compliance tracking
+5. **Quality signals** — freshness, row counts, test results
 
-## Scenario 2: Respond to a GDPR Erasure Request
+**Immediate Value for Your Team:**
 
-**Question:** A customer submits a GDPR Article 17 (right to erasure) request for customer_id=99999. You have data in S3 + Delta Lake tables across Bronze, Silver, and Gold zones. How do you handle this?
+| Problem | Catalog Solution |
+|---------|-----------------|
+| "What tables exist?" | Searchable asset inventory |
+| "What does this column mean?" | Column-level descriptions and tags |
+| "Is this data fresh?" | Freshness metadata and SLA tracking |
+| "Who owns this?" | Ownership assignment |
+| "Is it safe to use?" | PII/sensitivity tags, access controls |
 
-**Answer:**
+**Popular Catalog Tools:**
+- **Open-source:** Apache Atlas, OpenMetadata, DataHub
+- **Cloud-native:** AWS Glue Data Catalog, Azure Purview, Google Data Catalog
+- **Databricks:** Unity Catalog (combines catalog + governance)
+- **Commercial:** Alation, Atlan, Collibra
 
-```
-Process:
-
-Step 1: Identify all tables containing customer_id=99999
-  -- Query the catalog lineage: what tables reference customer_id?
-  -- Or: full scan of all tables for customer_id=99999 (use catalog tags)
-  
-  Affected tables:
-    bronze.orders (raw events — append only)
-    bronze.clickstream (raw events)
-    silver.orders (upserted by order_id, contains customer_id FK)
-    silver.customers (customer record — direct PII)
-    gold.customer_360 (pre-joined, contains PII)
-    gold.customer_features (ML features — may contain PII indirectly)
-
-Step 2: Delete from Silver and Gold (these have MERGEs, customer data exists)
-  spark.sql("DELETE FROM silver.customers WHERE customer_id = 99999")
-  spark.sql("DELETE FROM silver.orders WHERE customer_id = 99999")
-  spark.sql("DELETE FROM gold.customer_360 WHERE customer_id = 99999")
-  spark.sql("DELETE FROM gold.customer_features WHERE customer_id = 99999")
-  
-  -- Delta/Iceberg: this is a logical delete (soft delete in format)
-  -- Physical deletion requires OPTIMIZE/rewrite_data_files
-
-Step 3: Physical deletion via compaction
-  -- Delta:   OPTIMIZE silver.customers / VACUUM (waits for retention period)
-  -- Iceberg: CALL system.rewrite_data_files(table => 'silver.customers')
-  --          CALL system.expire_snapshots(older_than => ...)
-
-Step 4: Handle Bronze (append-only, raw data)
-  -- Bronze "true erasure" is controversial: Bronze is raw log, not primary store
-  -- Options:
-  --   Option A: Pseudonymize customer_id in Bronze (hash with erasure key)
-  --             When erasure key is deleted, customer is de-identified
-  --   Option B: Accept: Bronze is raw log, Silver/Gold are "personal data stores"
-  --             Under GDPR, erasure applies to personal data processed for purposes
-  --   Option C: Re-write Bronze partition excluding customer 99999 (expensive)
-  -- Common choice: Option A (cryptographic erasure via key deletion)
-
-Step 5: Audit log
-  Log the erasure request, tables affected, date completed, confirmed by whom
-  Retain erasure log for 7 years (compliance audit trail)
-
-Step 6: Confirm to customer
-  "Your data has been deleted from all production systems within 30 days as required by GDPR."
-  
-Timeline: erasure must complete within 30 days of request (GDPR requirement)
-```
-
----
-
-## Scenario 3: Build a Data Catalog for a 20-Table Lakehouse
-
-**Question:** Your team has 20 Delta tables (Bronze, Silver, Gold) and no catalog. Analysts constantly ask "what does this column mean?" and "is this table up to date?" Design and implement a basic catalog with minimal tooling.
-
-**Answer:**
-
-```
-Minimum viable catalog using dbt + docs:
-
-1. dbt YAML descriptions (business metadata + schema docs):
-
-# models/silver/schema.yml
-version: 2
+**Quick Win — Add Column Descriptions in dbt:**
+```yaml
+# models/orders.yml
 models:
-  - name: silver_orders
-    description: "Cleansed order records. Updated hourly via CDC from Postgres orders table.
-                  Source of truth for order data in analytics. PII: customer_id only."
-    meta:
-      owner: "data-engineering@company.com"
-      freshness_sla: "1 hour"
-      tier: "silver"
-      tags: ["finance", "orders", "internal"]
+  - name: orders
+    description: "One row per customer order. Source: Salesforce CRM."
     columns:
       - name: order_id
-        description: "Globally unique order identifier. Matches Postgres public.orders.id."
-        tests: [not_null, unique]
-      - name: amount
-        description: "Order total in USD, exclusive of tax. Inclusive of discounts. NULL if order cancelled."
-      - name: status
-        description: "Current order status. Values: pending, processing, shipped, delivered, cancelled."
+        description: "Globally unique order identifier (UUID v4)"
+      - name: customer_id
+        description: "FK to dim_customers. Never null."
+      - name: total_amount
+        description: "Order total in USD, inclusive of tax and shipping"
         tests:
-          - accepted_values:
-              values: [pending, processing, shipped, delivered, cancelled]
-
-2. Generate and serve dbt docs:
-   dbt docs generate  # creates target/catalog.json
-   dbt docs serve     # serves at localhost:8080
-   
-   # Deploy to S3 as static site for team access
-   aws s3 sync target/docs s3://bucket/data-catalog/
-   # CloudFront distribution → internal URL: https://catalog.internal.company.com
-
-3. Freshness monitoring (augments catalog):
-   # dbt source freshness check
-   version: 2
-   sources:
-     - name: bronze
-       description: "Raw ingest tables"
-       freshness:
-         warn_after: {count: 2, period: hour}
-         error_after: {count: 6, period: hour}
-       loaded_at_field: "_ingested_at"
-       tables:
-         - name: orders
-         - name: clickstream
-
-4. Data Dictionary (Google Sheet or Notion for simple start):
-   - Term: "revenue" → Definition: gross_revenue includes refunds; net_revenue excludes refunds
-   - Term: "active_customer" → Definition: made a purchase in the last 90 days
-   - Link from dbt model descriptions to glossary terms
-
-Result: 
-  - dbt docs = searchable catalog for 20 tables
-  - Schema tests = data quality documentation
-  - Freshness checks = SLA monitoring
-  - Total setup time: 1 sprint (2 weeks)
-  - Upgrade path: import dbt catalog into Atlan/DataHub when team grows
+          - not_null
+          - positive_value
 ```
+
+When dbt generates docs (`dbt docs generate`), these flow into the catalog automatically if integrated.
+
+</details>
+
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Implementing Unity Catalog for a Multi-Workspace Databricks Environment
+
+**Scenario:** Your company has 4 Databricks workspaces: prod, staging, dev, and a shared analytics workspace. Each has its own Hive metastore. You're tasked with migrating to Unity Catalog to enable centralized governance, cross-workspace access, and fine-grained column-level security. Design the migration plan.
+
+<details>
+<summary>💡 Hint</summary>
+
+Unity Catalog uses a 3-level namespace: catalog.schema.table. A Unity Catalog metastore is account-level (shared across workspaces). Plan your catalog hierarchy, external location setup, and privilege model before migrating data.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Unity Catalog Hierarchy Design:**
+
+```
+Account Metastore (single, account-level)
+├── catalog: prod
+│   ├── schema: raw
+│   ├── schema: silver
+│   └── schema: gold
+├── catalog: staging
+│   └── schema: ...
+├── catalog: dev
+│   └── schema: ...
+└── catalog: shared_analytics
+    ├── schema: finance
+    └── schema: marketing
+```
+
+**Step 1: Set Up External Locations**
+
+```python
+# In Databricks account console or via Terraform
+# External location maps S3 paths to Unity Catalog
+
+# SQL
+CREATE EXTERNAL LOCATION prod_data
+URL 's3://company-prod-data/'
+WITH (STORAGE CREDENTIAL prod_s3_credential);
+
+GRANT READ FILES ON EXTERNAL LOCATION prod_data TO `data-engineers`;
+```
+
+**Step 2: Migrate Hive Tables to Unity Catalog**
+
+```python
+# Upgrade existing Hive tables in-place
+spark.sql("""
+  UPGRADE TABLE hive_metastore.default.orders
+  TO prod.raw.orders
+""")
+
+# For managed tables, use SYNC
+spark.sql("""
+  SYNC prod.raw FROM hive_metastore.default
+  FULL
+""")
+```
+
+**Step 3: Column-Level Security for PII**
+
+```sql
+-- Tag PII columns
+ALTER TABLE prod.silver.customers
+ALTER COLUMN ssn SET TAGS ('pii' = 'true', 'pii_type' = 'ssn');
+
+ALTER TABLE prod.silver.customers
+ALTER COLUMN email SET TAGS ('pii' = 'true', 'pii_type' = 'email');
+
+-- Row/column filter function
+CREATE OR REPLACE FUNCTION mask_ssn(ssn STRING)
+RETURNS STRING
+RETURN CASE
+  WHEN is_member('pii_access_group') THEN ssn
+  ELSE CONCAT('***-**-', RIGHT(ssn, 4))
+END;
+
+-- Apply column mask
+ALTER TABLE prod.silver.customers
+ALTER COLUMN ssn SET MASK mask_ssn;
+```
+
+**Step 4: Privilege Model**
+
+```sql
+-- Data engineering team: full access to raw/silver
+GRANT USE CATALOG, USE SCHEMA, SELECT, MODIFY
+  ON CATALOG prod TO `group:data-engineers`;
+
+-- Analysts: read-only gold layer
+GRANT USE CATALOG, USE SCHEMA, SELECT
+  ON CATALOG prod.gold TO `group:analysts`;
+
+-- Row-level filter for regional data
+CREATE FUNCTION filter_by_region(region STRING)
+RETURNS BOOLEAN
+RETURN region = current_user_region();  -- custom function
+
+ALTER TABLE prod.gold.sales
+ADD ROW FILTER filter_by_region ON (region);
+```
+
+**Step 5: Lineage and Auditing**
+
+Unity Catalog automatically captures:
+- Column-level lineage from Spark SQL and notebooks
+- Query audit logs in `system.access.audit`
+
+```sql
+-- Query audit log
+SELECT user_name, action_name, request_params, response
+FROM system.access.audit
+WHERE event_time > CURRENT_TIMESTAMP - INTERVAL 1 DAY
+  AND action_name = 'commandSubmit';
+```
+
+</details>
+
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Federated Catalog Architecture Across Multiple Clouds and Engines
+
+**Scenario:** Your organization operates on AWS (primary), GCP (data science team), and Azure (EU regulatory). Each has its own data stores and tools (Trino on AWS, BigQuery on GCP, Synapse on Azure). Design a federated data catalog architecture that provides unified discovery, lineage, and governance without requiring data movement.
+
+<details>
+<summary>💡 Hint</summary>
+
+Consider an open metadata standard (OpenMetadata, DataHub) as the central catalog, with connectors to each cloud's native catalog. For lineage, OpenLineage is the emerging standard (Marquez, Atlan support it). Cross-catalog querying can use Iceberg REST catalog with engine-specific connectors.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Federated Catalog Architecture:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│              Central Metadata Plane                  │
+│         (OpenMetadata / DataHub)                     │
+│  - Unified search across all clouds                  │
+│  - Cross-cloud lineage (OpenLineage events)          │
+│  - Policy propagation                               │
+└────────┬──────────────────────┬──────────┬──────────┘
+         │                      │          │
+    ┌────▼────┐          ┌──────▼──┐  ┌───▼─────┐
+    │  AWS    │          │   GCP   │  │  Azure  │
+    │ Glue    │          │  Data   │  │ Purview │
+    │ Catalog │          │ Catalog │  │         │
+    │+ Iceberg│          │+BigQuery│  │+Synapse │
+    └─────────┘          └─────────┘  └─────────┘
+```
+
+**1. OpenMetadata Connectors Setup:**
+
+```yaml
+# openmetadata-ingestion config for AWS Glue
+source:
+  type: glue
+  serviceName: aws-prod
+  serviceConnection:
+    config:
+      type: Glue
+      awsConfig:
+        awsRegion: us-east-1
+  sourceConfig:
+    config:
+      type: DatabaseMetadata
+
+# GCP BigQuery connector
+source:
+  type: bigquery
+  serviceName: gcp-ds
+  serviceConnection:
+    config:
+      type: BigQuery
+      credentials:
+        gcpConfig:
+          type: service_account
+          projectId: gcp-datascience
+```
+
+**2. OpenLineage for Cross-Cloud Lineage:**
+
+Emit OpenLineage events from each engine:
+
+```python
+# Spark with OpenLineage
+spark = SparkSession.builder     .config("spark.extraListeners",
+            "io.openlineage.spark.agent.OpenLineageSparkListener")     .config("spark.openlineage.transport.type", "http")     .config("spark.openlineage.transport.url",
+            "https://openmetadata.internal/api/v1/lineage")     .getOrCreate()
+# All Spark SQL now auto-emits lineage events
+
+# dbt with OpenLineage
+# dbt-openlineage integration emits events on dbt run
+```
+
+**3. Federated Policy Propagation:**
+
+```python
+# Tag propagation: tag in central catalog → sync to each cloud
+class PolicyPropagator:
+    def propagate_pii_tag(self, table_fqn: str, column: str):
+        # Central catalog tags column as PII
+        openmetadata_client.add_tag(table_fqn, column, "PII")
+        
+        # AWS: update Lake Formation column tag
+        lakeformation.add_lf_tags_to_resource(
+            Resource={'TableWithColumns': {
+                'DatabaseName': db, 'TableName': table,
+                'ColumnNames': [column]
+            }},
+            LFTags=[{'TagKey': 'pii', 'TagValues': ['true']}]
+        )
+        
+        # GCP: update BigQuery policy tag
+        bigquery_client.update_column_policy_tag(
+            table_ref, column, pii_policy_tag_id
+        )
+        
+        # Azure: update Purview sensitivity label
+        purview_client.set_sensitivity_label(
+            table_fqn, column, "Confidential-PII"
+        )
+```
+
+**4. Cross-Cloud Discovery Without Data Movement:**
+
+Use Trino Federation + Iceberg REST catalog for query federation:
+
+```sql
+-- Trino can query AWS Glue Iceberg tables, GCS Iceberg tables
+-- without moving data
+SELECT a.customer_id, b.model_score
+FROM aws_catalog.gold.customers a
+JOIN gcp_catalog.ml_features.customer_scores b
+  ON a.customer_id = b.customer_id
+WHERE a.region = 'EU';
+```
+
+**Key Architecture Principles:**
+1. **Metadata moves, data doesn't** — crawlers push metadata to central catalog
+2. **OpenLineage as lingua franca** — engine-agnostic lineage events
+3. **Policy at the catalog, enforced at the engine** — central definition, local enforcement
+4. **Immutable audit trail** — all catalog events logged to append-only store
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "What is the difference between a technical catalog and a business catalog?" — A technical catalog stores schema, statistics, and lineage (e.g., Glue, Hive Metastore). A business catalog adds ownership, descriptions, business glossary, and data quality (e.g., DataHub, Alation). Modern tools blend both.
+> **Tip 2:** "How do you handle catalog sprawl across teams?" — Establish a governance committee, enforce naming conventions (domain.team.entity), use automated tagging for PII/sensitivity, and set stale-asset policies (archive tables unused for >90 days).
+> **Tip 3:** "What is OpenLineage?" — OpenLineage is an open standard (CNCF) for capturing data lineage events. Supported by Spark, Airflow, dbt, Flink. Events are JSON payloads describing input/output datasets per job run, enabling cross-engine lineage graphs.

@@ -2,19 +2,31 @@
 title: "Great Expectations — Scenarios"
 topic: data-quality
 subtopic: great-expectations
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [great-expectations, interview, scenarios]
 ---
 
 # Great Expectations — Interview Scenarios
 
-## Scenario 1 (Junior): First GX Suite
 
-**Question:** A new `customers` table is being ingested daily. Set up basic GX validation.
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: First GX Suite
+
+**Scenario:** A new `customers` table is being ingested daily. Set up basic GX validation.
+
+<details>
+<summary>💡 Hint</summary>
+
+import great_expectations as gx
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
 ```python
 import great_expectations as gx
 import pandas as pd
@@ -48,13 +60,25 @@ result = validator.validate()
 print(f"Passed: {result.success}")
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): GX Failing on New Data
+</article>
 
-**Question:** Your GX checkpoint passes in dev but fails in production with "column `region_code` was not found." How do you debug?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: GX Failing on New Data
+
+**Scenario:** Your GX checkpoint passes in dev but fails in production with "column `region_code` was not found." How do you debug?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Root cause possibilities:** 1. A new column was added to the suite that doesn't exist in prod source 2. The prod source has different schema (table was modified) 3. Suite was updated and deployed before the schema migration ran
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Root cause possibilities:**
 1. A new column was added to the suite that doesn't exist in prod source
@@ -88,13 +112,25 @@ print("In data but not expected:", extra_in_data)
 - If column was dropped accidentally → fix upstream schema migration
 - For resilience → add `expect_column_to_exist` with severity=warning so missing columns are flagged but don't fail the pipeline
 
----
+</details>
 
-## Scenario 3 (Senior): Scaling GX to 200 Tables
+</article>
 
-**Question:** Your team needs to add GX validation to 200 tables. How do you scale this without writing 200 suites manually?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Scaling GX to 200 Tables
+
+**Scenario:** Your team needs to add GX validation to 200 tables. How do you scale this without writing 200 suites manually?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Auto-generation pipeline:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Auto-generation pipeline:**
 ```python
@@ -163,3 +199,7 @@ for table_name in tables_to_onboard:
 3. Use GX Cloud for web UI so non-engineers can manage expectations
 4. Tag each expectation with `owner` metadata for accountability
 5. Start with severity=warning for all auto-generated rules, promote to critical after 30 days of stability
+
+</details>
+
+</article>

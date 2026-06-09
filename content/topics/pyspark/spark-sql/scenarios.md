@@ -2,15 +2,35 @@
 title: "PySpark Spark SQL - Interview Scenarios"
 topic: pyspark
 subtopic: spark-sql
-content_type: study_material
-difficulty_level: mid-level
-layer: real-world
+content_type: scenario_question
 tags: [pyspark, spark-sql, interview-scenarios, query-optimization, explain-plan, performance]
 ---
 
 # PySpark Spark SQL — Interview Scenarios
 
-## Junior Scenario: Write a Spark SQL Query
+
+
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Scenario: Write a Spark SQL Query
+
+**Scenario:** **Question:** "Given an orders table and a customers table, write a Spark SQL query to find the top 5 customers by total spend in Q1 2024, including their name and email."
+
+### Setup
+
+```python
+from p
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "Given an orders table and a customers table, write a Spark SQL query to find the top 5 customers by total spend in Q1 2024, including their name and email."
 
@@ -81,9 +101,25 @@ result.show()
 - LIMIT for top N
 - Bonus: mention that the optimizer will push the date filter before the join
 
----
+</details>
 
-## Mid-Level Scenario: Optimize a Slow Spark SQL Query
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Scenario: Optimize a Slow Spark SQL Query
+
+**Scenario:** **Question:** "This Spark SQL query takes 45 minutes to run on a 100-node cluster. The orders table has 2 billion rows partitioned by order_date. The products table has 50,000 rows. What's wrong and h
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "This Spark SQL query takes 45 minutes to run on a 100-node cluster. The orders table has 2 billion rows partitioned by order_date. The products table has 50,000 rows. What's wrong and how would you fix it?"
 
@@ -183,9 +219,29 @@ Sort [revenue DESC]
 - Explain plan reveals the problem — always check plan first
 - Additional: increase `autoBroadcastJoinThreshold` if products table is under threshold
 
----
+</details>
 
-## Senior Scenario: Compare SQL Plan vs DataFrame Plan
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Scenario: Compare SQL Plan vs DataFrame Plan
+
+**Scenario:** **Question:** "Your team claims Spark SQL is slower than DataFrame API for a specific query. You need to prove or disprove this. Walk me through your investigation."
+
+### Investigation Process
+
+```pyt
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "Your team claims Spark SQL is slower than DataFrame API for a specific query. You need to prove or disprove this. Walk me through your investigation."
 
@@ -285,3 +341,13 @@ print(f"SQL avg: {sql_avg:.2f}s, DF avg: {df_avg:.2f}s, Diff: {abs(sql_avg-df_av
 > **Tip 2:** "For optimization questions, always start with EXPLAIN." — "Don't guess — look at the plan. I check three things: Is partition pruning happening (Partition Filters in FileScan)? Is the join strategy appropriate (Broadcast for small tables)? Are there unnecessary shuffles (Exchange nodes)? Then I fix the most impactful issue first. Usually it's a filter that prevents pruning or a missing broadcast."
 
 > **Tip 3:** "For SQL vs DataFrame comparisons, emphasize they're the same thing." — "Both APIs produce the same Catalyst logical plan. Any performance difference is either measurement error or the two versions aren't expressing the same query. I verify by comparing optimizedPlan().toString() — if they match, performance is identical. The choice between SQL and DataFrame is about team preference and code maintainability, not performance."
+
+</details>
+
+</article>
+
+
+
+---
+
+## Interview Tips

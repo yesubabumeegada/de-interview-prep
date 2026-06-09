@@ -2,15 +2,32 @@
 title: "PySpark Broadcast Variables - Interview Scenarios"
 topic: pyspark
 subtopic: broadcast-variables
-content_type: study_material
-difficulty_level: mid-level
-layer: real-world
+content_type: scenario_question
 tags: [pyspark, broadcast, interview-scenarios, oom, repartition, join-strategy]
 ---
 
 # PySpark Broadcast Variables — Interview Scenarios
 
-## Junior Scenario: When to Broadcast
+
+
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Scenario: When to Broadcast
+
+**Scenario:** **Question:** "You have a 1-billion-row transaction table and a 5,000-row category lookup table. How would you join them efficiently? Explain why your approach is better than a regular join."
+
+### Sol
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "You have a 1-billion-row transaction table and a 5,000-row category lookup table. How would you join them efficiently? Explain why your approach is better than a regular join."
 
@@ -67,9 +84,25 @@ graph LR
 - Spark may auto-broadcast (5000 rows < 10MB threshold), but explicit is safer
 - Verify with `result.explain()` — should show BroadcastHashJoin
 
----
+</details>
 
-## Mid-Level Scenario: Fix OOM from Broadcasting Large Table
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Scenario: Fix OOM from Broadcasting Large Table
+
+**Scenario:** **Question:** "A developer added `F.broadcast()` to a 2GB user profile table because 'broadcasts are faster'. Now the job fails with OOM errors on both the driver and executors. Diagnose and fix the i
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "A developer added `F.broadcast()` to a 2GB user profile table because 'broadcasts are faster'. Now the job fails with OOM errors on both the driver and executors. Diagnose and fix the issue."
 
@@ -164,9 +197,25 @@ print(recommend_join_strategy(2000, 50, 50, 8))
 - Could try column pruning to reduce broadcast size (select only needed columns)
 - Check if filtering (e.g., only active users) reduces table enough to broadcast
 
----
+</details>
 
-## Senior Scenario: Broadcast vs Repartition Strategy
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Scenario: Broadcast vs Repartition Strategy
+
+**Scenario:** **Question:** "You have a pipeline that joins a 500GB event table with a 800MB customer dimension every hour. The dimension updates daily. Auto-broadcast threshold won't cover 800MB. What's your join
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "You have a pipeline that joins a 500GB event table with a 800MB customer dimension every hour. The dimension updates daily. Auto-broadcast threshold won't cover 800MB. What's your join strategy? Consider: performance, memory, maintainability, and the daily dimension update."
 
@@ -280,3 +329,13 @@ result = events_b.join(customers_b, "customer_id", "left")
 > **Tip 2:** "For OOM questions, trace the memory path." — "Broadcast data flows: driver collects → driver serializes → transfer to executors → executors deserialize → executors build hash table. At each step, memory is consumed. A 2GB table might need 4-6GB on the driver (original + serialized) and 2-3GB per executor (deserialized + hash table overhead). Multiply by executor count for total cluster impact."
 
 > **Tip 3:** "For strategy questions, present a progression." — "Start with the simplest solution (broadcast if it fits), acknowledge its limitations (memory, growth), then present the scalable solution (bucketing). Show you think about today AND tomorrow. The best answer includes: immediate fix (adjust threshold or broadcast hint), medium-term (adaptive strategy with fallback), and long-term (bucketing for zero-cost joins)."
+
+</details>
+
+</article>
+
+
+
+---
+
+## Interview Tips

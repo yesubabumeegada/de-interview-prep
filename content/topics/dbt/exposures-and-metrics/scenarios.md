@@ -3,18 +3,26 @@ title: "dbt Exposures & Metrics - Scenarios"
 topic: dbt
 subtopic: exposures-and-metrics
 content_type: scenario_question
-difficulty_level: mid-level
-layer: scenarios
 tags: [dbt, exposures, metrics, interview, scenarios]
 ---
 
-# dbt Exposures & Metrics — Scenario Questions
+# dbt Exposures & Metrics — Interview Scenarios
 
-## Scenario 1 (Junior): Add an Exposure
+<article data-difficulty="junior">
 
-**Situation:** Your team just shipped a new Tableau dashboard called "Customer 360" that uses `dim_customers` and `fct_orders`. Add an appropriate exposure definition.
+## 🟢 Junior: Adding an Exposure for a New Dashboard
 
-**Answer:**
+**Scenario:** Your team just shipped a new Tableau dashboard called "Customer 360" that uses `dim_customers` and `fct_orders`. Add an appropriate exposure definition.
+
+<details>
+<summary>💡 Hint</summary>
+
+An exposure documents downstream consumers of your dbt models. Include the type, URL, owner, maturity, and which dbt models it depends on using `ref()`.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```yaml
 # models/exposures.yml
@@ -37,15 +45,27 @@ exposures:
       stakeholders: ["@cs-team", "@account-management"]
 ```
 
-This exposure now appears in `dbt docs` lineage, showing that `dim_customers` and `fct_orders` are consumed by this dashboard.
+This exposure now appears in `dbt docs` lineage, showing that `dim_customers` and `fct_orders` are consumed by this dashboard. When you run `dbt ls --select +exposure:customer_360_dashboard`, you see exactly which models feed it.
 
----
+</details>
 
-## Scenario 2 (Mid-Level): Inconsistent Revenue Numbers
+</article>
 
-**Situation:** At a board meeting, the CFO presents revenue of $5.2M for Q3. The Sales VP has a Tableau dashboard showing $5.8M. The Marketing team's Python analysis shows $5.0M. Everyone is using `fct_orders` but calculating differently. How do you fix this architecturally?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Fixing Inconsistent Revenue Numbers Across Teams
+
+**Scenario:** At a board meeting, the CFO presents revenue of $5.2M for Q3. The Sales VP has a Tableau dashboard showing $5.8M. The Marketing team's Python analysis shows $5.0M. Everyone is using `fct_orders` but calculating differently. How do you fix this architecturally?
+
+<details>
+<summary>💡 Hint</summary>
+
+The root cause is divergent metric definitions. The fix is a single certified metric definition in the dbt Semantic Layer so all tools query the same canonical calculation.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Root cause:** Three teams, three different `revenue` calculations:
 - CFO's model: excludes refunds, excludes internal test orders
@@ -88,13 +108,25 @@ mf query --metrics net_revenue --group-by order__order_date__quarter
 
 → Everyone gets $5.2M (the audited correct number).
 
----
+</details>
 
-## Scenario 3 (Senior): Design Metric Governance for a Growing Org
+</article>
 
-**Situation:** Your data team has grown from 3 to 30 people. There are now 200+ metrics defined across 15 different dbt projects. Finance and Marketing define "active customer" differently. How do you establish metric governance?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Establishing Metric Governance at Scale
+
+**Scenario:** Your data team has grown from 3 to 30 people. There are now 200+ metrics defined across 15 different dbt projects. Finance and Marketing define "active customer" differently. How do you establish metric governance?
+
+<details>
+<summary>💡 Hint</summary>
+
+The answer has three parts: a tiered certification system (experimental → certified → deprecated), a central metrics repository in the platform project, and a PR-based review process with CODEOWNERS enforcement.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1 — Metric ownership model:**
 ```yaml
@@ -143,3 +175,17 @@ metrics:
       replacement: net_revenue
       deprecation_notice: "Use net_revenue instead. This metric will be removed 2024-06-01."
 ```
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "What is a dbt exposure and why does it matter?" — An exposure documents who consumes your dbt models downstream (dashboards, ML models, APIs). It appears in lineage so you can see the full impact of a model change before making it, and know who to notify.
+
+> **Tip 2:** "How would you solve inconsistent metrics across teams?" — The answer is the dbt Semantic Layer. Define one certified metric with one filter definition; all tools query via MetricFlow and get the same number. Without it, teams diverge by adding different WHERE clauses to the same base table.
+
+> **Tip 3:** "How do you govern metrics at scale?" — Use a tiered certification system: experimental → certified → deprecated. Certified metrics live in the platform project, require PR review by the governance team, and are versioned. Every metric has an owner who approves changes. Automated CI blocks uncertified metrics from being used in reports.

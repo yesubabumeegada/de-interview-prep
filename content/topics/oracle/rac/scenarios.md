@@ -2,19 +2,30 @@
 title: "RAC — Scenarios"
 topic: oracle
 subtopic: rac
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [oracle, rac, interview, scenarios, failover, troubleshooting]
 ---
 
 # RAC — Interview Scenarios
 
-## Scenario 1 (Junior): What Happens When a RAC Node Fails?
 
-**Question:** Your 3-node RAC cluster has node2 fail suddenly at 3am due to a hardware crash. Walk through exactly what Oracle does and what the impact is on applications.
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: What Happens When a RAC Node Fails?
+
+**Scenario:** Your 3-node RAC cluster has node2 fail suddenly at 3am due to a hardware crash. Walk through exactly what Oracle does and what the impact is on applications.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Automatic Oracle response (within seconds):**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Automatic Oracle response (within seconds):**
 
@@ -42,13 +53,25 @@ Committed transactions:  → All committed — fully durable (already in redo lo
 Uncommitted transactions → Rolled back during instance recovery
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Troubleshoot RAC Performance Degradation
+</article>
 
-**Question:** After adding node3 to a 2-node RAC, performance got WORSE instead of better. `gc buffer busy acquire` waits increased 10×. What's wrong?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Troubleshoot RAC Performance Degradation
+
+**Scenario:** After adding node3 to a 2-node RAC, performance got WORSE instead of better. `gc buffer busy acquire` waits increased 10×. What's wrong?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Check the interconnect is private**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Check the interconnect is private**
 ```sql
@@ -99,13 +122,25 @@ FETCH FIRST 10 ROWS ONLY;
 2. Sequences with small cache — adding node3 tripled contention
 3. Application not using services — all nodes serving the same workload with no affinity
 
----
+</details>
 
-## Scenario 3 (Senior): Design RAC + Data Guard Architecture
+</article>
 
-**Question:** Design a production database architecture for a banking application: 99.99% availability (< 52 min downtime/year), < 1 second data loss, < 5 minute RTO (recovery time), multi-datacenter, 20TB database, 5,000 concurrent transactions/second peak.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Design RAC + Data Guard Architecture
+
+**Scenario:** Design a production database architecture for a banking application: 99.99% availability (< 52 min downtime/year), < 1 second data loss, < 5 minute RTO (recovery time), multi-datacenter, 20TB database, 5,000 concurrent transactions/second peak.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Architecture:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Architecture:**
 ```
@@ -171,3 +206,7 @@ Standby switch back: manual ~ 10 minutes (planned)
 - 4-node RAC: provides N+2 redundancy — lose any 2 nodes and stay up
 - Active Data Guard: standby also serves reporting (no separate reporting database needed)
 - Fast-Start Failover: automatic promotion meets RTO < 5 min without 3am DBA page
+
+</details>
+
+</article>

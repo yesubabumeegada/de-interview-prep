@@ -2,19 +2,30 @@
 title: "Governance Fundamentals — Scenarios"
 topic: data-governance
 subtopic: governance-fundamentals
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [data-governance, interview, scenarios, framework, compliance]
 ---
 
 # Governance Fundamentals — Interview Scenarios
 
-## Scenario 1 (Junior): Missing Data Owner
 
-**Question:** A dashboard breaks and no one knows who owns the underlying table. How do you handle this short-term, and what governance fix prevents this in the future?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Missing Data Owner
+
+**Scenario:** A dashboard breaks and no one knows who owns the underlying table. How do you handle this short-term, and what governance fix prevents this in the future?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Short-term:** 1. Check the git blame on the dbt model file — the last committer is likely the de-facto owner 2. Check Airflow for who created/last modified the DAG writing to that table 3. Check Slack history for the table name — who talks about it? 4. Escalate to data engineering lead to assign...
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Short-term:**
 1. Check the git blame on the dbt model file — the last committer is likely the de-facto owner
@@ -54,13 +65,25 @@ def check_model_ownership(manifest_path: str) -> bool:
 
 **Prevention:** Ownership must be set at deploy time. No owner = no deploy.
 
----
+</details>
 
-## Scenario 2 (Mid-level): Governance Policy Conflict
+</article>
 
-**Question:** The security team wants all PII masked in non-production. The ML team needs real emails for model training in staging. How do you resolve this?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Governance Policy Conflict
+
+**Scenario:** The security team wants all PII masked in non-production. The ML team needs real emails for model training in staging. How do you resolve this?
+
+<details>
+<summary>💡 Hint</summary>
+
+This is a genuine policy conflict requiring escalation and a structured exception process:
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 This is a genuine policy conflict requiring escalation and a structured exception process:
 
@@ -103,13 +126,25 @@ controls:
 expires: 2024-06-30
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Building a Governance Program from Scratch
+</article>
 
-**Question:** You've joined a 200-person company with no data governance. There are 500 tables, no owners documented, unknown PII, and the CTO wants a governance program. Where do you start?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Building a Governance Program from Scratch
+
+**Scenario:** You've joined a 200-person company with no data governance. There are 500 tables, no owners documented, unknown PII, and the CTO wants a governance program. Where do you start?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Month 1: Discovery** - Inventory all tables (catalog scan) - Interview domain leads to identify data owners - Run PII scanner to find sensitive columns - Review current access controls - Identify the 20 tables that matter most (used by 80% of queries)
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```mermaid
 flowchart LR
@@ -151,3 +186,7 @@ flowchart LR
 ```
 
 **Key insight:** Don't boil the ocean. Start with the tables that matter most, assign clear owners, and make compliance easy before making it mandatory.
+
+</details>
+
+</article>

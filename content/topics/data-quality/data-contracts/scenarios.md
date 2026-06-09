@@ -2,19 +2,31 @@
 title: "Data Contracts — Scenarios"
 topic: data-quality
 subtopic: data-contracts
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [data-contracts, interview, scenarios, breaking-change]
 ---
 
 # Data Contracts — Interview Scenarios
 
-## Scenario 1 (Junior): Detecting Schema Drift
 
-**Question:** The payments team changed `amount` from `float` to `string` without notifying you. Your pipeline broke. How do you prevent this in the future?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Detecting Schema Drift
+
+**Scenario:** The payments team changed `amount` from `float` to `string` without notifying you. Your pipeline broke. How do you prevent this in the future?
+
+<details>
+<summary>💡 Hint</summary>
+
+1. **Immediate fix:** Add type coercion at ingestion, alert payments team, fix schema 2. **Prevention:** Implement schema validation at the ingestion boundary:
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
 1. **Immediate fix:** Add type coercion at ingestion, alert payments team, fix schema
 2. **Prevention:** Implement schema validation at the ingestion boundary:
 ```python
@@ -31,13 +43,25 @@ validate_schema(payments_df, expected)
 ```
 3. **Long-term:** Establish a data contract with the payments team. Any schema change requires a PR to the contract YAML, which notifies all consumers and runs compatibility checks in CI.
 
----
+</details>
 
-## Scenario 2 (Mid-level): Renaming a Column
+</article>
 
-**Question:** You need to rename `cust_id` to `customer_id` in the payments table. 8 downstream teams consume this column. How do you manage the migration?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Renaming a Column
+
+**Scenario:** You need to rename `cust_id` to `customer_id` in the payments table. 8 downstream teams consume this column. How do you manage the migration?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Migration plan:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Migration plan:**
 
@@ -65,13 +89,25 @@ Week 13: Remove deprecated field
 
 **Key point:** Never delete a field without verifying zero reads. Use query logs or column-level lineage to confirm.
 
----
+</details>
 
-## Scenario 3 (Senior): Designing a Contract Platform
+</article>
 
-**Question:** Your company has 200 producers and 1000 consumers across 15 teams. Design a data contract platform.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing a Contract Platform
+
+**Scenario:** Your company has 200 producers and 1000 consumers across 15 teams. Design a data contract platform.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Components:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Components:**
 
@@ -105,3 +141,7 @@ flowchart TD
 - Gradually promote remaining tables over 6 months
 
 **Key metric to track:** Contract health score = (tables with active contracts) / (total tables). Target: 80% within 12 months.
+
+</details>
+
+</article>

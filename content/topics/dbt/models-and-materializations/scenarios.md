@@ -3,26 +3,34 @@ title: "dbt Models & Materializations - Scenarios"
 topic: dbt
 subtopic: models-and-materializations
 content_type: scenario_question
-difficulty_level: mid-level
-layer: scenarios
 tags: [dbt, materialization, interview, scenarios]
 ---
 
-# dbt Models & Materializations — Scenario Questions
+# dbt Models & Materializations — Interview Scenarios
 
-## Scenario 1 (Junior): Choose the Right Materialization
+<article data-difficulty="junior">
 
-**Situation:** You have these models to build. Which materialization do you pick for each?
+## 🟢 Junior: Choosing the Right Materialization
 
-| Model | Description | Your Choice |
-|---|---|---|
-| `stg_events` | 1B-row source table, read-only cleanup | ? |
-| `dim_products` | 50K products, rarely changes | ? |
-| `fct_orders` | 500M rows, 100K new rows/day | ? |
-| `int_order_enriched` | Intermediate join, used by 2 models | ? |
-| `rpt_sales_today` | Live dashboard, needs real-time | ? |
+**Scenario:** You have these models to build. Which materialization do you pick for each, and why?
 
-**Answer:**
+| Model | Description |
+|---|---|
+| `stg_events` | 1B-row source table, read-only cleanup |
+| `dim_products` | 50K products, rarely changes |
+| `fct_orders` | 500M rows, 100K new rows/day |
+| `int_order_enriched` | Intermediate join, used by 2 models |
+| `rpt_sales_today` | Live dashboard, needs real-time |
+
+<details>
+<summary>💡 Hint</summary>
+
+Match materialization to the data volume and update pattern: views for thin wrappers, tables for small frequently-read models, incremental for large growing tables, ephemeral for intermediate steps, and materialized views for always-current dashboards.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 | Model | Materialization | Reason |
 |---|---|---|
@@ -32,13 +40,27 @@ tags: [dbt, materialization, interview, scenarios]
 | `int_order_enriched` | `ephemeral` or `table` | Ephemeral if simple, table if expensive join |
 | `rpt_sales_today` | `materialized_view` | Auto-refreshed, always current |
 
----
+Key rule: never use `table` for 500M-row models that grow daily — you'll rebuild them from scratch on every run. Use `incremental` instead.
 
-## Scenario 2 (Mid-Level): Incremental Model Breaking
+</details>
 
-**Situation:** Your incremental model `fct_events` has been running for 6 months. You added a new column `device_type` to the source last week. Now `dbt run --select fct_events` silently drops the new column from the output. Why?
+</article>
 
-**Answer:**
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: New Column Silently Dropped in Incremental Model
+
+**Scenario:** Your incremental model `fct_events` has been running for 6 months. You added a new column `device_type` to the source last week. Now `dbt run --select fct_events` silently drops the new column from the output. Why?
+
+<details>
+<summary>💡 Hint</summary>
+
+The default `on_schema_change` behavior is to ignore new columns. dbt only inserts columns that existed when the table was first created.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 The default `on_schema_change='ignore'` means dbt **ignores new columns** and only inserts the columns that existed when the incremental table was first created.
 
@@ -68,13 +90,25 @@ ALTER TABLE fct_events ADD COLUMN device_type VARCHAR;
 
 **Best practice:** Always set `on_schema_change='sync_all_columns'` for evolving models.
 
----
+</details>
 
-## Scenario 3 (Senior): Duplicate Rows in Incremental Table
+</article>
 
-**Situation:** You run `SELECT COUNT(*), COUNT(DISTINCT order_id) FROM fct_orders` and find 10% more rows than distinct `order_id` values — meaning ~1M duplicate rows. The model uses `incremental_strategy='append'`. How do you fix this without a full rebuild that would take 4 hours?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Removing Duplicate Rows Without a Full Rebuild
+
+**Scenario:** You run `SELECT COUNT(*), COUNT(DISTINCT order_id) FROM fct_orders` and find 10% more rows than distinct `order_id` values — meaning ~1M duplicate rows. The model uses `incremental_strategy='append'`. How do you fix this without a full rebuild that would take 4 hours?
+
+<details>
+<summary>💡 Hint</summary>
+
+Fix the duplicates in-place using a ROW_NUMBER window function (no need to rebuild). Then switch the strategy from `append` to `merge` to prevent recurrence. Add a `unique` test to catch this early going forward.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Root cause:** `append` strategy doesn't deduplicate — reruns (e.g., from failures or manual reruns) append rows again.
 
@@ -115,3 +149,17 @@ models:
           - unique     # Fails fast if duplicates sneak in
           - not_null
 ```
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "What materialization would you use for a 500M-row fact table?" — Incremental, always. Full table rebuilds on large fact tables are too expensive. Explain your `unique_key`, `on_schema_change`, and whether you'd use merge, append, or insert_overwrite.
+
+> **Tip 2:** "Why is my incremental model not picking up new columns?" — The default `on_schema_change='ignore'` means new source columns are silently dropped. Set `sync_all_columns` for evolving models, or run `--full-refresh` once to rebuild with the new schema.
+
+> **Tip 3:** "How do you fix duplicate rows in a production table without downtime?" — Use `CREATE OR REPLACE TABLE AS SELECT ... WHERE rn = 1` with a ROW_NUMBER window function. This runs in the warehouse and doesn't require dbt at all. Then fix the model to use `merge` strategy going forward and add a `unique` test.

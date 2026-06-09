@@ -171,3 +171,49 @@ graph TD
 > **Tip 4:** Kerberos is the authentication layer for Hadoop clusters. Without Kerberos, anyone who can connect to the cluster can access any data. All modern production clusters use Kerberos, and service accounts need keytabs to authenticate non-interactively.
 
 > **Tip 5:** The difference between NameNode and Secondary NameNode confuses many people. The Secondary NameNode does NOT provide failover — it periodically merges the edit log with the filesystem image (checkpointing) to prevent the edit log from growing too large. For actual HA, use the Active/Standby NameNode configuration with ZooKeeper.
+
+---
+
+## 🔄 Modern Context & Migration Path
+
+### Hadoop to Cloud / Modern Stack Mapping
+
+| Hadoop Component | Modern Cloud Equivalent | Notes |
+|---|---|---|
+| HDFS | S3 (AWS) / ADLS Gen2 (Azure) / GCS (GCP) | Object storage replaces distributed filesystem; cheaper, more durable, no HDFS maintenance |
+| MapReduce | Spark / Databricks / EMR Spark | Spark runs 10–100× faster; same Map/Shuffle/Reduce concepts in-memory |
+| Hive (query engine) | Spark SQL / Databricks SQL / BigQuery / Athena | SQL-on-cloud; serverless options eliminate cluster management |
+| Hive Metastore | AWS Glue Data Catalog / Unity Catalog / Databricks Metastore | Schema registry lives on — Spark, Athena, and Glue all use it |
+| Sqoop | AWS Glue / Azure Data Factory / Airbyte / Fivetran | Managed connectors replace Sqoop JDBC jobs |
+| Oozie | Apache Airflow / Prefect / AWS Step Functions | Modern orchestrators with better UI, retry logic, and alerting |
+| HBase | DynamoDB (AWS) / Bigtable (GCP) / Cosmos DB (Azure) | Managed NoSQL with no HBase cluster to maintain |
+| Pig | PySpark / Spark SQL | Pig Latin maps directly to Spark transformations |
+| YARN | Kubernetes / YARN on EMR | K8s replaces YARN as the cluster resource manager in cloud-native setups |
+| ZooKeeper | Managed coordination (built into cloud services) | Cloud services abstract away ZooKeeper; Kafka moving to KRaft |
+
+### Cloud Migration Approaches
+
+**Lift-and-Shift (faster, lower risk):**
+- Replace HDFS paths with S3/ADLS paths
+- Run existing MapReduce jobs on EMR or HDInsight (managed Hadoop)
+- Swap Oozie for Airflow running on EC2/AKS
+- Same code, new infrastructure — works in weeks, not months
+
+**Re-architect (higher effort, better long-term):**
+- Replace MapReduce jobs with PySpark on Databricks / EMR Serverless
+- Move raw storage to Delta Lake / Iceberg on object storage
+- Replace Hive queries with Databricks SQL / BigQuery / Athena
+- Use managed connectors (Glue, Fivetran) instead of Sqoop
+- Use Airflow on MWAA / Astronomer instead of self-managed Oozie
+- Result: fully serverless or near-serverless data platform
+
+### What Interviewers Ask
+
+**"How would you migrate a Hadoop cluster to cloud?"**
+
+Structure your answer in three phases:
+1. **Assessment** — inventory all jobs (MapReduce, Hive, Pig, Sqoop), data volumes, SLAs, and downstream consumers. Identify dependencies and critical paths.
+2. **Lift-and-shift** — move HDFS to S3/ADLS, run existing jobs on managed Hadoop (EMR/HDInsight) with minimal code changes. Validate results match on-prem.
+3. **Modernize** — incrementally replace components: Hive → Spark SQL, MapReduce → PySpark, Oozie → Airflow, Sqoop → Glue/Fivetran. Decommission on-prem cluster once all workloads are validated in cloud.
+
+Key risks to mention: data validation (compare row counts and aggregates), network egress costs during migration, Kerberos/IAM permission mapping, and testing idempotency of migrated jobs.

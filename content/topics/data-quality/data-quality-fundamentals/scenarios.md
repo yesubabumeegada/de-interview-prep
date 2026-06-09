@@ -2,19 +2,31 @@
 title: "Data Quality Fundamentals — Scenarios"
 topic: data-quality
 subtopic: data-quality-fundamentals
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [data-quality, interview, scenarios, problem-solving]
 ---
 
 # Data Quality Fundamentals — Interview Scenarios
 
-## Scenario 1 (Junior): Null Order IDs
 
-**Question:** Your orders table has 5,000 rows where `order_id` is NULL. How do you handle this?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Null Order IDs
+
+**Scenario:** Your orders table has 5,000 rows where `order_id` is NULL. How do you handle this?
+
+<details>
+<summary>💡 Hint</summary>
+
+1. **Don't silently drop** — first understand why they're null. Check the source system. Is it a bug? A new record type? 2. **Quarantine** the NULL rows to a separate table with a `dq_failure_reason` column 3. **Alert** the data owner / upstream engineering team 4. **Do not** pass NULL PKs to...
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
 1. **Don't silently drop** — first understand why they're null. Check the source system. Is it a bug? A new record type?
 2. **Quarantine** the NULL rows to a separate table with a `dq_failure_reason` column
 3. **Alert** the data owner / upstream engineering team
@@ -25,13 +37,25 @@ tags: [data-quality, interview, scenarios, problem-solving]
 **Follow-up:** What if the business says "some orders come from a legacy system that doesn't generate IDs yet"?
 → Generate a surrogate key with a `LEGACY_` prefix, flag rows with `is_surrogate_pk = TRUE`
 
----
+</details>
 
-## Scenario 2 (Mid-level): Revenue Discrepancy
+</article>
 
-**Question:** The finance team reports that your DW shows $10M in weekly revenue, but the source OLTP system shows $10.5M. How do you investigate?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Revenue Discrepancy
+
+**Scenario:** The finance team reports that your DW shows $10M in weekly revenue, but the source OLTP system shows $10.5M. How do you investigate?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Scope the gap**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Scope the gap**
 ```sql
@@ -75,13 +99,25 @@ HAVING cnt > 1;
 - Currency conversion error → fix exchange rate join
 - Timezone issue → align all timestamps to UTC at ingestion
 
----
+</details>
 
-## Scenario 3 (Senior): Designing a DQ Framework
+</article>
 
-**Question:** Your company has 300 tables across 5 data domains. You're asked to build a scalable DQ framework. What does it look like?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing a DQ Framework
+
+**Scenario:** Your company has 300 tables across 5 data domains. You're asked to build a scalable DQ framework. What does it look like?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Architecture:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Architecture:**
 
@@ -113,3 +149,7 @@ flowchart TD
 - Separation of concerns: rule definition ≠ runner ≠ metrics store ≠ alerting
 - Data ownership model — every alert has a human owner
 - DQ is a first-class citizen: block pipelines for critical, alert for warnings
+
+</details>
+
+</article>

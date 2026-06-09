@@ -2,19 +2,30 @@
 title: "SLA Monitoring — Scenarios"
 topic: data-quality
 subtopic: sla-monitoring
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [sla, monitoring, interview, scenarios]
 ---
 
 # SLA Monitoring — Interview Scenarios
 
-## Scenario 1 (Junior): Defining a Freshness SLA
 
-**Question:** The finance team says they need orders data to be "fresh." How do you translate this into a concrete SLA?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Defining a Freshness SLA
+
+**Scenario:** The finance team says they need orders data to be "fresh." How do you translate this into a concrete SLA?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Discovery conversation:** - "When do you use the orders data?" → "Every morning at 9 AM and ad-hoc during the day" - "What's the cost if data is 2 hours stale?" → "We might approve wrong credit limits" - "What about 30 minutes stale?" → "Probably fine" - "What time does your nightly processing...
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Discovery conversation:**
 - "When do you use the orders data?" → "Every morning at 9 AM and ad-hoc during the day"
@@ -44,13 +55,25 @@ with DAG("freshness_check", schedule="55 8 * * 1-5"):
     )
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): SLA Breach Investigation
+</article>
 
-**Question:** Finance reports at 9 AM that the orders dashboard shows data from yesterday afternoon. The SLA says data must be updated by 8:30 AM. Root-cause and fix?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: SLA Breach Investigation
+
+**Scenario:** Finance reports at 9 AM that the orders dashboard shows data from yesterday afternoon. The SLA says data must be updated by 8:30 AM. Root-cause and fix?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Investigation steps:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Investigation steps:**
 ```python
@@ -84,20 +107,27 @@ with engine.connect() as conn:
 **Common root causes and fixes:**
 
 | Root Cause | Evidence | Fix |
-|---|---|---|
-| Pipeline ran but failed silently | Airflow shows success but incomplete | Add row count validation |
-| Source system delayed | Bronze has no new records | Check source SLA, add dependency monitoring |
-| Transformation failed | Silver task failed | Fix transformation, rerun |
-| Job ran slow (OOM) | Long duration, restart | Scale cluster, add memory |
-| Wrong schedule | Job scheduled at 9 AM not 7 AM | Fix cron expression |
+|
 
----
+</details>
 
-## Scenario 3 (Senior): SLA Governance Framework
+</article>
 
-**Question:** You're joining a company where data teams have no formal SLAs. Leadership is frustrated because dashboards are often stale. Design a governance framework.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: SLA Governance Framework
+
+**Scenario:** You're joining a company where data teams have no formal SLAs. Leadership is frustrated because dashboards are often stale. Design a governance framework.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Phase 1: Inventory and measure (Month 1)** - Profile all tables: row count, MAX(updated_at), consumer teams - Measure actual freshness over 30 days without SLAs - Map consumer needs: who reads what, when, for what purpose
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Phase 1: Inventory and measure (Month 1)**
 - Profile all tables: row count, MAX(updated_at), consumer teams
@@ -125,10 +155,8 @@ with engine.connect() as conn:
 **SLA governance model:**
 
 | Role | Responsibility |
-|---|---|
-| Pipeline Owner | Meet SLA, respond to breaches within SLA response time |
-| Data Platform | Provide monitoring tooling, alert routing, reporting |
-| Consumer Team | Define freshness needs, acknowledge alerts |
-| Data Governance | Approve SLA commitments, escalation path |
+|
 
-**Key insight for interview:** Don't start by promising aggressive SLAs. Measure first, promise what you can consistently deliver, then tighten over time as reliability improves. Overpromising and consistently breaching is worse than a realistic SLA that's always met.
+</details>
+
+</article>

@@ -2,19 +2,30 @@
 title: "Exadata Architecture — Scenarios"
 topic: oracle
 subtopic: exadata-architecture
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [oracle, exadata, interview, scenarios, performance, architecture]
 ---
 
 # Exadata Architecture — Interview Scenarios
 
-## Scenario 1 (Junior): Why Is Smart Scan Not Working?
 
-**Question:** A query scanning 500GB of sales data on Exadata takes 20 minutes. A colleague says "Smart Scan should make this fast." But `io_cell_offload_eligible_bytes` in V$SQL is 0. What are the possible reasons?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Why Is Smart Scan Not Working?
+
+**Scenario:** A query scanning 500GB of sales data on Exadata takes 20 minutes. A colleague says "Smart Scan should make this fast." But `io_cell_offload_eligible_bytes` in V$SQL is 0. What are the possible reasons?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Check each reason systematically:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Check each reason systematically:**
 
@@ -61,13 +72,25 @@ ALTER TABLE sales MOVE TABLESPACE tbs_exadata_data;
 ALTER INDEX idx_sales_date REBUILD TABLESPACE tbs_exadata_idx;
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Design the Compression Strategy
+</article>
 
-**Question:** You have a 10TB sales table on Exadata with 5 years of data. Current disk usage is near capacity. No data older than 1 year is ever updated. How do you design the compression strategy?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Design the Compression Strategy
+
+**Scenario:** You have a 10TB sales table on Exadata with 5 years of data. Current disk usage is near capacity. No data older than 1 year is ever updated. How do you design the compression strategy?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Partitioning assumption:** Monthly range partitions (best practice for time-series on Exadata)
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Partitioning assumption:** Monthly range partitions (best practice for time-series on Exadata)
 
@@ -110,53 +133,31 @@ END;
 - 10TB current → ~2TB after compression (average 5× ratio with mixed tiers)
 - HCC compressed partitions also benefit from better Smart Scan (less data to transfer even with 100% filter)
 
----
+</details>
 
-## Scenario 3 (Senior): Exadata vs Cloud for a New DW
+</article>
 
-**Question:** Your company is building a new data warehouse with 50TB initial data, 100 analysts, mixed ad-hoc + nightly batch workloads, Oracle database preferred. Should you go with Exadata on-premises, Exadata Cloud Service (ExaCS), or move to Autonomous Data Warehouse (ADW)?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Exadata vs Cloud for a New DW
+
+**Scenario:** Your company is building a new data warehouse with 50TB initial data, 100 analysts, mixed ad-hoc + nightly batch workloads, Oracle database preferred. Should you go with Exadata on-premises, Exadata Cloud Service (ExaCS), or move to Autonomous Data Warehouse (ADW)?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Evaluation framework:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Evaluation framework:**
 
 | Criterion | Exadata On-Prem | ExaCS (Exadata Cloud) | ADW |
-|---|---|---|---|
-| Performance | Maximum (dedicated hardware) | Near on-prem | Excellent (auto-tuned) |
-| Operations | DBA team required | Oracle managed infra | Fully managed |
-| Scaling | Purchase additional nodes (weeks) | Elastic (hours) | Auto-scale (minutes) |
-| Licensing | Large upfront + annual | BYOL or included | Always included |
-| Data residency | Full control | Region-specific | Region-specific |
-| Oracle-specific features | All features | All features | Most features |
-| CapEx vs OpEx | CapEx heavy | OpEx | OpEx |
+|
 
-**Recommendation matrix:**
+</details>
 
-**Choose Exadata On-Premises if:**
-- Existing Oracle licenses worth $10M+ (avoid paying twice)
-- Data sovereignty requires physical control
-- Network latency to cloud is problematic
-- Predictable, steady workload (no spikes)
-
-**Choose ExaCS (Exadata Cloud Service) if:**
-- Want Exadata performance without hardware management
-- Need elastic scaling for variable workloads
-- DR across regions is needed
-- Moving from on-prem Exadata (same skills, same features)
-
-**Choose ADW (Autonomous Data Warehouse) if:**
-- Operations team is small (no DBA headcount)
-- Developer experience and self-service analytics are priority
-- Pay-per-query is acceptable (can be very expensive for continuous heavy workloads)
-- Machine learning and APEX integration valued
-
-**For this scenario (50TB, 100 analysts, mixed workload, Oracle preferred):**
-→ **ExaCS** is the best fit: Oracle performance, managed infrastructure, elastic scaling for analyst spikes vs batch, familiar Oracle tooling, no hardware procurement cycle.
-
-**Sizing consideration:**
-```
-50TB data after 10× HCC compression = 5TB storage
-100 analysts × concurrent query peak = 20 parallel queries
-Recommended: ExaCS Quarter Rack → 2 DB nodes, 3 storage cells
-Scale to Half Rack when data grows or analyst count doubles
-```
+</article>

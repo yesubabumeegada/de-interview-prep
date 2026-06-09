@@ -2,19 +2,30 @@
 title: "Data Guard — Scenarios"
 topic: oracle
 subtopic: data-guard
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [oracle, data-guard, interview, scenarios, dr, failover, rto-rpo]
 ---
 
 # Data Guard — Interview Scenarios
 
-## Scenario 1 (Junior): Set Up a Physical Standby
 
-**Question:** You need to create a physical standby for a 500GB production database to enable DR. Walk through the high-level steps.
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Set Up a Physical Standby
+
+**Scenario:** You need to create a physical standby for a 500GB production database to enable DR. Walk through the high-level steps.
+
+<details>
+<summary>💡 Hint</summary>
+
+-- PREREQUISITES (on PRIMARY):
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```sql
 -- PREREQUISITES (on PRIMARY):
@@ -77,13 +88,25 @@ SELECT process, status, sequence# FROM v$managed_standby WHERE process = 'MRP0';
 -- Status: APPLYING_LOG = success
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Primary Database Has Crashed — Failover
+</article>
 
-**Question:** At 2am, your primary database server has a hardware failure. It's completely unresponsive. The standby is healthy with a 45-second apply lag (Maximum Performance mode). How do you failover?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Primary Database Has Crashed — Failover
+
+**Scenario:** At 2am, your primary database server has a hardware failure. It's completely unresponsive. The standby is healthy with a 45-second apply lag (Maximum Performance mode). How do you failover?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Assessment (first 2 minutes):**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Assessment (first 2 minutes):**
 ```sql
@@ -128,13 +151,25 @@ FROM v$archived_log WHERE standby_dest = 'NO';
 -- rman> DUPLICATE TARGET DATABASE FOR STANDBY FROM ACTIVE DATABASE ...
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Design DR Architecture for 99.999% Uptime
+</article>
 
-**Question:** Design a Data Guard architecture for a financial trading system: RPO = 0 (zero data loss), RTO = 30 seconds (auto-failover), 5TB database, trading hours 8am-8pm EST, DB must support 50,000 TPS at peak.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Design DR Architecture for 99.999% Uptime
+
+**Scenario:** Design a Data Guard architecture for a financial trading system: RPO = 0 (zero data loss), RTO = 30 seconds (auto-failover), 5TB database, trading hours 8am-8pm EST, DB must support 50,000 TPS at peak.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Architecture:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Architecture:**
 ```
@@ -216,3 +251,7 @@ SELECT protection_mode, protection_level FROM v$database;
 - RAC at both primary and standby: eliminates single-node failure as a failover trigger
 - Active Data Guard on standby: reporting queries stay up during DR events (already open)
 - 3rd standby (Dallas): protection against complete 2-site disaster (regulatory requirement)
+
+</details>
+
+</article>

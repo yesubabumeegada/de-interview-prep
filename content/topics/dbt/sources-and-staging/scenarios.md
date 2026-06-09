@@ -3,16 +3,16 @@ title: "dbt Sources & Staging - Scenarios"
 topic: dbt
 subtopic: sources-and-staging
 content_type: scenario_question
-difficulty_level: mid-level
-layer: scenarios
 tags: [dbt, sources, staging, interview, scenarios]
 ---
 
-# dbt Sources & Staging — Scenario Questions
+# dbt Sources & Staging — Interview Scenarios
 
-## Scenario 1 (Junior): Source Not Found Error
+<article data-difficulty="junior">
 
-**Situation:** Running `dbt run` gives this error:
+## 🟢 Junior: Fixing a Source Not Found Error
+
+**Scenario:** Running `dbt run` gives this error:
 ```
 Compilation Error in model stg_orders
   Database Error: Object 'RAW_DB.shopify.orders' does not exist or not authorized
@@ -27,9 +27,17 @@ sources:
       - name: orders
 ```
 
-**What's wrong and how do you fix it?**
+What's wrong and how do you fix it?
 
-**Answer:**
+<details>
+<summary>💡 Hint</summary>
+
+The error mentions `shopify` but your YAML says `shopify_prod`. One of them is wrong — check the actual schema name in the warehouse.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 The schema in the source definition (`shopify_prod`) doesn't match what's in the warehouse. Options:
 
@@ -45,13 +53,25 @@ The schema in the source definition (`shopify_prod`) doesn't match what's in the
 
 Debug with: `dbt debug` and `dbt compile --select stg_orders` to see the resolved SQL.
 
----
+</details>
 
-## Scenario 2 (Mid-Level): Source Freshness Failure in Production
+</article>
 
-**Situation:** At 8am Monday, dbt Cloud alerts that `raw_shopify.orders` source freshness has failed (error threshold: 12 hours). The data team is panicking because the executive dashboard shows no weekend sales. How do you triage?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Triaging a Source Freshness Failure in Production
+
+**Scenario:** At 8am Monday, dbt Cloud alerts that `raw_shopify.orders` source freshness has failed (error threshold: 12 hours). The data team is panicking because the executive dashboard shows no weekend sales. How do you triage?
+
+<details>
+<summary>💡 Hint</summary>
+
+Work backwards from the symptom: freshness check failed → why didn't the data arrive? Check the ingestion tool (Fivetran/Airbyte), then the source system, then communicate status before diving into a fix.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1 — Verify the failure:**
 ```bash
@@ -79,13 +99,25 @@ dbt source freshness --select source:shopify.orders
 - Add PagerDuty alert on source freshness failure
 - Add a dbt test: `dbt_utils.recency` to catch issues before dashboard users notice
 
----
+</details>
 
-## Scenario 3 (Senior): Migrate Source System Without Downstream Impact
+</article>
 
-**Situation:** Your company is migrating from Fivetran to Airbyte for Salesforce data. Fivetran loads to `RAW_DB.salesforce_fivetran`, Airbyte will load to `RAW_DB.salesforce_airbyte`. You have 20+ staging models. How do you migrate with zero downtime?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Zero-Downtime Source System Migration
+
+**Scenario:** Your company is migrating from Fivetran to Airbyte for Salesforce data. Fivetran loads to `RAW_DB.salesforce_fivetran`, Airbyte will load to `RAW_DB.salesforce_airbyte`. You have 20+ staging models. How do you migrate with zero downtime?
+
+<details>
+<summary>💡 Hint</summary>
+
+The key is that staging models abstract away the source location. Run both sources in parallel, validate parity between them, then do a single-PR cutover to switch staging models to the new source. Downstream models never change.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Strategy: Parallel run → cutover → cleanup**
 
@@ -121,3 +153,17 @@ SELECT ... FROM {{ source('salesforce_airbyte', 'account') }}
 **Phase 5 — Monitor** first run post-cutover for row count parity.
 
 Key principle: **source abstraction via staging models** means downstream `fct_` and `dim_` models never need to change — only the staging layer changes.
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "Why do we have a staging layer in dbt?" — Staging models are a thin, source-specific transformation layer. They rename columns, cast types, and reference the source exactly once. All downstream models join through staging, not raw sources. This means if the source system changes, you only update the staging model.
+
+> **Tip 2:** "How do you handle a source freshness failure?" — Structured triage: verify the failure with `dbt source freshness`, check the ingestion tool logs, check the source system status, communicate to stakeholders with an ETA, then fix and rerun only the affected models.
+
+> **Tip 3:** "How do you migrate source systems without downtime?" — Run both sources in parallel for validation. Use `audit_helper.compare_relations` to verify parity. Do the cutover in a single PR that swaps the source reference in the staging model. Downstream models never see the change because staging abstracts the source location.

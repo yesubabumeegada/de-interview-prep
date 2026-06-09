@@ -2,19 +2,30 @@
 title: "Unity Catalog Governance — Scenarios"
 topic: data-governance
 subtopic: unity-catalog-governance
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [unity-catalog, databricks, interview, scenarios, governance]
 ---
 
 # Unity Catalog Governance — Interview Scenarios
 
-## Scenario 1 (Junior): Setting Up Access for a New Analyst
 
-**Question:** A new data analyst joins. They need read access to gold tables in Databricks but must NOT see raw customer emails (PII). How do you set this up in Unity Catalog?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Setting Up Access for a New Analyst
+
+**Scenario:** A new data analyst joins. They need read access to gold tables in Databricks but must NOT see raw customer emails (PII). How do you set this up in Unity Catalog?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Add analyst to the correct IdP group**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Add analyst to the correct IdP group**
 ```
@@ -65,13 +76,25 @@ LIMIT 5;
 -- customer_email should show hashes, not real emails
 ```
 
----
+</details>
 
-## Scenario 2 (Mid-level): Migrating from Hive Metastore to Unity Catalog
+</article>
 
-**Question:** Your team has 50 Delta tables in the Hive Metastore. You need to migrate them to Unity Catalog while maintaining all access and adding governance. How do you approach this?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Migrating from Hive Metastore to Unity Catalog
+
+**Scenario:** Your team has 50 Delta tables in the Hive Metastore. You need to migrate them to Unity Catalog while maintaining all access and adding governance. How do you approach this?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Phase 1: Assessment (Week 1)**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Phase 1: Assessment (Week 1)**
 ```python
@@ -119,13 +142,25 @@ GRANT SELECT ON TABLE prod.gold.orders TO `data-engineers`;
 spark.sql("ALTER TABLE hive_metastore.gold.orders SET TBLPROPERTIES ('deprecated' = 'true', 'migrated_to' = 'prod.gold.orders')")
 ```
 
----
+</details>
 
-## Scenario 3 (Senior): Unity Catalog Governance Design for 500 Tables
+</article>
 
-**Question:** Your company is adopting Databricks as the primary data platform. Design the Unity Catalog governance architecture for 500 tables, 15 domain teams, and GDPR compliance.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Unity Catalog Governance Design for 500 Tables
+
+**Scenario:** Your company is adopting Databricks as the primary data platform. Design the Unity Catalog governance architecture for 500 tables, 15 domain teams, and GDPR compliance.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Catalog structure:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Catalog structure:**
 ```
@@ -186,3 +221,7 @@ daily_governance_audit()  # From real-world pattern
 ```
 
 **Key design principle:** Unity Catalog handles the technical enforcement — column masking, row filters, audit logs. The governance program (policies, workflows, glossary) lives outside UC. UC is the enforcement layer; governance is the policy layer.
+
+</details>
+
+</article>

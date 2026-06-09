@@ -3,22 +3,26 @@ title: "dbt Seeds & Snapshots - Scenarios"
 topic: dbt
 subtopic: seeds-and-snapshots
 content_type: scenario_question
-difficulty_level: mid-level
-layer: scenarios
 tags: [dbt, seeds, snapshots, interview, scenarios]
 ---
 
-# dbt Seeds & Snapshots — Scenario Questions
+# dbt Seeds & Snapshots — Interview Scenarios
 
-## Scenario 1 (Junior): When to Use Seed vs Source
+<article data-difficulty="junior">
 
-**Situation:** Your company has two datasets they want in dbt:
-1. A 200-row CSV of US state codes and region mappings (maintained by the analyst team)
-2. A 50M-row customer database loaded by Fivetran every hour
+## 🟢 Junior: Deciding Between Seed and Source
 
-Which should be a seed, and which should be a source? Why?
+**Scenario:** Your company has two datasets they want in dbt: (1) a 200-row CSV of US state codes and region mappings maintained by the analyst team, and (2) a 50M-row customer database loaded by Fivetran every hour. Which should be a seed and which a source? Why?
 
-**Answer:**
+<details>
+<summary>💡 Hint</summary>
+
+Seeds are for small, static reference data that fits in git and is managed by analysts. Sources are for large, frequently-updated tables loaded by external tools.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **State codes → Seed:**
 - 200 rows → tiny, fits in git
@@ -45,15 +49,27 @@ sources:
           error_after: {count: 3, period: hour}
 ```
 
----
+**Rule of thumb:** Seeds are for lookup tables maintained by humans. Sources are for everything loaded by pipelines.
 
-## Scenario 2 (Mid-Level): Missing History in Snapshot
+</details>
 
-**Situation:** Your `snap_customers` snapshot runs daily. A customer upgraded from Silver to Gold tier on Tuesday at 2pm, then downgraded back to Silver on Wednesday at 11am. It's now Thursday. The snapshot ran Tuesday night and Wednesday night. 
+</article>
 
-What does the snapshot table show? Is any history missing?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Understanding Snapshot Granularity Limitations
+
+**Scenario:** Your `snap_customers` snapshot runs daily. A customer upgraded from Silver to Gold tier on Tuesday at 2pm, then downgraded back to Silver on Wednesday at 11am. It's now Thursday. The snapshot ran Tuesday night and Wednesday night. What does the snapshot table show? Is any history missing?
+
+<details>
+<summary>💡 Hint</summary>
+
+Snapshots only capture the state at the time they run. Changes that happened and reversed within a single snapshot interval will be partially visible — but the exact timestamps won't be accurate.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 Snapshot runs: Tuesday night (~11pm), Wednesday night (~11pm)
 
@@ -74,13 +90,25 @@ Snapshot table:
 
 **Key insight:** Snapshot granularity is limited by how often you run `dbt snapshot`. For high-frequency changes, run snapshots every hour instead of daily. For extremely precise tracking, use CDC (Change Data Capture) at the source.
 
----
+</details>
 
-## Scenario 3 (Senior): Snapshot Table Got Accidentally Dropped
+</article>
 
-**Situation:** A colleague accidentally ran `DROP TABLE snapshots.snap_customers` in production. The snapshot had 3 years of customer tier history. `dbt snapshot` will recreate the table but with no history — just the current state. How do you recover?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Recovering a Dropped Snapshot Table
+
+**Scenario:** A colleague accidentally ran `DROP TABLE snapshots.snap_customers` in production. The snapshot had 3 years of customer tier history. `dbt snapshot` will recreate the table but with no history — just the current state. How do you recover?
+
+<details>
+<summary>💡 Hint</summary>
+
+Start with the warehouse's native recovery features (Time Travel on Snowflake, UNDROP) before looking at backups. The recovery path depends on what's available.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1 — Check if recovery is possible:**
 
@@ -125,6 +153,20 @@ FILE_FORMAT = (TYPE = PARQUET);
 
 **Prevention checklist:**
 - Enable Snowflake Fail-Safe (7 days beyond Time Travel)
-- Daily backup to S3 using `COPY INTO`  
+- Daily backup to S3 using `COPY INTO`
 - Add `GRANT OWNERSHIP` restrictions so analysts can't drop production tables
 - Enable Terraform/IaC for snapshot tables to detect drift
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "When would you use a seed vs a source?" — Seeds are for analyst-maintained lookup tables that fit in git: country codes, product categories, tax rates. Sources are for tables loaded by external tools like Fivetran. The key indicator is size and update frequency.
+
+> **Tip 2:** "What are the limitations of dbt snapshots?" — Snapshots only capture the state at run time. Changes that happen and revert between snapshot runs are partially tracked — you'll see the change happened but the exact timestamps won't be accurate. For precision tracking, run snapshots more frequently or use CDC.
+
+> **Tip 3:** "How would you recover from an accidentally dropped snapshot table?" — Check the warehouse's native recovery first: Snowflake UNDROP or Time Travel, Delta Lake time travel. If that's not available, restore from your most recent backup. Going forward: enable Time Travel retention, add daily S3 exports, and restrict DROP privileges on production snapshot tables.

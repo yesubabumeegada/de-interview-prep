@@ -2,19 +2,31 @@
 title: "Anomaly Detection — Scenarios"
 topic: data-quality
 subtopic: anomaly-detection
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [anomaly-detection, interview, scenarios]
 ---
 
 # Anomaly Detection — Interview Scenarios
 
-## Scenario 1 (Junior): Row Count Drop
 
-**Question:** Your daily orders pipeline suddenly processes only 1,000 rows instead of the usual 50,000. How do you detect and respond?
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Row Count Drop
+
+**Scenario:** Your daily orders pipeline suddenly processes only 1,000 rows instead of the usual 50,000. How do you detect and respond?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Response steps:** 1. Alert the data team immediately 2. Check if the source system is down (check monitoring dashboards) 3. Check if there was a pipeline change deployed today 4. Check if a date filter was accidentally applied (e.g., wrong partition) 5. Do NOT use the partial data for downstream...
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
 ```python
 import numpy as np
 
@@ -45,13 +57,25 @@ result = check_row_count(1000, historical)
 6. If source is healthy but data is missing → check ingestion logs, rerun
 7. If source is down → wait, then backfill when restored
 
----
+</details>
 
-## Scenario 2 (Mid-level): Revenue Distribution Shift
+</article>
 
-**Question:** Mean revenue per order dropped from $85 to $42 overnight. The row count is normal. How do you investigate?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Revenue Distribution Shift
+
+**Scenario:** Mean revenue per order dropped from $85 to $42 overnight. The row count is normal. How do you investigate?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Investigation:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Investigation:**
 ```python
@@ -85,13 +109,25 @@ print(yesterday["order_type"].value_counts())
 
 **Resolution:** Add distribution-aware anomaly detection (not just mean), segment metrics by region/category, and add currency validation.
 
----
+</details>
 
-## Scenario 3 (Senior): Building a Data Observability System
+</article>
 
-**Question:** You're building a data observability system from scratch. Describe the architecture and key decisions.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Building a Data Observability System
+
+**Scenario:** You're building a data observability system from scratch. Describe the architecture and key decisions.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Architecture:**
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Architecture:**
 
@@ -124,3 +160,7 @@ flowchart TD
 6. **Cost control:** Run lightweight volume/freshness checks on every batch. Run expensive ML-based distribution checks only daily or on configured tables.
 
 7. **Progressive rollout:** Start advisory mode (log everything, alert nothing) for 30 days. Tune thresholds. Enable warnings. Enable critical alerts only for the most important tables.
+
+</details>
+
+</article>

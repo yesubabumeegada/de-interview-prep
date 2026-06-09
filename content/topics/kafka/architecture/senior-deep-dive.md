@@ -246,3 +246,71 @@ Round up to nice number: 24 partitions
 > **Tip 2:** "How does Kafka handle broker failure?" — "Every partition has a leader and N replicas. The controller detects failure via heartbeat timeout and promotes an in-sync replica to leader. Producers/consumers automatically reconnect to the new leader. Typical failover: seconds with ZooKeeper, milliseconds with KRaft."
 
 > **Tip 3:** "How do you size partitions?" — "I calculate: target throughput / per-partition consumer throughput = minimum partitions. Then I add 2x headroom for growth. For a 100 MB/s workload with 10 MB/s per consumer, I'd use 20-24 partitions."
+
+---
+
+## ⚡ Cheat Sheet
+
+### Partition Sizing Rules
+
+| Rule | Guideline |
+|---|---|
+| Partition count formula | `max(target_throughput / per_partition_throughput, max_consumer_count)` × 2 (headroom) |
+| Target partition size | 1–10 GB stored; ~10 MB/s ingestion throughput per partition |
+| When to add partitions | Consumer lag grows consistently AND you've ruled out slow consumers |
+| Can you decrease partitions? | No — only increase; decreasing breaks key-based ordering |
+| Partitions per broker | Keep < 4,000 per broker (Kafka guideline); aim < 1,000 for stability |
+
+### Replication Rules
+
+| Rule | Value |
+|---|---|
+| Replication factor (production) | RF = 3 |
+| `min.insync.replicas` (production) | 2 (requires 2 replicas to acknowledge writes) |
+| `acks=all` + `min.insync.replicas=2` | Durability guarantee — tolerate 1 broker loss with no data loss |
+| Under-replicated partitions alert | Alert if > 0 for more than 30 seconds |
+
+### Producer Configuration
+
+| Config | Default | Recommended (DE pipelines) | What it controls |
+|---|---|---|---|
+| `acks` | 1 | `all` | Durability: `0`=fire-and-forget, `1`=leader only, `all`=all ISRs |
+| `batch.size` | 16384 | 65536–1048576 | Max bytes batched before send; larger = better throughput |
+| `linger.ms` | 0 | 5–100 | Wait time to fill batch; trade latency for throughput |
+| `compression.type` | none | `lz4` or `snappy` | Compress batches; reduces network I/O significantly |
+| `retries` | 2147483647 | default | Retry on transient failure |
+| `enable.idempotence` | true (Kafka 3+) | true | Exactly-once at producer level (deduplicates retries) |
+| `max.in.flight.requests.per.connection` | 5 | 1 (if ordering critical) | 1 guarantees ordering; 5 maximizes throughput |
+
+### Consumer Configuration
+
+| Config | Default | Recommended (DE pipelines) | What it controls |
+|---|---|---|---|
+| `max.poll.records` | 500 | 100–1000 | Records per poll(); lower if processing is slow |
+| `fetch.min.bytes` | 1 | 1024–65536 | Min bytes broker waits to send; reduces round-trips |
+| `fetch.max.wait.ms` | 500 | 500 | Max wait for fetch.min.bytes to be satisfied |
+| `session.timeout.ms` | 45000 | 30000–60000 | Time before consumer considered dead |
+| `heartbeat.interval.ms` | 3000 | 10000 (1/3 of session.timeout) | Heartbeat frequency |
+| `auto.offset.reset` | latest | `earliest` (for new pipelines) | What to do when no committed offset exists |
+| `enable.auto.commit` | true | false (for critical pipelines) | Manual commit = process-then-commit for safety |
+
+### Retention Rules
+
+| Config | Typical value | Notes |
+|---|---|---|
+| `retention.ms` | 604800000 (7 days) | -1 = retain forever (log compaction use cases) |
+| `log.retention.bytes` | -1 (no limit) | Set per-topic for disk-bound topics |
+| `log.segment.bytes` | 1073741824 (1 GB) | Smaller = more frequent compaction; larger = fewer files |
+| `log.compaction` | delete | Set to `compact` for changelog/CDC topics |
+
+### Symptom → Config Fix
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Consumer lag growing | Consumers too slow | Increase `max.poll.records`; scale consumer group; optimize processing |
+| High producer latency | Waiting for acks | Reduce `linger.ms`; use `acks=1` if durability allows |
+| High end-to-end latency | Batch accumulation | Lower `linger.ms` to 0–5ms for low-latency use cases |
+| Message loss after broker restart | `acks=1` with RF=1 | Set `acks=all`, RF=3, `min.insync.replicas=2` |
+| Rebalancing storms | Short session timeout + slow processing | Increase `session.timeout.ms`; use static membership (`group.instance.id`) |
+| Duplicate messages on consumer | At-least-once + no idempotent consumer logic | Implement idempotent processing (dedup key in DB); or use exactly-once transactions |
+| Disk filling up unexpectedly | Retention too high or compaction stalled | Set `log.retention.bytes`; check compaction is running for compact topics |

@@ -1,159 +1,418 @@
 ---
-title: "Fault Tolerance & Reliability — Scenarios"
+title: "Fault Tolerance — Scenarios"
 topic: system-design
 subtopic: fault-tolerance
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
-tags: [system-design, fault-tolerance, interview, scenarios, incident]
+content_type: scenario_question
+tags: [fault-tolerance, reliability, resilience, scenarios]
 ---
 
-# Fault Tolerance & Reliability — Interview Scenarios
+# Fault Tolerance — Interview Scenarios
 
-## Scenario 1: Design a Fault-Tolerant Streaming Pipeline
+<article data-difficulty="junior">
 
-**Question:** Design a streaming pipeline that ingests 100,000 financial transactions per second and stores them for reporting. The requirements: zero data loss, handle node failures, recover within 5 minutes of failure.
+## 🟢 Junior: Handling Failures in a Batch Pipeline
 
-**Answer:**
+**Scenario:** Your nightly Airflow DAG has 10 tasks. Task 7 fails due to a transient network error. The remaining tasks (8, 9, 10) don't run. Explain how you would configure the DAG to handle this gracefully without rerunning all 10 tasks from the start.
+
+<details>
+<summary>💡 Hint</summary>
+
+Airflow has built-in retry logic and supports "clear and re-run from failed task." Key configs: `retries`, `retry_delay`, `depends_on_past`. For idempotent tasks, re-running from the failed task is safe.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Configuration: Retry Logic**
+
+```python
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime, timedelta
+
+default_args = {
+    'retries': 3,
+    'retry_delay': timedelta(minutes=5),
+    'retry_exponential_backoff': True,  # 5min, 10min, 20min
+    'max_retry_delay': timedelta(minutes=30),
+    'email_on_failure': True,
+    'email': ['data-team@company.com']
+}
+
+with DAG(
+    'nightly_pipeline',
+    default_args=default_args,
+    schedule_interval='0 2 * * *',
+    catchup=False
+) as dag:
+
+    # Task with custom retry config
+    task_7 = PythonOperator(
+        task_id='load_to_snowflake',
+        python_callable=load_to_snowflake,
+        retries=5,                          # override default
+        retry_delay=timedelta(minutes=2),
+        execution_timeout=timedelta(hours=1)  # fail-fast if hung
+    )
+```
+
+**Re-running from Failed Task (Airflow UI):**
+1. Go to DAG Run → click failed task → "Clear" (not "Reset")
+2. Airflow re-runs only the failed task and its downstream dependencies
+3. Previously successful tasks are not re-run
+
+**Making Tasks Idempotent (prerequisite for safe re-runs):**
+
+```python
+def load_to_snowflake(ds: str, **kwargs):
+    """Idempotent: safe to run multiple times for same date."""
+    # Delete+insert pattern for the target date
+    snowflake_hook.run(f"DELETE FROM orders WHERE order_date = '{ds}'")
+    # OR use MERGE INTO for upsert
+    df.write.mode("overwrite")         .option("replaceWhere", f"order_date = '{ds}'")         .saveAsTable("prod.orders")
+```
+
+**Alerting on Failures:**
+
+```python
+def failure_callback(context):
+    task_instance = context['task_instance']
+    send_slack_message(
+        channel='#data-alerts',
+        text=f":red_circle: Task failed: {task_instance.task_id} "
+             f"in DAG {task_instance.dag_id} "
+             f"at {task_instance.execution_date}"
+    )
+
+task_7 = PythonOperator(
+    on_failure_callback=failure_callback,
+    ...
+)
+```
+
+</details>
+
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Circuit Breaker Pattern for Unreliable Upstream APIs
+
+**Scenario:** Your pipeline ingests data from a vendor API that is unreliable — it goes down for 30-60 minutes 2-3 times per week. Currently, your pipeline fails hard when the API is down, causing cascading failures in downstream jobs. Implement a circuit breaker pattern.
+
+<details>
+<summary>💡 Hint</summary>
+
+A circuit breaker has three states: CLOSED (normal), OPEN (stop calling after N failures), HALF-OPEN (test if service recovered). When OPEN, fail fast without hitting the API. Reset after a cooldown period.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Circuit Breaker Implementation:**
+
+```python
+import time
+import redis
+from enum import Enum
+from functools import wraps
+from typing import Callable, Any
+
+class CircuitState(Enum):
+    CLOSED = "closed"        # Normal operation
+    OPEN = "open"            # Failing fast
+    HALF_OPEN = "half_open"  # Testing recovery
+
+class CircuitBreaker:
+    def __init__(
+        self,
+        name: str,
+        failure_threshold: int = 5,
+        recovery_timeout: int = 300,  # 5 minutes
+        half_open_max_calls: int = 1
+    ):
+        self.name = name
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.half_open_max_calls = half_open_max_calls
+        self.redis = redis.Redis(host='redis', port=6379)
+
+    def _get_state(self) -> CircuitState:
+        state = self.redis.get(f"circuit:{self.name}:state")
+        if state is None:
+            return CircuitState.CLOSED
+        return CircuitState(state.decode())
+
+    def _get_failure_count(self) -> int:
+        count = self.redis.get(f"circuit:{self.name}:failures")
+        return int(count) if count else 0
+
+    def _record_failure(self):
+        pipe = self.redis.pipeline()
+        pipe.incr(f"circuit:{self.name}:failures")
+        pipe.expire(f"circuit:{self.name}:failures", 600)  # reset after 10 min
+        pipe.execute()
+
+        if self._get_failure_count() >= self.failure_threshold:
+            self.redis.setex(
+                f"circuit:{self.name}:state",
+                self.recovery_timeout,
+                CircuitState.OPEN.value
+            )
+
+    def _record_success(self):
+        self.redis.delete(f"circuit:{self.name}:failures")
+        self.redis.set(f"circuit:{self.name}:state", CircuitState.CLOSED.value)
+
+    def call(self, func: Callable, *args, **kwargs) -> Any:
+        state = self._get_state()
+
+        if state == CircuitState.OPEN:
+            raise Exception(
+                f"Circuit {self.name} is OPEN. "
+                f"Skipping API call. Retry after cooldown."
+            )
+
+        try:
+            result = func(*args, **kwargs)
+            self._record_success()
+            return result
+        except Exception as e:
+            self._record_failure()
+            raise
+
+# Usage in pipeline
+vendor_circuit = CircuitBreaker(
+    name="vendor_api",
+    failure_threshold=3,
+    recovery_timeout=600  # 10 minutes
+)
+
+def fetch_vendor_data(date: str) -> list:
+    def _fetch():
+        response = requests.get(
+            f"https://vendor.api/data?date={date}",
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+
+    return vendor_circuit.call(_fetch)
+
+# Airflow task with circuit breaker + fallback
+def ingest_vendor_data(ds: str, **kwargs):
+    try:
+        data = fetch_vendor_data(ds)
+        process_and_store(data, ds)
+
+    except Exception as e:
+        if "Circuit" in str(e):
+            # Circuit open: use cached/previous day's data as fallback
+            print(f"Circuit open, using fallback data for {ds}")
+            use_previous_day_data(ds)
+            # Mark task as skipped, not failed (downstream can still run)
+            raise AirflowSkipException(f"Vendor API unavailable: {e}")
+        else:
+            raise  # Real error — fail the task
+```
+
+**Monitoring Circuit State:**
+
+```python
+def circuit_health_check():
+    for circuit_name in ["vendor_api", "crm_api", "payment_api"]:
+        state = redis.get(f"circuit:{circuit_name}:state")
+        failures = redis.get(f"circuit:{circuit_name}:failures")
+        
+        if state and state.decode() == "open":
+            send_alert(f"Circuit OPEN: {circuit_name}, failures: {failures}")
+```
+
+</details>
+
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Designing a Resilient Multi-Region Data Pipeline
+
+**Scenario:** Your data platform must achieve 99.9% availability (< 8.7 hours downtime/year). The primary region is us-east-1. Design a multi-region active-passive failover architecture for the critical path: ingestion → processing → serving.
+
+<details>
+<summary>💡 Hint</summary>
+
+99.9% SLA requires automated failover — manual failover is too slow. Key components: active-passive S3 replication, Kafka MirrorMaker 2 for stream replication, DNS failover (Route53), and RTO/RPO targets per tier.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**RTO/RPO Targets:**
+
+| Tier | RTO | RPO | Tier |
+|------|-----|-----|------|
+| Ingestion (Kafka) | 5 min | 0 (no data loss) | Critical |
+| Processing (Spark) | 15 min | 15 min | High |
+| Serving (Trino/Snowflake) | 10 min | 5 min | Critical |
+
+**Architecture:**
 
 ```
-Architecture overview:
-
-Layer 1 — Ingestion:
-  Transaction service → Kafka (RF=3, acks=all, min.insync.replicas=2)
-  Zero data loss: producer blocks until 2 of 3 brokers ACK
-  Partition count: 100 partitions → 1000 events/sec/partition (well within limits)
-  Retention: 7 days (allows consumer catch-up and replay)
-
-Layer 2 — Processing:
-  Spark Structured Streaming (Kubernetes, 10 executors)
-  Checkpoint: s3://bucket/checkpoints/ (atomic offset + state save)
-  Trigger: processingTime="10 seconds" (10-sec micro-batches)
-  Exactly-once: Delta Lake sink + Spark checkpoint = atomic offset+data commit
-
-Layer 3 — Storage:
-  Delta Lake on S3 (Multi-AZ S3 = 11 nines durability)
-  Partitioned by: transaction_date
-  OPTIMIZE daily: compact small micro-batch files → 1GB files
-
-Failure scenarios:
-
-Spark executor fails mid-batch:
-  → Driver detects failure, reschedules tasks on other executors
-  → If checkpoint written: resume from last checkpoint (< 10 sec redo)
-  → If no checkpoint: micro-batch is replayed from Kafka offset (exactly-once)
-  → Recovery time: 1-2 minutes ✓
-
-Kafka broker fails:
-  → ISR (in-sync replicas): 2 remaining brokers take over partitions
-  → Producer: retries with exponential backoff → new leader elected in < 30 sec
-  → Consumer lag: grows during election (~30 sec) then catches up
-  → Recovery: 1-2 minutes ✓
-
-Full AZ failure:
-  → Kafka: RF=3 across 3 AZs → 2 AZs still have 2 replicas → continues
-  → Spark: Kubernetes reschedules pods in other AZs → 3-5 min recovery ✓
-  → Delta on S3: S3 Multi-AZ → no impact ✓
-
-RTO: 5 minutes (within requirement for full AZ failure)
-RPO: 0 (Kafka acks=all + Delta exactly-once = zero data loss) ✓
+Primary (us-east-1)          DR (us-west-2)
+─────────────────────        ──────────────────
+Kafka Cluster ──MM2──────→  Kafka Cluster (replica)
+     ↓                              ↓ (standby)
+Flink Cluster                Flink Cluster (hot standby)
+     ↓                              ↓
+S3 Bucket ────replication──→ S3 Bucket (replica)
+     ↓                              ↓
+Trino Cluster                Trino Cluster (standby)
+     ↓                              ↓
+Route53 Health Check → DNS Failover
 ```
+
+**Component 1: Kafka MirrorMaker 2 (Zero Data Loss)**
+
+```yaml
+# mirrormaker2.yaml
+clusters: us-east-1, us-west-2
+us-east-1.bootstrap.servers: kafka-east:9092
+us-west-2.bootstrap.servers: kafka-west:9092
+
+# Replicate all topics east → west
+us-east-1->us-west-2.enabled: true
+us-east-1->us-west-2.topics: .*
+us-east-1->us-west-2.emit.heartbeats.enabled: true
+us-east-1->us-west-2.emit.checkpoints.enabled: true
+# Checkpoint interval: commit consumer offsets to DR cluster
+us-east-1->us-west-2.emit.checkpoints.interval.seconds: 60
+```
+
+**Component 2: S3 Cross-Region Replication**
+
+```python
+# Enable cross-region replication for all lakehouse buckets
+s3_control = boto3.client('s3control')
+
+replication_config = {
+    'Rules': [{
+        'ID': 'replicate-all-to-dr',
+        'Status': 'Enabled',
+        'Filter': {'Prefix': ''},
+        'Destination': {
+            'Bucket': 'arn:aws:s3:::datalake-dr-us-west-2',
+            'StorageClass': 'STANDARD_IA',  # Cheaper for DR
+            'ReplicationTime': {
+                'Status': 'Enabled',
+                'Time': {'Minutes': 15}  # S3 RTC: 99.99% within 15 min
+            }
+        }
+    }]
+}
+```
+
+**Component 3: Automated Failover with Route53**
+
+```python
+import boto3
+
+route53 = boto3.client('route53')
+
+def check_primary_health() -> bool:
+    """Returns True if primary is healthy."""
+    try:
+        r = requests.get("https://trino-east.internal/v1/status", timeout=5)
+        return r.status_code == 200
+    except:
+        return False
+
+def trigger_failover():
+    """Update DNS to point to DR region."""
+    route53.change_resource_record_sets(
+        HostedZoneId='Z123ABC',
+        ChangeBatch={
+            'Changes': [{
+                'Action': 'UPSERT',
+                'ResourceRecordSet': {
+                    'Name': 'trino.data.company.com',
+                    'Type': 'CNAME',
+                    'TTL': 60,  # Low TTL for fast failover
+                    'ResourceRecords': [
+                        {'Value': 'trino-west.internal'}  # DR endpoint
+                    ]
+                }
+            }]
+        }
+    )
+    send_pagerduty_alert("FAILOVER INITIATED: primary us-east-1 unhealthy")
+
+# Health check Lambda (runs every 30s)
+def lambda_handler(event, context):
+    consecutive_failures = int(
+        ssm.get_parameter(Name='/failover/consecutive_failures')['Parameter']['Value']
+    )
+
+    if not check_primary_health():
+        consecutive_failures += 1
+        ssm.put_parameter(Name='/failover/consecutive_failures',
+                          Value=str(consecutive_failures), Overwrite=True)
+
+        if consecutive_failures >= 3:  # 3 consecutive failures = failover
+            trigger_failover()
+    else:
+        ssm.put_parameter(Name='/failover/consecutive_failures',
+                          Value='0', Overwrite=True)
+```
+
+**Component 4: Flink Hot Standby**
+
+```python
+# Primary Flink job writes checkpoints to S3 (replicated to DR)
+env.getCheckpointConfig().setCheckpointStorage(
+    "s3://checkpoints-east/pipeline/"  # auto-replicated to west
+)
+
+# DR Flink cluster: restore from latest checkpoint
+# Triggered by failover automation
+dr_job_command = """
+flink run     -s s3://checkpoints-west/pipeline/chk-12345/     -c com.company.pipeline.MainJob     pipeline.jar
+"""
+```
+
+**Failover Runbook (automated):**
+1. Health check fails 3× (90 seconds)
+2. Lambda triggers Route53 DNS update (TTL=60s → propagates in ~2 minutes)
+3. DR Flink jobs start from latest checkpoint (5 minutes)
+4. Total RTO: ~8 minutes (within 15-minute target)
+5. PagerDuty alert fired; on-call engineer validates DR health
+
+**Chaos Engineering (quarterly drills):**
+```python
+# Chaos Monkey: randomly terminate primary Kafka brokers
+def chaos_drill_kafka_failover():
+    # Kill primary broker
+    ec2.terminate_instances(InstanceIds=[primary_kafka_broker_id])
+    
+    # Measure time until Kafka MirrorMaker routes to DR
+    start = time.time()
+    while not check_kafka_dr_health():
+        time.sleep(5)
+    rto_seconds = time.time() - start
+    
+    assert rto_seconds < 300, f"Kafka failover took {rto_seconds}s > 5min SLA"
+```
+
+</details>
+
+</article>
 
 ---
 
-## Scenario 2: Debugging a Flaky Pipeline
+## Interview Tips
 
-**Question:** Your pipeline fails about 10% of the time with "Connection timeout after 30 seconds". It almost always succeeds on retry. What is happening and how do you fix it?
-
-**Answer:**
-
-```
-Root Cause Analysis:
-  10% transient failure + always succeeds on retry = transient network issue
-  
-  Most likely causes:
-  1. Source database overloaded during peak hours → slow to respond
-  2. Network congestion between pipeline and DB
-  3. DB connection pool exhausted (other jobs competing)
-  4. VPC security group rule timing out idle connections
-
-Diagnosis:
-  grep "Connection timeout" pipeline.log | awk '{print $1, $2}' | sort | uniq -c
-  # Check: do failures cluster at specific times? (peak hours → load issue)
-  
-  Check DB performance at failure times:
-  SELECT query_start, state, wait_event_type, wait_event
-  FROM pg_stat_activity
-  WHERE state != 'idle'
-  ORDER BY query_start;
-
-Fixes:
-  1. Increase connection timeout: 30s → 60s (buys time for slow DB)
-  2. Add retry with exponential backoff (immediate fix):
-     def query_with_retry(sql, max_retries=3):
-         for attempt in range(max_retries):
-             try:
-                 return db.execute(sql)
-             except TimeoutError:
-                 if attempt < max_retries - 1:
-                     time.sleep(2 ** attempt)
-                 else: raise
-  
-  3. Connection pooling: use SQLAlchemy pool_size=5, pool_timeout=60
-  4. Schedule pipeline during off-peak hours (avoid DB peak load window)
-  5. Add read replica for pipeline queries (decouple from OLTP load)
-
-Prevention:
-  Set retry=3, retry_delay=5 in Airflow default_args
-  Add alert only after 2 consecutive failures (1 failure = likely transient)
-  Monitor source DB load; alert if CPU > 80% during pipeline window
-```
-
----
-
-## Scenario 3: Data Loss Investigation
-
-**Question:** Someone reports that 50,000 orders are missing from your DW for last Tuesday. How do you investigate and prevent this in the future?
-
-**Answer:**
-
-```
-Investigation:
-
-Step 1: Quantify the gap
-  SELECT COUNT(*) FROM orders_fact WHERE order_date = '2024-01-16';
-  -- 1,250,000 rows (expected: ~1,300,000 based on daily average)
-  -- Missing: ~50,000 rows
-
-Step 2: Identify the time range of missing data
-  SELECT
-    EXTRACT(HOUR FROM order_timestamp) AS hour_of_day,
-    COUNT(*) AS row_count
-  FROM orders_fact WHERE order_date = '2024-01-16'
-  GROUP BY hour_of_day ORDER BY hour_of_day;
-  -- Hour 14 (2pm): 2,000 rows (expected: ~55,000) ← clear gap
-
-Step 3: Check pipeline run logs
-  SELECT * FROM pipeline_run_log
-  WHERE pipeline_name = 'orders_pipeline' AND execution_date = '2024-01-16';
-  -- status=failed, error="S3 permission denied at 2024-01-16 14:32:00"
-  -- Retry succeeded at 14:45 but only processed orders from 3pm onward
-
-Step 4: Root cause
-  S3 credentials expired mid-run; retry restarted with new batch starting at 15:00
-  Orders between 14:00-15:00 were never loaded
-
-Step 5: Recovery
-  -- Re-extract that specific hour from source:
-  INSERT INTO orders_fact
-  SELECT * FROM orders_source_extract
-  WHERE order_timestamp BETWEEN '2024-01-16 14:00' AND '2024-01-16 15:00'
-    AND order_id NOT IN (SELECT order_id FROM orders_fact WHERE order_date = '2024-01-16');
-
-Prevention:
-  1. Add row count assertion per hour: if any hour < 70% of hourly average → alert
-  2. Credential rotation: use IAM roles (no expiring credentials) instead of access keys
-  3. Post-run reconciliation: compare source count vs DW count for execution_date
-     ASSERT source_count = dw_count ± 0.01% (within 99.99% tolerance)
-  4. Never restart a job without a proper watermark: retry always resumes from last checkpoint
-```
+> **Tip 1:** "What is the difference between RTO and RPO?" — RTO (Recovery Time Objective) is how long the system can be down. RPO (Recovery Point Objective) is how much data can be lost. A payment system might have RTO=5min, RPO=0 (no data loss). An analytics dashboard might have RTO=2h, RPO=1h.
+> **Tip 2:** "How do you test fault tolerance?" — Chaos engineering: intentionally inject failures in production-like environments (Chaos Monkey, Gremlin). Run quarterly DR drills with real failovers. Measure actual RTO/RPO vs targets.
+> **Tip 3:** "What is a bulkhead pattern in data pipelines?" — Isolate failures to prevent cascading: separate thread pools per upstream source, separate Kafka consumer groups per downstream consumer, separate Snowflake warehouses per use case (analytics vs ingestion). A slow analytics query won't block real-time ingestion.

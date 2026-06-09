@@ -3,18 +3,26 @@ title: "dbt Macros & Jinja - Scenarios"
 topic: dbt
 subtopic: macros-and-jinja
 content_type: scenario_question
-difficulty_level: mid-level
-layer: scenarios
 tags: [dbt, macros, jinja, interview, scenarios]
 ---
 
-# dbt Macros & Jinja — Scenario Questions
+# dbt Macros & Jinja — Interview Scenarios
 
-## Scenario 1 (Junior): Write Your First Macro
+<article data-difficulty="junior">
 
-**Situation:** You have 10 models that all need to cast `price_cents` (an integer) to `price_usd` (a decimal). You're repeating `ROUND(price_cents / 100.0, 2) AS price_usd` everywhere. Write a macro to DRY this up.
+## 🟢 Junior: Writing a DRY Macro to Eliminate Repeated Logic
 
-**Answer:**
+**Scenario:** You have 10 models that all need to cast `price_cents` (an integer) to `price_usd` (a decimal). You're repeating `ROUND(price_cents / 100.0, 2) AS price_usd` everywhere. Write a macro to DRY this up.
+
+<details>
+<summary>💡 Hint</summary>
+
+Create a macro that accepts the column name as a parameter, and optionally an alias. Use Jinja's `if` block to conditionally add the `AS alias` part.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```sql
 -- macros/cents_to_dollars.sql
@@ -34,15 +42,27 @@ SELECT
 FROM {{ source('raw', 'orders') }}
 ```
 
-Now changing the rounding logic only requires editing one file.
+Now changing the rounding logic only requires editing one file. If you want 4 decimal places later, change it in one place.
 
----
+</details>
 
-## Scenario 2 (Mid-Level): Cross-Database Macro
+</article>
 
-**Situation:** Your company uses Snowflake in production but BigQuery for a separate analytics team. You need a macro `date_diff_days` that computes the difference in days between two dates, working on both platforms.
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Writing a Cross-Database Macro
+
+**Scenario:** Your company uses Snowflake in production but BigQuery for a separate analytics team. You need a macro `date_diff_days` that computes the difference in days between two dates, working on both platforms.
+
+<details>
+<summary>💡 Hint</summary>
+
+Use `adapter.dispatch()` — dbt's dispatch mechanism automatically routes to the correct platform-specific implementation based on the target adapter name.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```sql
 -- macros/date_diff_days.sql
@@ -75,11 +95,17 @@ SELECT
 FROM {{ ref('fct_orders') }}
 ```
 
----
+dbt automatically selects the correct implementation at compile time based on which adapter is active.
 
-## Scenario 3 (Senior): Debug a Broken Macro
+</details>
 
-**Situation:** This macro is supposed to generate a UNION ALL of last 12 months of data, but it produces empty output. Find the bugs:
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Debugging a Broken Macro
+
+**Scenario:** This macro is supposed to generate a UNION ALL of the last 12 months of data, but it produces empty output. Find and fix all the bugs:
 
 ```sql
 {% macro union_monthly_data(table_name) %}
@@ -92,7 +118,15 @@ FROM {{ ref('fct_orders') }}
 {% endmacro %}
 ```
 
-**Answer — Three Bugs:**
+<details>
+<summary>💡 Hint</summary>
+
+There are three bugs: the UNION ALL placement, year-boundary arithmetic, and zero-padding of month numbers. Work through the logic for December/January to find the boundary bug.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Bug 1:** `UNION ALL` is placed after the LAST item, but it should be placed between items (after all items EXCEPT the last):
 ```sql
@@ -132,3 +166,17 @@ FROM {{ ref('fct_orders') }}
     {% endfor %}
 {% endmacro %}
 ```
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "When should you write a macro vs just repeat SQL?" — Write a macro when the same logic appears in 3+ models and involves non-trivial transformation (type casting, date math, conditional logic). Simple column aliases don't need macros. The test: if you change the business rule, how many files do you need to touch?
+
+> **Tip 2:** "How do you handle warehouse-specific SQL in dbt?" — Use `adapter.dispatch()`. Define a default implementation and platform-specific overrides (prefixed with `snowflake__`, `bigquery__`, etc.). dbt selects the right one at compile time. This is how dbt-utils handles cross-database compatibility.
+
+> **Tip 3:** "Debug a macro that produces wrong output." — First run `dbt compile` and inspect the compiled SQL. Common Jinja bugs: wrong loop condition (`loop.last` vs `not loop.last`), year-boundary arithmetic, missing zero-padding for dates, and variable scoping issues inside loops.

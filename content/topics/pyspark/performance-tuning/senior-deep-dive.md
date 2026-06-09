@@ -287,3 +287,38 @@ spark.conf.set("spark.executor.cores", "8")
 > **Tip 2:** "What's bucketing and when do you use it?" — "Bucketing pre-shuffles data at write time into a fixed number of hash-based files. When two tables are bucketed on the same column with the same bucket count, joins on that column skip the shuffle entirely. Use it for frequently-joined tables in recurring pipelines. Don't use for ad-hoc exploration or frequently-changing tables."
 
 > **Tip 3:** "How do you size a Spark cluster?" — "Three factors: (1) Data volume → determines partition count (target 128 MB each). (2) Parallelism needed → total cores = partitions / desired waves. (3) Memory per task → 4-6 GB/core for most workloads, more for heavy joins. I typically use 5 cores and 30 GB per executor. Dynamic allocation auto-scales the executor count."
+
+---
+
+## ⚡ Cheat Sheet
+
+### Spark Configuration Knobs
+
+| Config Key | Default | Recommended (large jobs) | What it controls |
+|---|---|---|---|
+| `spark.executor.memory` | 1g | 16–30g | Heap memory per executor |
+| `spark.driver.memory` | 1g | 4–8g | Driver heap (collect/broadcast) |
+| `spark.memory.fraction` | 0.6 | 0.7–0.75 | Fraction of heap for execution+storage |
+| `spark.memory.storageFraction` | 0.5 | 0.3–0.4 | Fraction of memory.fraction reserved for cache |
+| `spark.sql.shuffle.partitions` | 200 | 500–2000 | Post-shuffle partition count |
+| `spark.shuffle.file.buffer` | 32k | 64k–128k | Buffer size for shuffle write |
+| `spark.reducer.maxSizeInFlight` | 48m | 96m | Max data fetched per reduce task at once |
+| `spark.sql.adaptive.enabled` | true (Spark 3+) | true | Enable Adaptive Query Execution |
+| `spark.sql.adaptive.coalescePartitions.enabled` | true | true | AQE: merge small post-shuffle partitions |
+| `spark.sql.adaptive.skewJoin.enabled` | true | true | AQE: auto-split skewed partitions |
+| `spark.sql.autoBroadcastJoinThreshold` | 10m | 50m–200m | Max table size for auto-broadcast join |
+| `spark.default.parallelism` | 2× cores | 2–3× total cores | Default RDD partition count |
+| `spark.sql.files.maxPartitionBytes` | 128m | 128m–256m | Max bytes per file-scan partition |
+
+### Signs of Misconfiguration → Fix
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| Executor OOM / GC overhead | Heap too small or too many partitions in memory | Increase `spark.executor.memory`; reduce `spark.sql.shuffle.partitions` |
+| Driver OOM | Collecting large dataset or large broadcast | Increase `spark.driver.memory`; avoid `collect()` on large DFs |
+| Spill to disk (high I/O) | Insufficient execution memory | Increase `spark.memory.fraction`; add more memory per executor |
+| Stage stuck at 199/200 tasks | Skewed partition | Enable AQE skew join; salt keys manually |
+| Too many small shuffle files | `spark.sql.shuffle.partitions` too high | Lower shuffle partitions or enable AQE partition coalescing |
+| Join defaulting to SortMerge | Small table above broadcast threshold | Raise `spark.sql.autoBroadcastJoinThreshold` or use `broadcast()` hint |
+| Low parallelism / idle cores | `spark.default.parallelism` too low | Set to 2–3× total executor cores |
+| Slow file reads | Partition size too small (many tiny tasks) | Increase `spark.sql.files.maxPartitionBytes` |

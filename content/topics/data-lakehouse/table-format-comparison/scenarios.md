@@ -2,157 +2,276 @@
 title: "Table Format Comparison — Scenarios"
 topic: data-lakehouse
 subtopic: table-format-comparison
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
-tags: [table-formats, scenarios, interview, selection, design]
+content_type: scenario_question
+tags: [iceberg, delta, hudi, comparison, scenarios]
 ---
 
 # Table Format Comparison — Interview Scenarios
 
-## Scenario 1: Choose a Table Format for a Healthcare Analytics Platform
+<article data-difficulty="junior">
 
-**Question:** A healthcare company is building a data platform on AWS. Requirements: (1) Spark for ETL, (2) Athena for ad-hoc SQL by analysts, (3) Flink for real-time patient alerts, (4) compliance: 7-year data retention, audit trail for all data access, GDPR right-to-erasure for patient data. Which table format do you recommend?
+## 🟢 Junior: Delta Lake, Iceberg, and Hudi — Core Differences
 
-**Answer:**
+**Scenario:** A startup is building their first data lakehouse. The engineering manager asks you to recommend a table format. They use Databricks for ETL, Trino for ad-hoc SQL, and may add Flink later. What do you recommend and why?
 
+<details>
+<summary>💡 Hint</summary>
+
+Consider engine compatibility. Delta Lake has tight Databricks integration but historically weaker multi-engine support. Iceberg is engine-agnostic. Hudi excels at CDC. The multi-engine requirement (Databricks + Trino + Flink) is the key constraint.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Recommendation: Apache Iceberg**
+
+**Reasoning:**
+
+| Feature | Delta Lake | Apache Iceberg | Apache Hudi |
+|---------|-----------|----------------|-------------|
+| Databricks support | Native | Via Delta-Iceberg or UniForm | Connector |
+| Trino support | Limited (Delta connector) | First-class | Limited |
+| Flink support | Limited | First-class | First-class |
+| Open spec | Yes (open-sourced 2023) | Yes (Apache) | Yes (Apache) |
+| CDC support | Basic | Via Flink/Spark | Best-in-class |
+| Multi-catalog | Limited | REST catalog standard | Limited |
+
+**For this team:**
+- Databricks now supports Iceberg natively via **UniForm** (Universal Format), which lets a Delta table be read as Iceberg by external engines
+- Trino has a mature Iceberg connector
+- Flink has first-class Iceberg sink support
+
+**If already on Databricks:** Use Delta with UniForm enabled — get native Databricks performance while allowing Trino and Flink to read via Iceberg protocol.
+
+```sql
+-- Enable UniForm on a Delta table (Databricks)
+ALTER TABLE orders SET TBLPROPERTIES (
+  'delta.universalFormat.enabledFormats' = 'iceberg'
+);
 ```
-Analysis:
 
-Compute engines: Spark (EMR), Athena, Flink → multi-engine requirement
-  → Eliminates Delta as primary format (Athena + Delta = manifests, not native)
-  → Iceberg: native Athena support (Iceberg connector), native Flink support, EMR Spark
+**If greenfield (no Databricks lock-in):** Go pure Iceberg with a REST catalog (Polaris, Nessie, or AWS Glue).
 
-GDPR right-to-erasure: DELETE WHERE patient_id = X
-  → Need efficient row-level deletes
-  → Iceberg V2 MOR: equality delete files (efficient deletes, compaction materializes)
-  → Delta DV: similar, but Athena doesn't support DVs natively
-  → Hudi: efficient deletes, but Athena support for Hudi is limited
-  → Winner: Iceberg V2
+</details>
 
-7-year retention + audit trail:
-  → Iceberg: snapshot history tracks all changes
-  → Iceberg table branching (Nessie): immutable tags for each year-end state
-  → Athena audit: S3 access logs + Athena query history in CloudTrail
+</article>
 
-Recommendation: Apache Iceberg
+<article data-difficulty="mid-level">
 
-Full architecture:
-  Catalog: AWS Glue (managed, integrates with all three engines)
-  Table format: Iceberg V2 (MOR for efficient deletes)
-  Storage: S3 with Object Lock (WORM for 7-year retention compliance)
-  
-  Engine mapping:
-    Flink → Iceberg sink (patient alerts: streaming inserts to Bronze)
-    Spark/EMR → Iceberg MERGE (Silver: ETL transforms, upserts by patient_id)
-    Athena → Iceberg SELECT (read-only analytics for compliance team)
-  
-  GDPR process:
-    1. DELETE WHERE patient_id = X (Spark → Iceberg V2 equality delete)
-    2. Schedule rewrite_data_files (physical removal from Parquet files)
-    3. expire_snapshots (removes historical snapshots referencing patient data)
-    4. Object Lock ensures deletion is final and auditable
+## 🟡 Mid-Level: Migrating from Delta Lake to Iceberg
 
-  Audit trail:
-    CloudTrail: all Athena + EMR access logged
-    Iceberg table history (DESCRIBE HISTORY): all commits with timestamp and operation
-    Glue Catalog: schema change history
+**Scenario:** Your company is migrating from Databricks Delta Lake to an open lakehouse on EMR with Iceberg. You have 200 Delta tables ranging from 10GB to 50TB. Design a migration strategy that minimizes downtime and risk.
+
+<details>
+<summary>💡 Hint</summary>
+
+Consider shadow migration (write to both, validate, cut over), in-place conversion vs copy, and the Delta-to-Iceberg migration tools. Test with small tables first. Plan for rollback.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Migration Strategy: Phased Shadow Migration**
+
+**Phase 1: Assessment (Week 1)**
+```python
+# Inventory all Delta tables
+tables_info = spark.sql("""
+  SELECT table_name,
+         round(sum(size)/1e12, 2) as size_tb,
+         count(*) as file_count,
+         max(modificationTime) as last_modified
+  FROM (
+    DESCRIBE DETAIL delta.`s3://bucket/tables/*`
+  )
+  GROUP BY table_name
+  ORDER BY size_tb DESC
+""")
+
+# Categorize: small (<100GB), medium, large (>10TB)
 ```
+
+**Phase 2: In-Place Conversion (Small Tables)**
+
+Using the Delta-Iceberg migration tool:
+```python
+# Use iceberg-delta-lake-compat or rewrite via Spark
+from delta import DeltaTable
+
+# Option A: Read Delta, write as Iceberg
+delta_df = spark.read.format("delta").load("s3://bucket/small_table/")
+delta_df.write.format("iceberg")     .option("write.format.default", "parquet")     .saveAsTable("prod.small_table")
+
+# Verify row counts
+delta_count = delta_df.count()
+iceberg_count = spark.table("prod.small_table").count()
+assert delta_count == iceberg_count
+```
+
+**Phase 3: Dual-Write for Large Tables**
+```python
+def write_to_both(batch_df, batch_id):
+    # Write to Delta (existing)
+    batch_df.write.format("delta")         .mode("append").save("s3://bucket/large_table/")
+    
+    # Write to Iceberg (new)
+    batch_df.write.format("iceberg")         .mode("append").saveAsTable("prod_iceberg.large_table")
+
+stream.writeStream.foreachBatch(write_to_both).start()
+```
+
+**Phase 4: Validation**
+```python
+import great_expectations as ge
+
+# Statistical validation
+def validate_migration(delta_path, iceberg_table):
+    delta_df = spark.read.format("delta").load(delta_path)
+    ice_df = spark.table(iceberg_table)
+    
+    checks = {
+        "row_count_match": delta_df.count() == ice_df.count(),
+        "null_counts_match": all(
+            delta_df.filter(col(c).isNull()).count() ==
+            ice_df.filter(col(c).isNull()).count()
+            for c in delta_df.columns
+        ),
+        "schema_match": delta_df.schema == ice_df.schema
+    }
+    return checks
+```
+
+**Phase 5: Cutover**
+- Update all pipeline configs to point to Iceberg tables
+- Keep Delta tables in read-only mode for 30 days
+- Monitor query performance and data quality
+- Decommission Delta after validation period
+
+**Rollback Plan:**
+- Keep Delta tables intact during migration
+- Feature flag in pipeline configs to switch back
+- Delta retained for 30 days post-cutover
+
+</details>
+
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Choosing a Table Format at Scale — Architecture Decision Record
+
+**Scenario:** You are the principal data engineer at a financial services company processing 50TB/day. The data platform team needs to decide on a table format for the next 5 years. You must evaluate Delta Lake, Iceberg, and Hudi across: regulatory compliance (data retention, audit trails), multi-cloud strategy, query performance, operational complexity, and ecosystem lock-in. Produce an architecture decision record (ADR).
+
+<details>
+<summary>💡 Hint</summary>
+
+ADRs have: context, decision drivers, options considered, decision, consequences. For financial services, consider: immutable audit logs, fine-grained access control, column-level encryption, cross-cloud portability, and regulatory requirements (GDPR right-to-erasure vs immutability).
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Architecture Decision Record: Table Format Selection**
+
+**Status:** Proposed  
+**Date:** 2024-Q1  
+**Deciders:** Principal DE, Platform Architect, CTO
 
 ---
 
-## Scenario 2: Migrate from Hive to a Modern Table Format
-
-**Question:** Your team has 500 Hive tables on HDFS (Parquet format, Hive Metastore catalog). You're migrating to AWS S3 and want to modernize the table format. Choose between Delta, Iceberg, and Hudi, and outline the migration plan.
-
-**Answer:**
-
-```
-Choose: Apache Iceberg
-  Reasoning:
-  1. Migration path: Iceberg can migrate Hive Parquet tables WITHOUT data copy
-     (snapshot migration: Iceberg reads existing Parquet files, wraps with Iceberg metadata)
-  2. Hive Metastore is Iceberg-compatible (Hive catalog → Iceberg works natively)
-  3. No Databricks lock-in (team doesn't use Databricks)
-  4. Athena + Iceberg: simpler than Delta manifests for ad-hoc SQL
-  5. Schema evolution: ID-based (rename columns safely — important after migration)
-
-Migration Plan:
-
-Phase 1: Infrastructure (Week 1-2)
-  - Copy HDFS Parquet files to S3: s3-dist-cp or AWS DataSync
-  - Verify checksums (md5/sha256 comparison before and after copy)
-  - Install Iceberg JARs on EMR clusters
-
-Phase 2: Migrate High-Value Tables (Week 3-4)
-  - Start with 10 most-used tables (80% of query volume)
-  - Use Iceberg snapshot migration (no data copy, metadata only):
-    CALL local.system.snapshot(
-      source_table => 'hive.db.orders',
-      table => 'iceberg.db.orders',
-      location => 's3://bucket/iceberg/orders'
-    )
-  - Validate: row count, column distributions, query results match
-
-Phase 3: Parallel Operation (Week 5-8)
-  - New writes go to Iceberg tables
-  - Hive tables become read-only (for rollback safety)
-  - Update downstream jobs to read from Iceberg catalog
-
-Phase 4: Migrate Remaining Tables (Week 9-16)
-  - 490 remaining tables via batch migration scripts
-  - Categorize: active (migrate now), archive (migrate to cold storage), deprecated (drop)
-
-Phase 5: Decommission HDFS (Week 17-20)
-  - All tables validated in Iceberg
-  - HDFS kept read-only for 30 days
-  - Delete HDFS data and Hadoop cluster
-  
-Cost: primary cost is migration compute (S3-dist-cp + EMR spot instances)
-      Expect $2,000-5,000 one-time migration cost for 500 tables
-```
+**Context:**
+50TB/day ingestion across 3 cloud providers (AWS primary, GCP DR, Azure for EU data residency). 200 analysts on Trino, 15 data scientists on Spark, real-time fraud detection on Flink. SEC/FINRA audit requirements: 7-year immutable retention, complete lineage.
 
 ---
 
-## Scenario 3: Debug Format-Specific Query Performance Issue
+**Decision Drivers:**
 
-**Question:** Your Delta table answers queries in 3 seconds from Spark. Your colleague's Iceberg table on the same data answers similar queries in 15 seconds from the same Spark cluster. What do you investigate?
+| Driver | Weight |
+|--------|--------|
+| Regulatory compliance | Critical |
+| Multi-engine/multi-cloud | High |
+| Query performance | High |
+| Operational maturity | Medium |
+| Vendor lock-in risk | Medium |
 
-**Answer:**
+---
 
+**Options Evaluated:**
+
+**Delta Lake**
+- ✅ Best Databricks integration, DeltaSharing for cross-org sharing
+- ✅ VACUUM with retention controls
+- ❌ Multi-cloud catalog story weak (Databricks-centric)
+- ❌ Trino integration limited vs Iceberg
+
+**Apache Iceberg**
+- ✅ True multi-engine: Trino, Spark, Flink, Hive all first-class
+- ✅ REST catalog is cloud-agnostic
+- ✅ Row-level deletes (GDPR erasure) with `DELETE WHERE`
+- ✅ Snapshot retention for audit (immutable snapshot history)
+- ❌ CDC (upsert) slightly more complex than Hudi
+
+**Apache Hudi**
+- ✅ Best CDC/upsert support, timeline-based audit
+- ✅ MoR for high-frequency updates
+- ❌ Weaker Trino support
+- ❌ Smaller community than Iceberg/Delta
+
+---
+
+**Decision: Apache Iceberg with Polaris REST Catalog**
+
+**Rationale:**
+1. **Compliance:** Iceberg's snapshot model provides immutable point-in-time audit (required for SEC rule 17a-4). `expire_snapshots` is explicitly controlled, never automatic.
+2. **GDPR Erasure:** Row-level deletes update metadata without rewriting all files. Deleted rows become unreachable without physical scan.
+3. **Multi-cloud:** REST catalog abstracts cloud-specific metastores. Same catalog API on AWS (S3), GCP (GCS), Azure (ADLS).
+4. **Multi-engine:** Trino (analytics), Spark (ETL), Flink (streaming) all have mature Iceberg connectors.
+
+**Catalog Architecture:**
 ```
-Hypothesis checklist:
-
-1. Check file sizes
-   -- Both tables: DESCRIBE DETAIL / DESCRIBE TABLE
-   Delta: average file size 128MB (OPTIMIZE ran recently)
-   Iceberg: average file size 8MB (rewrite_data_files never ran, streaming writes)
-   → Root cause found: Iceberg has 16× more files, 16× more S3 GET requests
-   Fix: CALL system.rewrite_data_files(table => 'db.orders', strategy => 'binpack',
-         options => map('target-file-size-bytes', '134217728'))
-
-2. Check column statistics collection
-   Delta: stats collected on all columns by default (32 columns)
-   Iceberg: stats require explicitly enabling column statistics at write time
-   
-   Check: spark.sql("SELECT * FROM iceberg.db.orders$files LIMIT 5")
-   -- Look at: lower_bounds, upper_bounds — if null, stats not collected
-   -- Fix: set write.metadata.metrics.default=truncate(16) in table properties
-
-3. Check partitioning
-   Delta: partition by order_date (explicit)
-   Iceberg: hidden partition by days(order_ts) — but query might not hit it
-   
-   Explain plan: both should show partition pruning
-   If Iceberg doesn't prune: query uses wrong timestamp column format
-   Fix: ensure WHERE clause uses the column configured in PARTITIONED BY
-
-4. Check number of manifest files
-   SELECT count(*) FROM iceberg.db."orders$manifests";
-   -- 10,000 manifests (one per streaming micro-batch)
-   Fix: CALL system.rewrite_manifests(table => 'db.orders')
-   
-Result after fix:
-  After rewrite_data_files + rewrite_manifests: Iceberg query drops to 3-4 seconds
-  Conclusion: format difference was operational (no maintenance), not inherent
+┌──────────────────────────────────────────────┐
+│           Apache Polaris (REST Catalog)       │
+│  - OAuth2 per-engine credentials             │
+│  - Namespace-level access policies           │
+│  - Cross-cloud namespace federation          │
+└──────────────────┬───────────────────────────┘
+                   │
+        ┌──────────┼──────────┐
+        │          │          │
+     AWS S3     GCP GCS   Azure ADLS
+   (primary)    (DR)     (EU residency)
 ```
+
+**GDPR Erasure Procedure:**
+```sql
+-- Soft delete (metadata only, fast)
+DELETE FROM prod.customers WHERE customer_id = 12345;
+
+-- After legal hold expires: physical removal
+CALL prod.system.expire_snapshots(
+    table => 'prod.customers',
+    older_than => TIMESTAMP '2024-01-01'
+);
+CALL prod.system.rewrite_data_files('prod.customers');
+CALL prod.system.remove_orphan_files('prod.customers');
+```
+
+**Consequences:**
+- Positive: Engine flexibility, no Databricks dependency
+- Negative: Higher operational complexity vs managed Delta (Databricks)
+- Mitigation: Platform team maintains Polaris catalog; runbooks for maintenance procedures
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "How do Delta Lake, Iceberg, and Hudi handle schema evolution?" — All three support adding/removing columns. Iceberg and Hudi use column IDs internally so renames don't break reads. Delta uses column names and is more strict about rename operations.
+> **Tip 2:** "What is ACID in the context of table formats?" — Atomicity (all-or-nothing commits via metadata swap), Consistency (schema enforcement), Isolation (snapshot isolation prevents dirty reads), Durability (committed snapshots are permanent on object storage).
+> **Tip 3:** "What's the difference between hidden partitioning and Hive partitioning?" — Hive partitioning requires users to include partition columns in queries. Iceberg's hidden partitioning uses transforms (e.g., `months(event_time)`) and automatically prunes partitions without requiring users to know the physical layout.

@@ -3,18 +3,26 @@ title: "dbt Cloud & CI/CD - Scenarios"
 topic: dbt
 subtopic: dbt-cloud-and-ci-cd
 content_type: scenario_question
-difficulty_level: mid-level
-layer: scenarios
 tags: [dbt, cicd, deployment, interview, scenarios]
 ---
 
-# dbt Cloud & CI/CD — Scenario Questions
+# dbt Cloud & CI/CD — Interview Scenarios
 
-## Scenario 1 (Junior): CI Takes 45 Minutes
+<article data-difficulty="junior">
 
-**Situation:** Every PR triggers a CI pipeline that runs `dbt build` on all 150 models. It takes 45 minutes, slowing down the team. How do you fix it?
+## 🟢 Junior: Speeding Up a Slow CI Pipeline
 
-**Answer:**
+**Scenario:** Every PR triggers a CI pipeline that runs `dbt build` on all 150 models. It takes 45 minutes, slowing down the team. How do you fix it?
+
+<details>
+<summary>💡 Hint</summary>
+
+The key is Slim CI: instead of building everything, only build models that changed plus their downstream dependencies. dbt's `state:modified+` selector combined with `--defer` achieves this.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Current (slow):**
 ```bash
@@ -44,13 +52,25 @@ dbt build \
 - Skip CI for documentation-only changes
 - Run tests in parallel with `--threads 8`
 
----
+</details>
 
-## Scenario 2 (Mid-Level): Production Job Fails at 5am
+</article>
 
-**Situation:** You're on-call. The 5am production dbt job fails. The executive dashboard shows no data for today. You have 2 hours before business opens. Walk through your response.
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Responding to a 5am Production Job Failure
+
+**Scenario:** You're on-call. The 5am production dbt job fails. The executive dashboard shows no data for today. You have 2 hours before business opens. Walk through your response.
+
+<details>
+<summary>💡 Hint</summary>
+
+Follow a structured incident response: check the job logs first, identify the root cause layer (source system, pipeline, or transformation), communicate status to stakeholders, fix the root cause, and then rerun only the affected models.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **0:00 — Alert received:** PagerDuty fires
 
@@ -73,15 +93,14 @@ Error: Object 'RAW_DB.shopify.orders' does not exist
 
 **0:10 — Trigger Fivetran re-sync:**
 ```bash
-# Trigger via Fivetran API
 curl -X POST https://api.fivetran.com/v1/connectors/shopify_prod/force \
   -H "Authorization: Bearer $FIVETRAN_KEY"
 ```
 
 **0:15 — Communicate:**
 ```
-Slack #data-ops: "5am dbt job failed — Shopify data delayed ~1hr. 
-Root cause: Fivetran rate limit. ETA for fix: 6:30am. 
+Slack #data-ops: "5am dbt job failed — Shopify data delayed ~1hr.
+Root cause: Fivetran rate limit. ETA for fix: 6:30am.
 Dashboard will be current by 7am."
 ```
 
@@ -101,13 +120,25 @@ dbt test --select tag:smoke_test
 
 Post-incident: Add Fivetran sync check as first step in dbt job. Add `dbt source freshness` before `dbt build`.
 
----
+</details>
 
-## Scenario 3 (Senior): Design CI/CD Strategy for dbt Mesh
+</article>
 
-**Situation:** You're migrating from a 300-model monolithic dbt project to a dbt Mesh with 5 separate projects (platform, finance, marketing, operations, data-science). Design the CI/CD strategy.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing CI/CD Strategy for a dbt Mesh Migration
+
+**Scenario:** You're migrating from a 300-model monolithic dbt project to a dbt Mesh with 5 separate projects (platform, finance, marketing, operations, data-science). Design the CI/CD strategy.
+
+<details>
+<summary>💡 Hint</summary>
+
+The key challenge in a Mesh is managing cross-project dependencies in CI. Each project needs independent CI, but platform changes must trigger downstream validation before being considered safe to deploy.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Architecture:**
 ```
@@ -117,8 +148,6 @@ platform_project (foundation — shared dims/facts)
   ├── operations_project (depends on platform)
   └── data_science_project (depends on platform + finance)
 ```
-
-**CI/CD Rules:**
 
 **Rule 1: Each project has independent CI**
 ```yaml
@@ -161,3 +190,17 @@ Deploy sequence (Airflow DAG):
 ./rollback.sh finance_project
 # Platform data is still good — only finance marts rolled back
 ```
+
+</details>
+
+</article>
+
+---
+
+## Interview Tips
+
+> **Tip 1:** "How do you make CI faster for a large dbt project?" — Slim CI with `state:modified+` and `--defer` is the standard answer. Only build changed models and their downstream; read everything else from prod. Quantify the impact: 150 models → CI that tests 3-5 models per typical PR.
+
+> **Tip 2:** "Walk me through an on-call incident for a failed dbt job." — Show a structured approach: check logs, identify the root cause layer (source vs transform vs infra), communicate status immediately, fix the root cause first, then rerun. Never rerun blindly without understanding why it failed.
+
+> **Tip 3:** "How would you structure CI/CD for a dbt Mesh?" — Each project gets independent CI. Platform project changes must cascade validation through downstream projects before deployment. Deployment follows dependency order: platform first, then domain projects in parallel, then cross-domain projects.

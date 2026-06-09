@@ -2,19 +2,30 @@
 title: "Incident Management — Scenarios"
 topic: data-quality
 subtopic: incident-management
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [incident-management, interview, scenarios, on-call]
 ---
 
 # Incident Management — Interview Scenarios
 
-## Scenario 1 (Junior): First On-Call Incident
 
-**Question:** You're on-call and get a PagerDuty alert at 2 AM: "orders_freshness_sla_breach — orders table not updated in 3 hours." Walk through your response.
 
-**Answer:**
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: First On-Call Incident
+
+**Scenario:** You're on-call and get a PagerDuty alert at 2 AM: "orders_freshness_sla_breach — orders table not updated in 3 hours." Walk through your response.
+
+<details>
+<summary>💡 Hint</summary>
+
+**Step 1: Acknowledge (< 5 min)** - Acknowledge PagerDuty alert to stop escalation - Post in #data-incidents: "Acknowledging orders SLA breach. Investigating."
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Step 1: Acknowledge (< 5 min)**
 - Acknowledge PagerDuty alert to stop escalation
@@ -49,13 +60,25 @@ airflow tasks run orders_pipeline transform_silver 2024-01-15
 **Step 5: Communicate resolution**
 - Post resolution time, root cause, and summary in #data-incidents
 
----
+</details>
 
-## Scenario 2 (Mid-level): Silent Data Corruption
+</article>
 
-**Question:** The data looks fresh and row counts are normal, but the sales team reports revenue figures seem wrong. Nobody received an alert. How do you investigate?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Silent Data Corruption
+
+**Scenario:** The data looks fresh and row counts are normal, but the sales team reports revenue figures seem wrong. Nobody received an alert. How do you investigate?
+
+<details>
+<summary>💡 Hint</summary>
+
+**If Silver ≠ Gold:** transformation bug (wrong aggregation, wrong join cardinality) **If Silver = Gold but both wrong:** ingestion bug (missing records, wrong amount) **If duplicates found:** dedup logic failed after a change
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```python
 # Step 1: Quantify the discrepancy
@@ -107,13 +130,25 @@ print(silver_vs_gold)
 
 **Prevention:** Add business-logic DQ check: SUM(gold.revenue) BETWEEN (rolling_avg * 0.8) AND (rolling_avg * 1.2). This would have caught it.
 
----
+</details>
 
-## Scenario 3 (Senior): Designing Incident Prevention
+</article>
 
-**Question:** Your team is having 3 P1 incidents per week. Leadership asks you to reduce this by 75% in 90 days. What's your plan?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing Incident Prevention
+
+**Scenario:** Your team is having 3 P1 incidents per week. Leadership asks you to reduce this by 75% in 90 days. What's your plan?
+
+<details>
+<summary>💡 Hint</summary>
+
+**Week 1-2: Analysis** - Pull incident history: group by root cause category - Top categories typically: OOM, source delays, schema drift, bad deployments - Identify which incidents are recurring (same root cause > 1x)
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Week 1-2: Analysis**
 - Pull incident history: group by root cause category
@@ -154,3 +189,7 @@ ORDER BY 1;
 ```
 
 **Target:** P1 incidents: 3/week → 0.75/week in 90 days (75% reduction). Achieved through: auto-remediation (-40%), faster detection (-20%), runbooks (-15%).
+
+</details>
+
+</article>

@@ -2,15 +2,32 @@
 title: "PySpark Partitioning and Bucketing - Interview Scenarios"
 topic: pyspark
 subtopic: partitioning-and-bucketing
-content_type: study_material
-difficulty_level: mid-level
-layer: real-world
+content_type: scenario_question
 tags: [pyspark, partitioning, bucketing, interview-scenarios, coalesce, partition-strategy, design]
 ---
 
 # PySpark Partitioning and Bucketing — Interview Scenarios
 
-## Junior Scenario: Why Coalesce Before Write
+
+
+
+<article data-difficulty="junior">
+
+## 🟢 Junior: Scenario: Why Coalesce Before Write
+
+**Scenario:** **Question:** "Your pipeline filters a 100GB dataset down to 500MB of results, then writes to Parquet. The output directory has 200 files averaging 2.5MB each. What's wrong and how do you fix it?"
+
+##
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "Your pipeline filters a 100GB dataset down to 500MB of results, then writes to Parquet. The output directory has 200 files averaging 2.5MB each. What's wrong and how do you fix it?"
 
@@ -68,9 +85,25 @@ filtered.coalesce(4).write.parquet("s3://output/li_data/")
 - Target file sizes: 128MB-512MB for Parquet
 - Mention maxRecordsPerFile as an alternative guardrail
 
----
+</details>
 
-## Mid-Level Scenario: Choose Partition Count
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Scenario: Choose Partition Count
+
+**Scenario:** **Question:** "Your Spark job processes 50GB of data on a cluster with 20 executors, each with 4 cores and 16GB memory. You see that some tasks take 30 seconds and others take 10 minutes. Current part
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "Your Spark job processes 50GB of data on a cluster with 20 executors, each with 4 cores and 16GB memory. You see that some tasks take 30 seconds and others take 10 minutes. Current partition count is 200. What partition count would you recommend and why?"
 
@@ -152,9 +185,25 @@ spark.conf.set("spark.sql.shuffle.partitions", "400")
 - Formula: partitions = max(3× cores, data_size / target_partition_size)
 - Enable AQE with skew detection for ongoing protection
 
----
+</details>
 
-## Senior Scenario: Design Partitioning Strategy for 10TB Table
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Scenario: Design Partitioning Strategy for 10TB Table
+
+**Scenario:** **Question:** "You're designing the storage layout for a 10TB clickstream analytics table. It receives 500GB daily, is queried by date range (90% of queries), by user_id (50% of queries include this),
+
+<details>
+<summary>💡 Hint</summary>
+
+Think carefully about the key concepts and consider the trade-offs.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 **Question:** "You're designing the storage layout for a 10TB clickstream analytics table. It receives 500GB daily, is queried by date range (90% of queries), by user_id (50% of queries include this), and joined with a 200GB user profile table. Design the partitioning, bucketing, and file organization strategy."
 
@@ -275,3 +324,13 @@ graph TD
 > **Tip 2:** "For partition count questions, show the calculation." — "Formula: max(cores × 3, data_size_gb × 1024 / target_mb). Then diagnose why tasks are uneven — check partition sizes with glom().map(len). If skew is the issue, increasing partitions alone won't fix it. Address the root cause: AQE skew handling, key salting, or repartitioning by a less-skewed column."
 
 > **Tip 3:** "For design questions, start with query patterns." — "The #1 input to partitioning strategy is how the data will be queried. Partition by the most common filter column (usually date). Bucket by the most common join/group key. Size everything based on daily volume and target file sizes. Show you think about the full lifecycle: initial write, incremental loads, compaction, and eventual data retirement."
+
+</details>
+
+</article>
+
+
+
+---
+
+## Interview Tips

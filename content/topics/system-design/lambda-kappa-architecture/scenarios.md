@@ -2,155 +2,299 @@
 title: "Lambda & Kappa Architecture — Scenarios"
 topic: system-design
 subtopic: lambda-kappa-architecture
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
-tags: [system-design, lambda-architecture, kappa-architecture, interview, scenarios]
+content_type: scenario_question
+tags: [lambda, kappa, architecture, scenarios]
 ---
 
 # Lambda & Kappa Architecture — Interview Scenarios
 
-## Scenario 1: Choose an Architecture for a Real-Time Analytics Platform
+<article data-difficulty="junior">
 
-**Question:** A logistics company needs: (1) real-time shipment tracking dashboard (< 30 second latency), (2) daily operational reports (exact numbers, run overnight), (3) ML model to predict delivery delays (trained weekly on 2 years of history). Recommend an architecture.
+## 🟢 Junior: What Are Lambda and Kappa Architectures?
 
-**Answer:**
+**Scenario:** Your interviewer asks you to explain Lambda and Kappa architectures. When would you choose one over the other?
+
+<details>
+<summary>💡 Hint</summary>
+
+Lambda has two paths: batch (accurate, slow) and stream (fast, approximate). Kappa has one path: stream-only. Lambda handles reprocessing via batch layer; Kappa reprocesses by replaying Kafka. Consider operational complexity vs correctness requirements.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Lambda Architecture:**
 
 ```
-Recommended: Hybrid (Kappa-like with separate ML batch layer)
-
-Architecture:
-
-Ingestion:
-  GPS trackers + warehouse systems → Kafka (shipments.events)
-  Retention: 2 years (enables ML retraining from Kafka)
-  Partitioned by: shipment_id (32 partitions)
-
-Real-Time Tracking (< 30 sec latency):
-  Spark Structured Streaming (30-second trigger)
-  → Delta Lake (shipments_current — current status per shipment)
-  → Redis (hot path: last 1000 updates per shipment for dashboard)
-  Dashboard queries Redis for sub-second response
-
-Daily Reports (exact numbers):
-  Spark batch job at 1 AM, reads Delta Lake full history
-  → Snowflake summary tables (daily_shipment_stats)
-  NOT a separate batch layer — same Delta Lake data, just different processing time
-  Why exact? Batch can handle late arrivals from the full previous day
-
-ML Training (weekly):
-  Reads Kafka from offset=90_days_ago (2 weeks of fresh data)
-  Or: reads Delta Lake time-travel (same data, easier SQL)
-  Trains on full 2-year history in Spark MLlib
-  Deploys new model → streaming job picks up new model file
-
-Why not pure Lambda:
-  Don't need two separate codebases — Delta Lake handles both streaming + batch reads
-  
-Why not pure Kappa:
-  ML training requires historical bulk reads → batch job is the right tool
-  (Not a "speed layer" — just batch ML, which is expected to be batch)
-
-This is closest to Kappa + batch ML:
-  One event log (Kafka) → one storage (Delta) → streaming + batch read same table
-  Separate batch job only for ML (inherently batch workload)
+Sources → Kafka → ┌─ Batch Layer (Spark) → Batch Views ─┐
+                  │                                       ├─ Serving Layer → Queries
+                  └─ Speed Layer (Flink) → RT Views ─────┘
 ```
+
+- **Batch layer:** Processes all historical data, produces accurate results (hours latency)
+- **Speed layer:** Processes recent data in real-time, fills the gap (seconds latency)
+- **Serving layer:** Merges batch + speed views for queries
+
+**Kappa Architecture:**
+
+```
+Sources → Kafka → Flink (single streaming job) → Views → Queries
+                        ↑
+               Replay from Kafka offset 0 for reprocessing
+```
+
+- Single processing path: streaming only
+- Reprocessing: replay Kafka topic from beginning with updated logic
+- Simpler to operate: one codebase, one runtime
+
+**Comparison:**
+
+| Factor | Lambda | Kappa |
+|--------|--------|-------|
+| Complexity | High (2 systems) | Low (1 system) |
+| Reprocessing | Batch re-run | Kafka replay |
+| Historical data | Unlimited (S3/lake) | Limited by Kafka retention |
+| Latency | Dual (seconds + hours) | Single (seconds) |
+| Accuracy | Batch layer is authoritative | Single authoritative stream |
+
+**When to Choose:**
+- **Lambda:** Need both real-time AND batch-accurate results for the same metric; historical data > Kafka retention window
+- **Kappa:** Prefer operational simplicity; all processing logic fits in streaming; Kafka retention covers needed history (or source is replayable)
+
+**Modern trend:** Kappa with lakehouse. Flink writes to Iceberg (serving as the "batch layer" equivalent), enabling both stream processing and historical reprocessing from the lake.
+
+</details>
+
+</article>
+
+<article data-difficulty="mid-level">
+
+## 🟡 Mid-Level: Implementing Kappa Architecture with Flink and Iceberg
+
+**Scenario:** Your team is migrating from a Lambda architecture (Spark batch + Flink streaming) to a Kappa architecture. The current batch job processes 30 days of clickstream data nightly. Design the Kappa replacement and explain how you handle reprocessing when ML scoring logic changes.
+
+<details>
+<summary>💡 Hint</summary>
+
+Kappa reprocessing = replay Kafka from offset 0 (or a specific timestamp) with a new job version. Key challenges: Kafka retention (30 days needed), state management during reprocessing, and serving layer updates without downtime.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Migration Plan:**
+
+**Step 1: Extend Kafka Retention**
+```bash
+# Ensure 30+ days retention for reprocessing
+kafka-configs.sh --bootstrap-server kafka:9092   --entity-type topics   --entity-name clickstream   --alter   --add-config retention.ms=2592000000  # 30 days in ms
+```
+
+**Step 2: Flink Job — Streaming to Iceberg**
+
+```java
+StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+env.enableCheckpointing(60_000); // 1-min checkpoints
+
+DataStream<ClickEvent> clicks = env
+    .addSource(new FlinkKafkaConsumer<>("clickstream", schema, kafkaProps)
+        .setStartFromEarliest());  // reprocessing: start from beginning
+
+// Apply ML scoring
+DataStream<ScoredEvent> scored = clicks
+    .map(event -> {
+        double score = scoringModel.predict(event.getFeatures());
+        return new ScoredEvent(event, score);
+    });
+
+// Write to Iceberg with upsert (safe for reprocessing)
+scored.addSink(
+    IcebergSink.forRow(rowType)
+        .tableLoader(tableLoader)
+        .equalityFieldColumns(List.of("click_id"))  // upsert key
+        .build()
+);
+```
+
+**Step 3: Blue-Green Reprocessing**
+
+When scoring logic changes, run reprocessing job in parallel without interrupting production:
+
+```python
+# Blue (current): writes to prod.gold.scored_clicks
+# Green (new): writes to prod.gold.scored_clicks_v2
+
+# 1. Start green job from Kafka beginning
+green_job = start_flink_job(
+    topic="clickstream",
+    start_offset="earliest",
+    output_table="prod.gold.scored_clicks_v2",
+    scoring_model_version="v2"
+)
+
+# 2. Monitor catch-up progress
+while not is_caught_up(green_job, lag_threshold_seconds=60):
+    time.sleep(30)
+
+# 3. Atomic cutover: update serving layer pointer
+update_serving_config("scored_clicks", "prod.gold.scored_clicks_v2")
+
+# 4. Stop blue job after traffic verified
+stop_flink_job(blue_job_id)
+```
+
+**Step 4: Serving with Time-Travel**
+
+```sql
+-- During reprocessing, old results still available via Iceberg snapshots
+SELECT * FROM prod.gold.scored_clicks
+FOR SYSTEM_TIME AS OF '2024-01-15 00:00:00'
+WHERE user_id = 12345;
+-- Returns pre-reprocessing scores for debugging
+```
+
+</details>
+
+</article>
+
+<article data-difficulty="senior">
+
+## 🔴 Senior: Exactly-Once Semantics in a Distributed Streaming Pipeline
+
+**Scenario:** Your Flink pipeline reads from Kafka, joins with a Redis lookup, and writes to both Iceberg (for analytics) and PostgreSQL (for operational dashboards). Business requirement: each financial transaction must be counted exactly once in both sinks, even after job failures and restarts. Design the end-to-end exactly-once architecture.
+
+<details>
+<summary>💡 Hint</summary>
+
+Exactly-once in Flink requires: exactly-once Kafka source (offset committed only on checkpoint), idempotent or transactional sinks. Iceberg supports exactly-once via two-phase commit. PostgreSQL needs idempotent writes (INSERT ... ON CONFLICT DO NOTHING). Redis lookups are read-only — no concern there.
+
+</details>
+
+<details>
+<summary>✅ Solution</summary>
+
+**Exactly-Once Guarantee Chain:**
+
+```
+Kafka (EOS source) → Flink (checkpoint barrier) → Iceberg (2PC sink)
+                                                 → PostgreSQL (idempotent sink)
+```
+
+**1. Kafka Source — Exactly-Once**
+
+```java
+Properties kafkaProps = new Properties();
+kafkaProps.put("isolation.level", "read_committed"); // only read committed msgs
+kafkaProps.put("enable.auto.commit", "false"); // Flink manages offsets
+
+FlinkKafkaConsumer<Transaction> source = new FlinkKafkaConsumer<>(
+    "financial-transactions",
+    new TransactionDeserializer(),
+    kafkaProps
+);
+// Offsets committed ONLY when checkpoint completes
+source.setCommitOffsetsOnCheckpoints(true);
+```
+
+**2. Flink Checkpoint Configuration**
+
+```java
+env.enableCheckpointing(30_000); // 30s checkpoints
+env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
+env.getCheckpointConfig().setMinPauseBetweenCheckpoints(5_000);
+env.getCheckpointConfig().setCheckpointTimeout(120_000); // 2 min timeout
+env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
+
+// Use RocksDB for large state (Redis join keys)
+env.setStateBackend(new EmbeddedRocksDBStateBackend(true));
+env.getCheckpointConfig().setCheckpointStorage("s3://checkpoints/transactions/");
+```
+
+**3. Iceberg Sink — Two-Phase Commit**
+
+```java
+// Iceberg implements TwoPhaseCommitSinkFunction natively
+DataStreamSink<RowData> icebergSink = FlinkSink.forRowData(stream)
+    .tableLoader(TableLoader.fromCatalog(catalogLoader, tableId))
+    .overwrite(false)
+    // Exactly-once: files committed only when checkpoint succeeds
+    .build();
+```
+
+How Iceberg 2PC works with Flink:
+1. `preCommit`: write data files to S3 (not yet visible)
+2. On checkpoint complete: `commit` — atomic metadata update makes files visible
+3. On failure before checkpoint: files are orphaned (cleaned up by `remove_orphan_files`)
+
+**4. PostgreSQL Sink — Idempotent Writes**
+
+PostgreSQL doesn't support distributed 2PC with Flink's checkpoint protocol, so use idempotent writes:
+
+```java
+public class PostgresSink extends RichSinkFunction<Transaction> {
+    private Connection conn;
+
+    @Override
+    public void invoke(Transaction txn, Context ctx) throws Exception {
+        // ON CONFLICT DO NOTHING = idempotent
+        PreparedStatement stmt = conn.prepareStatement("""
+            INSERT INTO operational.transactions
+                (transaction_id, amount, currency, processed_at, score)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT (transaction_id) DO UPDATE SET
+                score = EXCLUDED.score,
+                processed_at = EXCLUDED.processed_at
+        """);
+        stmt.setString(1, txn.getId());
+        stmt.setBigDecimal(2, txn.getAmount());
+        stmt.setString(3, txn.getCurrency());
+        stmt.setTimestamp(4, txn.getProcessedAt());
+        stmt.setDouble(5, txn.getScore());
+        stmt.executeUpdate();
+    }
+}
+```
+
+**5. Failure Scenario Analysis**
+
+| Failure Point | What Happens | Recovery |
+|--------------|--------------|----------|
+| Flink task fails mid-checkpoint | Checkpoint aborted, restart from last checkpoint | Kafka offsets rewound, data re-read |
+| Iceberg commit fails | Files on S3 but not committed | Next checkpoint attempt re-commits (2PC recovery) |
+| PostgreSQL write fails | Exception → task restarts from checkpoint | Idempotent INSERT ON CONFLICT handles duplicates |
+| Kafka broker down | Consumer blocks, checkpoint stalls | Alert; Flink waits for Kafka recovery |
+
+**6. Monitoring Exactly-Once Health**
+
+```python
+# Prometheus metrics to watch
+metrics = {
+    "flink_jobmanager_job_lastCheckpointDuration": "< 10s ideally",
+    "flink_jobmanager_job_numberOfFailedCheckpoints": "should be 0",
+    "kafka_consumer_records_lag_max": "healthy < 10000",
+    # Custom: duplicate detection
+    "transactions_duplicate_count": "should always be 0"
+}
+
+# Audit query (run daily)
+spark.sql("""
+    SELECT transaction_id, count(*) as cnt
+    FROM prod.gold.transactions
+    GROUP BY transaction_id
+    HAVING cnt > 1
+""").show()  # Should return 0 rows
+```
+
+</details>
+
+</article>
 
 ---
 
-## Scenario 2: Debug Speed Layer and Batch Layer Disagree
+## Interview Tips
 
-**Question:** Your Lambda Architecture has a problem: the speed layer shows $5.2M revenue today, but when the batch job runs tonight, it shows $4.9M for the same day. Why might they differ, and how do you fix this?
-
-**Answer:**
-
-```
-Root Causes for Speed vs Batch Discrepancy:
-
-1. Late-arriving events (most common):
-   Speed layer processed events that arrived on time
-   Batch layer reprocessed with all late arrivals included
-   → Batch is MORE accurate (counts transactions that arrived late)
-   Fix: this is expected behavior; document that today's speed layer number
-   updates when batch runs (this is Lambda's intended design)
-
-2. Different data sources:
-   Speed layer reads from Kafka (some events lost before Kafka)
-   Batch layer reads from database (authoritative source)
-   → Batch is authoritative
-   Fix: align sources; speed layer should read from same authoritative source
-   (CDC events from database → Kafka → speed layer)
-
-3. Timezone handling:
-   Speed layer: uses UTC
-   Batch layer: uses America/New_York
-   "Today" means different cutoff times
-   Fix: standardize to UTC everywhere; convert to local time at display layer only
-
-4. Duplicate events in speed layer:
-   Speed layer retried failed events; some counted twice
-   Batch layer: MERGE on transaction_id deduplicates
-   Fix: add deduplication to speed layer (dropDuplicates on transaction_id
-   within a 1-hour window)
-
-5. Different business logic (drift):
-   Speed layer: calculates revenue = gross_amount
-   Batch layer: calculates revenue = gross_amount - refunds (updated last month)
-   Batch was updated; speed layer wasn't
-   Fix: This is the dual codebase problem → migrate to Kappa/Lakehouse
-
-Debugging approach:
-  1. Compare counts by hour: WHERE day='today' GROUP BY EXTRACT(HOUR FROM ts)
-     → find the hour where they diverge
-  2. Check if specific transaction_ids exist in one but not the other
-  3. Check for duplicates: SELECT transaction_id, COUNT(*) GROUP BY 1 HAVING COUNT(*) > 1
-```
-
----
-
-## Scenario 3: Design Kappa Architecture for a Payment System
-
-**Question:** Design a Kappa Architecture for a payment processing company. Requirements: process 50,000 transactions/second, provide real-time account balances, support historical audit queries, handle model updates without downtime.
-
-**Answer:**
-
-```
-Kappa Architecture for Payments:
-
-Kafka setup:
-  Topic: payments.events (100 partitions, RF=3, acks=all, retention=3 years)
-  Topic: payments.dlq (failed events, retention=1 year)
-  Throughput: 50K tx/sec × 2KB avg = 100MB/sec → well within 100 partition capacity
-
-Processing (Spark Structured Streaming):
-  Job: payments_processor_v5
-  Input: payments.events (all partitions)
-  Watermark: 2 minutes (tolerate network delays)
-  Trigger: 5-second micro-batch (balance freshness SLO)
-
-Output targets (all from same streaming job):
-  1. Delta Lake (payments_history): append-only, partitioned by payment_date
-     → for audit queries: SELECT * FROM payments_history
-       WHERE account_id=X AND TIMESTAMP AS OF '2024-01-15' (time-travel)
-  
-  2. Delta Lake (account_balances): MERGE on account_id (current balance)
-     → real-time balance queries: SELECT balance FROM account_balances WHERE account_id=X
-  
-  3. Delta Lake (fraud_alerts): high-risk transactions flagged by rule engine
-
-Zero-downtime model/logic update:
-  1. Deploy v6 job reading from "3 years ago" (full replay for accuracy)
-  2. v6 writes to separate Delta tables (payments_history_v6, account_balances_v6)
-  3. Validation: v6 catches up to real-time → compare sample accounts
-     SELECT * FROM account_balances_v5 WHERE account_id = 'test_account'
-     EXCEPT
-     SELECT * FROM account_balances_v6 WHERE account_id = 'test_account'
-     -- Should return 0 rows if logic is equivalent
-  4. Switch: UPDATE serving_config SET active_version = 'v6'
-  5. Decommission v5 after 24 hours of stable v6 operation
-
-Audit compliance:
-  Delta time-travel satisfies "what was the balance at time T" requirements
-  Kafka log satisfies "what events were processed" requirements
-  Both immutable: append-only / version-controlled
-```
+> **Tip 1:** "What is the difference between at-least-once and exactly-once processing?" — At-least-once: records are processed at minimum once (duplicates possible on retry). Exactly-once: records are processed precisely once even after failures. Exactly-once requires coordinated checkpointing between source, processing, and sink.
+> **Tip 2:** "Is exactly-once always necessary?" — No. For aggregation metrics (counts, sums), at-least-once with idempotent updates (increment counters) is sufficient. Exactly-once is critical for financial transactions, billing records, and any count-based SLAs.
+> **Tip 3:** "What is Flink's two-phase commit protocol?" — On checkpoint, Flink sinks write data but don't commit (pre-commit). Only after all operators confirm the checkpoint succeeds does Flink call commit on each sink. If any step fails, uncommitted data is rolled back on restart.
