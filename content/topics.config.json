@@ -138,7 +138,10 @@
         { "id": "type-hints", "displayName": "Type Hints & Mypy", "order": 13 },
         { "id": "logging", "displayName": "Logging", "order": 14 },
         { "id": "regex", "displayName": "Regular Expressions", "order": 15 },
-        { "id": "packaging", "displayName": "Virtual Environments & Packaging", "order": 16 }
+        { "id": "packaging", "displayName": "Virtual Environments & Packaging", "order": 16 },
+        { "id": "async-asyncio", "displayName": "Async / asyncio", "order": 17 },
+        { "id": "dataclasses-pydantic", "displayName": "Dataclasses & Pydantic", "order": 18 },
+        { "id": "profiling-performance", "displayName": "Profiling & Performance", "order": 19 }
       ]
     },
     {
@@ -161,7 +164,10 @@
         { "id": "performance-tuning", "displayName": "Performance Tuning", "order": 12 },
         { "id": "data-sources", "displayName": "Data Sources API", "order": 13 },
         { "id": "spark-connect", "displayName": "Spark Connect", "order": 14 },
-        { "id": "spark-kubernetes", "displayName": "Spark on Kubernetes", "order": 15 }
+        { "id": "spark-kubernetes", "displayName": "Spark on Kubernetes", "order": 15 },
+        { "id": "joins", "displayName": "Joins", "order": 16 },
+        { "id": "delta-lake-integration", "displayName": "Delta Lake Integration", "order": 17 },
+        { "id": "testing-pyspark", "displayName": "Testing PySpark", "order": 18 }
       ]
     },
     {
