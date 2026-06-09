@@ -2,19 +2,25 @@
 title: "Event Hubs — Scenarios"
 topic: azure
 subtopic: event-hubs
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, event-hubs, scenarios, interview, design, kafka]
 ---
 
 # Event Hubs — Interview Scenarios
 
-## Scenario 1: Design Event Hubs for a Ride-Sharing Platform
+<article data-difficulty="mid-level">
 
-**Question:** A ride-sharing company has 500K active drivers sending GPS+status updates every 5 seconds, and 1M riders generating ride requests and status events. Design the Event Hubs ingestion layer.
+## 🟡 Mid-Level: Design Event Hubs for a Ride-Sharing Platform
 
-**Answer:**
+**Scenario:** A ride-sharing company has 500K active drivers sending GPS+status updates every 5 seconds, and 1M riders generating ride requests and status events. Design the Event Hubs ingestion layer.
+
+<details>
+<summary>💡 Hint</summary>
+Calculate ingress: 500K drivers × 1 event/5sec + 1M riders × 0.1 events/sec, multiply by event size. Choose tier (Standard vs Premium) based on MB/sec. Design separate Event Hubs per event type with partition key = business key for ordering.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Scale calculation:
@@ -66,13 +72,23 @@ Network:
   APIM validates driver auth token before proxying to Event Hubs
 ```
 
----
+</details>
 
-## Scenario 2: Event Hubs Consumer Suddenly Has 6-Hour Lag
+</article>
 
-**Question:** Your Databricks Structured Streaming job reads from Event Hubs orders topic. Operations alerts you that the consumer lag is 6 hours (3.6B events behind). The job is running. What happened and how do you fix it?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Event Hubs Consumer Suddenly Has 6-Hour Lag
+
+**Scenario:** Your Databricks Structured Streaming job reads from Event Hubs orders topic. Operations alerts you that the consumer lag is 6 hours (3.6B events behind). The job is running. What happened and how do you fix it?
+
+<details>
+<summary>💡 Hint</summary>
+Check Databricks streaming tab for input rate vs processing rate. Consider three causes: production spike created lag (cluster healthy, just catching up), cluster auto-scaled down removing workers, or slow downstream sink causing backpressure.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Investigation:
@@ -128,13 +144,23 @@ Expected outcome after fix:
   Communicate ETA to stakeholders: "pipeline will be current by 4 PM"
 ```
 
----
+</details>
 
-## Scenario 3: Migrate from RabbitMQ to Event Hubs
+</article>
 
-**Question:** Your company uses RabbitMQ for inter-service messaging. You're moving to Azure and need to migrate to a managed Azure service. Events are order status updates (order_id, status, timestamp, metadata). Volume: 50K events/min. Recommend and design the target.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Migrate from RabbitMQ to Event Hubs
+
+**Scenario:** Your company uses RabbitMQ for inter-service messaging. You're moving to Azure and need to migrate to a managed Azure service. Events are order status updates (order_id, status, timestamp, metadata). Volume: 50K events/min. Recommend and design the target.
+
+<details>
+<summary>💡 Hint</summary>
+Analyze the RabbitMQ pattern: is it point-to-point (one consumer) or pub/sub (multiple consumers)? Volume is low (833 events/sec) — either Event Hubs or Service Bus works. Decision driver: if analytics consumers are needed now or later, Event Hubs wins for fan-out replay.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Analysis: RabbitMQ use case
@@ -185,6 +211,9 @@ Cost: Standard tier, 4 TUs = ~$300/month
   (vs RabbitMQ VM: 2× Standard_DS2_v2 = ~$280/month → similar cost, zero management)
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -194,3 +223,4 @@ Cost: Standard tier, 4 TUs = ~$300/month
 > **Tip 2:** "What's the Event Hubs retention limit and what happens when retention expires?" — Standard: 1–7 days. Premium: up to 90 days. Dedicated: unlimited (backed by Blob Storage). When retention expires, old events are automatically deleted — consumers that have fallen too far behind will lose access to those events (offset pointing to deleted data → consumer must reset to earliest available). Monitor consumer lag carefully: if a consumer is down for more than the retention period, it will miss events permanently. For consumers that need long retention (audit, replay): use Event Hubs Capture (writes to ADLS with unlimited retention) independently of the Event Hubs retention window.
 
 > **Tip 3:** "When would you choose Event Hubs over Azure Service Bus?" — Event Hubs: high-throughput streaming (millions of events/sec), multiple independent consumers (fan-out to ASA + Databricks + archive simultaneously), analytics workloads, append-only log semantics, consumer controls its own read position, ordered within a partition. Service Bus: transactional messaging (exactly-once with sessions), per-message settlement (ACK/NACK/Dead-letter), message scheduling (deliver at future time), duplicate detection built-in, complex routing (topics + subscriptions with filters). Rule: IoT, clickstream, telemetry → Event Hubs. Order processing, payment notifications, work queues → Service Bus.
+

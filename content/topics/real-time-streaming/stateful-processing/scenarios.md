@@ -2,19 +2,25 @@
 title: "Stateful Processing — Scenarios"
 topic: real-time-streaming
 subtopic: stateful-processing
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [streaming, stateful, interview, scenarios, fraud-detection, cep, state-explosion]
 ---
 
 # Stateful Processing — Interview Scenarios
 
-## Scenario 1: Design a Real-Time Recommendation Engine
+<article data-difficulty="mid-level">
 
-**Question:** Design a streaming recommendation system for a music platform. 50 million active users, each listening to 30 songs/hour. Recommend the next song within 200ms of a listen event. Consider: user listening history (last 24 hours), song similarity (pre-computed), and real-time popularity.
+## 🟡 Mid-Level: Design a Real-Time Recommendation Engine
 
-**Answer:**
+**Scenario:** Design a streaming recommendation system for a music platform. 50 million active users, each listening to 30 songs/hour. Recommend the next song within 200ms of a listen event. Consider: user listening history (last 24 hours), song similarity (pre-computed), and real-time popularity.
+
+<details>
+<summary>💡 Hint</summary>
+Think about pre-computing recommendations in Flink (user state → listening history), writing to Redis (< 1ms serve), and having the API read from Redis directly. Flink processes song events and updates Redis state asynchronously.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture:
@@ -70,13 +76,23 @@ Flink stateful job:
     Similarity lookup: approximate nearest neighbor (FAISS index in memory)
 ```
 
----
+</details>
 
-## Scenario 2: State Explosion in Fraud Detection Job
+</article>
 
-**Question:** Your fraud detection Flink job (32 parallelism, RocksDB) has been running for 3 months. State has grown from 5 GB to 280 GB. Checkpoints now take 25 minutes and are often failing. Diagnose and fix.
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: State Explosion in Fraud Detection Job
+
+**Scenario:** Your fraud detection Flink job (32 parallelism, RocksDB) has been running for 3 months. State has grown from 5 GB to 280 GB. Checkpoints now take 25 minutes and are often failing. Diagnose and fix.
+
+<details>
+<summary>💡 Hint</summary>
+State explosion from ListState without TTL — each key accumulates unbounded history. Check state per key size distribution (top 10 largest keys). Fix: add StateTtlConfig, replace ListState with pre-aggregated ValueState.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Profile state growth
@@ -151,13 +167,23 @@ Prevention:
   Code review gate: any new ListState must have explicit TTL or size limit
 ```
 
----
+</details>
 
-## Scenario 3: Designing Low-Latency Complex Event Detection
+</article>
 
-**Question:** Design a system to detect account takeover attempts in real-time. Pattern: login from new device → change password → add new payment method, all within 10 minutes. 5 million logins/hour. Must detect within 2 seconds of last event in pattern.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing Low-Latency Complex Event Detection
+
+**Scenario:** Design a system to detect account takeover attempts in real-time. Pattern: login from new device → change password → add new payment method, all within 10 minutes. 5 million logins/hour. Must detect within 2 seconds of last event in pattern.
+
+<details>
+<summary>💡 Hint</summary>
+Use Flink CEP: define a pattern (login → password_change → add_payment) with WITHIN 10 minutes. KeyBy userId so the pattern state is local to each user's partition. Consider: what constitutes 'new device' for the first event filter.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Pattern definition (CEP):
@@ -236,6 +262,9 @@ Monitoring:
   Alert latency: p99 < 2 seconds (measure event_time → alert emit timestamp)
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -245,3 +274,4 @@ Monitoring:
 > **Tip 2:** "What's the difference between `next()` and `followedBy()` in Flink CEP patterns?" — `next(name)`: the next event must immediately follow (no intervening events of other types). Very strict — any non-matching event breaks the pattern. `followedBy(name)`: events matching the next pattern stage can appear anywhere after, even with other events in between. More flexible — models "event A eventually followed by event B." `followedByAny(name)`: like `followedBy` but allows multiple parallel pattern matches when there are multiple candidate events. For account takeover: `followedBy` is correct (the user may do other actions between login, password change, and payment add). Use `next` only for strict consecutive patterns (e.g., exactly 3 consecutive failed logins).
 
 > **Tip 3:** "How do you handle stateful processing in a multi-region deployment?" — State in Flink/Spark is local to the job instance in one region. For multi-region: (a) Active-passive: primary region processes all events, secondary region is a warm standby (fed same Kafka events, maintains state but doesn't emit). On primary failure: promote secondary; (b) Active-active: each region processes its own events independently, state is local to the region. Cross-region consistency requires a separate sync layer (DynamoDB global tables, Cosmos DB multi-master). (c) Shared external state: all regions read/write to a global state store (Redis global cluster, DynamoDB global tables). Trade-off: external state adds 5-20ms per lookup vs. in-memory Flink state at ~0.1ms. For fraud detection: active-passive (correctness > multi-region write latency).
+

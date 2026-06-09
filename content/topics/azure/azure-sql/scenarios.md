@@ -2,19 +2,25 @@
 title: "Azure SQL & Managed Instance — Scenarios"
 topic: azure
 subtopic: azure-sql
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, azure-sql, scenarios, interview, migration, performance, design]
 ---
 
 # Azure SQL & Managed Instance — Interview Scenarios
 
-## Scenario 1: On-Premises SQL Server Migration
+<article data-difficulty="mid-level">
 
-**Question:** A company has a 2TB SQL Server 2012 database on-premises with: SQL Agent jobs, cross-database queries (3 databases), linked servers to Oracle, CLR functions, and stored procedures. They want to migrate to Azure with minimum downtime and code changes. What do you recommend?
+## 🟡 Mid-Level: On-Premises SQL Server Migration
 
-**Answer:**
+**Scenario:** A company has a 2TB SQL Server 2012 database on-premises with: SQL Agent jobs, cross-database queries (3 databases), linked servers to Oracle, CLR functions, and stored procedures. They want to migrate to Azure with minimum downtime and code changes. What do you recommend?
+
+<details>
+<summary>💡 Hint</summary>
+Compare features used (SQL Agent, cross-DB queries, linked servers, CLR) against Azure SQL DB limitations vs SQL Managed Instance capabilities. Then design a DMS-based online migration with minimal downtime.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Assessment:
@@ -78,13 +84,23 @@ Cost estimate:
   Total: ~$4,000-5,000/month (vs on-prem server depreciation + maintenance)
 ```
 
----
+</details>
 
-## Scenario 2: Database Performance Degradation
+</article>
 
-**Question:** An Azure SQL DB (General Purpose, 8 vCores) that supports an order management application was running fine for 2 years. This week, response time went from 200ms to 8 seconds. No code changes were deployed. What do you investigate?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Database Performance Degradation
+
+**Scenario:** An Azure SQL DB (General Purpose, 8 vCores) that supports an order management application was running fine for 2 years. This week, response time went from 200ms to 8 seconds. No code changes were deployed. What do you investigate?
+
+<details>
+<summary>💡 Hint</summary>
+Check resource metrics first (CPU%, storage%). A storage-full condition causes dramatic SQL slowdowns. Then investigate long-running uncommitted transactions holding the log. Look at Query Store for newly appearing expensive queries.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Check resource metrics (Azure Monitor, last 7 days)
@@ -131,13 +147,23 @@ Expected outcome:
   After storage cleanup: storage at 40%
 ```
 
----
+</details>
 
-## Scenario 3: Multi-Tenant SaaS Database Design
+</article>
 
-**Question:** You're building a SaaS CRM application. You expect 500 small-medium business tenants with variable usage patterns. Each tenant needs data isolation. Design the Azure SQL strategy.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Multi-Tenant SaaS Database Design
+
+**Scenario:** You're building a SaaS CRM application. You expect 500 small-medium business tenants with variable usage patterns. Each tenant needs data isolation. Design the Azure SQL strategy.
+
+<details>
+<summary>💡 Hint</summary>
+Compare three patterns: single DB with row-level security, elastic pool with one DB per tenant, and dedicated DB per tenant. Size the elastic pool based on peak concurrent tenant usage, not total tenants.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Three design options:
@@ -199,6 +225,9 @@ Implementation details for Option B:
   One tenant's data breach doesn't expose other tenants' data
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -208,3 +237,4 @@ Implementation details for Option B:
 > **Tip 2:** "How do you handle schema migrations in a production Azure SQL DB with zero downtime?" — Use online schema changes where possible: `ALTER TABLE ... ADD COLUMN` is instantaneous for nullable columns (no rebuild). Changing column type or adding NOT NULL: create a new column, backfill it in batches (small transactions to avoid log bloat), add a check constraint, then drop the old column. For index changes: `CREATE INDEX ... WITH (ONLINE = ON)` in Business Critical/Hyperscale tier allows index creation without locking reads. For table rebuilds: use partition switching — build the new version in a staging table, switch it in as an atomic metadata operation.
 
 > **Tip 3:** "When would you choose Azure SQL Hyperscale over other tiers?" — Use Hyperscale when: (a) database size exceeds 4TB (only option at that scale), (b) you need read scale-out (up to 5 named read replicas served from the same page servers — no data copy lag), (c) fast scale-up is required (minutes not hours), (d) unpredictable size growth (storage auto-expands without downtime), (e) fast point-in-time restore (restores from log service rather than full backup — minutes not hours). Limitations: Hyperscale cannot be downgraded back to General Purpose or Business Critical (one-way migration). This is the most important gotcha — test thoroughly before committing.
+

@@ -2,19 +2,25 @@
 title: "Azure Synapse Analytics — Scenarios"
 topic: azure
 subtopic: azure-synapse
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, synapse, scenarios, interview, performance, design]
 ---
 
 # Azure Synapse Analytics — Interview Scenarios
 
-## Scenario 1: Design a Synapse DW for a Retail Company
+<article data-difficulty="mid-level">
 
-**Question:** A retail company has 5 years of historical sales data (2TB), 50M customers, 1M products, 500M transactions/year. They have 30 BI analysts querying daily. Design the Synapse Dedicated SQL Pool schema and architecture.
+## 🟡 Mid-Level: Design a Synapse DW for a Retail Company
 
-**Answer:**
+**Scenario:** A retail company has 5 years of historical sales data (2TB), 50M customers, 1M products, 500M transactions/year. They have 30 BI analysts querying daily. Design the Synapse Dedicated SQL Pool schema and architecture.
+
+<details>
+<summary>💡 Hint</summary>
+Scale the DWU to the analyst concurrency (30 users → DW2000c). For the schema: REPLICATE small dimensions, HASH large ones. The fact table distribution key should co-locate with the most common join. Use Ordered CCI for date-range queries.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Scale sizing:
@@ -62,13 +68,23 @@ Architecture:
     ↓ Power BI (reports — Import mode for best performance)
 ```
 
----
+</details>
 
-## Scenario 2: Slow Query Investigation
+</article>
 
-**Question:** A Power BI report that queries the fact_sales table runs in 45 seconds. Business users complain it should be faster. How do you investigate and fix?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Slow Query Investigation
+
+**Scenario:** A Power BI report that queries the fact_sales table runs in 45 seconds. Business users complain it should be faster. How do you investigate and fix?
+
+<details>
+<summary>💡 Hint</summary>
+Run EXPLAIN on the slow query to see ShuffleMoveOperation. Check table distributions: a small dimension table with HASH distribution (instead of REPLICATE) causes unnecessary data movement. Update statistics and consider materialized views.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Capture the query
@@ -123,13 +139,23 @@ Step 6: Enable result set caching
 Result: 45s → 8s from distribution fix + 8s → <1s for cached dashboard runs
 ```
 
----
+</details>
 
-## Scenario 3: Synapse vs Databricks Decision
+</article>
 
-**Question:** Your company is deciding between Azure Synapse Dedicated SQL Pool and Azure Databricks as the primary data platform. Make the case for each.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Synapse vs Databricks Decision
+
+**Scenario:** Your company is deciding between Azure Synapse Dedicated SQL Pool and Azure Databricks as the primary data platform. Make the case for each.
+
+<details>
+<summary>💡 Hint</summary>
+Frame this as: Synapse Dedicated = SQL-centric teams needing concurrency management and T-SQL features. Databricks = engineering teams needing ML, Python, streaming, Delta Lake. The hybrid (Databricks ETL + Synapse serving) is usually the right answer for large enterprises.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Case for Synapse Dedicated SQL Pool:
@@ -173,6 +199,9 @@ Decision factors:
   If both → hybrid architecture above
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -182,3 +211,4 @@ Decision factors:
 > **Tip 2:** "What's the cost of a Synapse Dedicated SQL Pool at DW2000c?" — DW2000c: $14.40/DWU-hour × 2000/100 = $14.40/hour. If running 24/7: $14.40 × 24 × 30 = $10,368/month. With pause/resume (8 hours/day, 5 days/week): $14.40 × 8 × 22 = $2,534/month. With auto-scaling for month-end (scale to DW4000c for 2 days): extra ~$700. Total: ~$3,200/month for a production BI DW — similar to a mid-tier Snowflake subscription.
 
 > **Tip 3:** "How does Synapse Serverless SQL price compare to Synapse Dedicated SQL Pool?" — Serverless: $5/TB scanned, no idle cost, no provisioning. Dedicated: $4.50-$14.40/hour regardless of query volume. Break-even: if you query more than ~1-2 TB/hour consistently, Dedicated is cheaper. Serverless is ideal for: (a) development/exploration (unpredictable query patterns), (b) infrequent reporting (daily/weekly queries on large data), (c) ELT jobs that run once daily. Dedicated is ideal for: (a) 30+ concurrent BI users querying the same tables hourly, (b) teams that need T-SQL procedural logic, stored procedures, workload management.
+

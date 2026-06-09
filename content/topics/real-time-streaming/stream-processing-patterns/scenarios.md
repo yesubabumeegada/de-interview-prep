@@ -2,19 +2,25 @@
 title: "Stream Processing Patterns — Scenarios"
 topic: real-time-streaming
 subtopic: stream-processing-patterns
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [streaming, patterns, interview, scenarios, architecture, exactly-once, dlq]
 ---
 
 # Stream Processing Patterns — Interview Scenarios
 
-## Scenario 1: Design a Real-Time Metrics Pipeline
+<article data-difficulty="mid-level">
 
-**Question:** Design a metrics collection and alerting system for a SaaS platform. 1,000 microservices emit metrics (CPU, memory, error rate, latency). Requirements: detect anomalies within 30 seconds, store 90 days of data, support ad-hoc queries.
+## 🟡 Mid-Level: Design a Real-Time Metrics Pipeline
 
-**Answer:**
+**Scenario:** Design a metrics collection and alerting system for a SaaS platform. 1,000 microservices emit metrics (CPU, memory, error rate, latency). Requirements: detect anomalies within 30 seconds, store 90 days of data, support ad-hoc queries.
+
+<details>
+<summary>💡 Hint</summary>
+Think about the ingestion layer (Kafka for metrics), windowed anomaly detection (Flink SQL TUMBLE), DLQ for processing failures, and the serving layer (InfluxDB for dashboards + DynamoDB for threshold config).
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture:
@@ -71,13 +77,23 @@ SLA: anomaly detected within 30 seconds of event
      Achieved: event → Kafka (1s) → Flink window (10s avg) → alert (< 5s) ≈ 15s total
 ```
 
----
+</details>
 
-## Scenario 2: Streaming Pipeline Producing Incorrect Aggregations
+</article>
 
-**Question:** Your streaming pipeline counts purchases per category per minute. After investigating, you notice the counts are 20-30% lower than what the database shows for the same time range. The pipeline uses Spark Structured Streaming with event-time windowing. What are the likely causes?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Streaming Pipeline Producing Incorrect Aggregations
+
+**Scenario:** Your streaming pipeline counts purchases per category per minute. After investigating, you notice the counts are 20-30% lower than what the database shows for the same time range. The pipeline uses Spark Structured Streaming with event-time windowing. What are the likely causes?
+
+<details>
+<summary>💡 Hint</summary>
+When streaming counts are lower than batch for the same window, the most likely cause is late events being dropped by the watermark. Check watermark tolerance vs actual event latency distribution. Mobile events can arrive 5-30 minutes late.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Differential: batch count > streaming count by 20-30%
@@ -121,13 +137,23 @@ Lesson: always validate streaming counts against batch source of truth
         Late data is THE most common cause of streaming count discrepancy.
 ```
 
----
+</details>
 
-## Scenario 3: Design for the Kappa Architecture Migration
+</article>
 
-**Question:** Your company has a Lambda architecture: batch Spark jobs (daily) + streaming Kafka Streams application (hourly). The engineering team complains about duplicate logic and maintenance burden. Design a Kappa architecture migration.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Design for the Kappa Architecture Migration
+
+**Scenario:** Your company has a Lambda architecture: batch Spark jobs (daily) + streaming Kafka Streams application (hourly). The engineering team complains about duplicate logic and maintenance burden. Design a Kappa architecture migration.
+
+<details>
+<summary>💡 Hint</summary>
+Kappa Architecture = one streaming job handling both real-time and historical data. The key enabler: Kafka's long retention (30 days) allows full replay. Migration plan: implement streaming-only pipeline, validate against batch, extend Kafka retention, decommission batch.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Current state:
@@ -190,6 +216,9 @@ Cost comparison:
   Net: slight cost increase in storage, significant reduction in engineering overhead
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -199,3 +228,4 @@ Cost comparison:
 > **Tip 2:** "How do you ensure high availability for a streaming pipeline?" — Multiple layers: (a) Source HA: Kafka replication factor = 3, min.insync.replicas = 2 (tolerate 1 broker failure); (b) Processing HA: Flink with checkpointing (restart from checkpoint on failure, automatic recovery); Spark Structured Streaming with checkpoint location in S3/ADLS; (c) Sink HA: Delta Lake with ADLS/S3 (replicated by cloud provider); Kafka sink with replication factor = 3; (d) Monitoring: alert on lag, checkpoint failures, backpressure before they cascade; (e) Multi-AZ deployment: Kafka brokers across 3 AZs; Flink/Databricks cluster spans multiple AZs. RTO (Recovery Time Objective): with checkpointing every 60 seconds, recovery takes 60 seconds of reprocessing + job startup time (typically 2-5 minutes total).
 
 > **Tip 3:** "How would you debug a streaming job where the output topic has 0 records for the last 10 minutes?" — 5-step diagnosis: (1) Check job status: is the streaming job running? (Flink UI, Databricks UI); (2) Check source: is there data in the input Kafka topic? (kafka-consumer-groups.sh --describe → is lag growing?); (3) Check processing: are there exceptions in logs? (Flink TaskManager logs, Spark driver logs); (4) Check watermark: for window-based queries, the watermark must advance past the window end time before output is emitted — if event time is old, no output until watermark catches up; (5) Check sink: is the sink accepting writes? (Kafka producer errors, Delta write errors, S3 permission errors). The most common causes in order: (a) job crashed silently, (b) source topic empty/disconnected, (c) watermark stuck on old timestamp.
+

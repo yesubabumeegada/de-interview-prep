@@ -2,19 +2,25 @@
 title: "Apache Flink — Scenarios"
 topic: real-time-streaming
 subtopic: apache-flink
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [flink, interview, scenarios, fraud-detection, cdc, backpressure, exactly-once]
 ---
 
 # Apache Flink — Interview Scenarios
 
-## Scenario 1: Design a Real-Time Leaderboard System
+<article data-difficulty="mid-level">
 
-**Question:** Design a real-time leaderboard for a gaming platform. 10 million concurrent players send score events. Show top 10 players globally and per region, updated every 30 seconds.
+## 🟡 Mid-Level: Design a Real-Time Leaderboard System
 
-**Answer:**
+**Scenario:** Design a real-time leaderboard for a gaming platform. 10 million concurrent players send score events. Show top 10 players globally and per region, updated every 30 seconds.
+
+<details>
+<summary>💡 Hint</summary>
+Think about two-phase aggregation to avoid a non-parallelizable global top-10: first keyBy(playerId % N) for per-partition top-100, then a second stage to merge into global top-10. Use Redis ZADD for the sink.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture:
@@ -66,13 +72,23 @@ Sizing:
 Expected latency: < 35 seconds from event to leaderboard update
 ```
 
----
+</details>
 
-## Scenario 2: Flink Job Failing with Checkpoint Timeout
+</article>
 
-**Question:** Your Flink fraud detection job (parallelism 8, RocksDB state backend) is failing every 2-4 hours with: `Checkpoint 1234 expired before completing. Maximum checkpoint time is 120000ms.` How do you diagnose and fix it?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Flink Job Failing with Checkpoint Timeout
+
+**Scenario:** Your Flink fraud detection job (parallelism 8, RocksDB state backend) is failing every 2-4 hours with: `Checkpoint 1234 expired before completing. Maximum checkpoint time is 120000ms.` How do you diagnose and fix it?
+
+<details>
+<summary>💡 Hint</summary>
+Checkpoint timeout usually means the state is too large to serialize in time. Check: state size per subtask, RocksDB block cache size, whether state has a TTL, and whether incremental checkpointing is enabled.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Understand checkpoint timeout
@@ -129,13 +145,23 @@ Additional improvements:
     env.getCheckpointConfig().setLocalRecoveryEnabled(true);
 ```
 
----
+</details>
 
-## Scenario 3: Migrate Storm Topology to Flink
+</article>
 
-**Question:** You have a legacy Apache Storm topology doing real-time session analysis. 50 spouts, 200 bolts, 2M events/sec, at-least-once delivery. Business wants exactly-once and lower latency. Design the Flink migration.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Migrate Storm Topology to Flink
+
+**Scenario:** You have a legacy Apache Storm topology doing real-time session analysis. 50 spouts, 200 bolts, 2M events/sec, at-least-once delivery. Business wants exactly-once and lower latency. Design the Flink migration.
+
+<details>
+<summary>💡 Hint</summary>
+Design the migration in phases: parallel running (Storm + Flink), shadow validation (compare outputs), gradual traffic shift, and cutover. Map Storm spout/bolt topology to Flink DataStream API sources/operators.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Phase 1: Assessment (2 weeks)
@@ -198,6 +224,9 @@ Results achieved:
   Cost:            60% reduction in compute cost
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -207,3 +236,4 @@ Results achieved:
 > **Tip 2:** "How do you test a Flink job before deploying to production?" — Unit test operators with `ProcessFunctionTestHarnesses` (Flink's test harness library). Integration test with MiniClusterWithClientResource (embedded Flink cluster in JUnit). For end-to-end: deploy to a staging environment with a replay of production Kafka data (start from a saved offset). Use Flink's `CollectSink` or `BoundedOutOfOrdernessWatermarks` with synthetic data for deterministic tests. For window tests: inject events with specific timestamps and control the watermark explicitly to trigger window firing. Shadow mode (parallel job consuming same Kafka topic) is essential for validating stateful migration.
 
 > **Tip 3:** "How does Flink scale — can you change parallelism without downtime?" — Yes, but it requires a savepoint. Procedure: `flink stop --savepointPath s3://bucket/sp/ <jobId>` → update parallelism in job config → `flink run -s s3://bucket/sp/<id> myJob.jar`. Flink redistributes KeyedState by rehashing keys across new parallel instances. OperatorState is redistributed in round-robin. This is a stateful rescale — no data loss. In Flink Kubernetes Operator, this can be done by changing the `parallelism` field in the FlinkDeployment manifest and redeploying. For reactive auto-scaling (add/remove TaskManagers without restart), Flink 1.13+ supports reactive mode with `scheduler-mode: reactive`, but it restarts the job from the last checkpoint.
+

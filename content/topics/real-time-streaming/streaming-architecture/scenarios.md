@@ -2,19 +2,25 @@
 title: "Streaming Architecture Patterns — Scenarios"
 topic: real-time-streaming
 subtopic: streaming-architecture
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [streaming, architecture, design, interview, scenarios, kafka, flink, production]
 ---
 
 # Streaming Architecture Patterns — Interview Scenarios
 
-## Scenario 1: Design a Real-Time Ride-Sharing Event Platform
+<article data-difficulty="mid-level">
 
-**Question:** You're a senior data engineer at a ride-sharing company. The company has 10,000 drivers and 100,000 riders. You need to design a streaming platform to power: (a) driver position tracking (update every 5 seconds), (b) real-time surge pricing (recalculate every 30 seconds per geographic area), (c) trip lifecycle events for billing (trip_started, trip_completed, payment_processed), (d) fraud detection on payments. Design the complete streaming architecture.
+## 🟡 Mid-Level: Design a Real-Time Ride-Sharing Event Platform
 
-**Answer:**
+**Scenario:** You're a senior data engineer at a ride-sharing company. The company has 10,000 drivers and 100,000 riders. You need to design a streaming platform to power: (a) driver position tracking (update every 5 seconds), (b) real-time surge pricing (recalculate every 30 seconds per geographic area), (c) trip lifecycle events for billing (trip_started, trip_completed, payment_processed), (d) fraud detection on payments. Design the complete streaming architecture.
+
+<details>
+<summary>💡 Hint</summary>
+Design four separate pipelines with different characteristics: GPS tracking (Flink + Redis GEOADD, 5s TTL), surge pricing (Flink SQL TUMBLE 30s → Redis), billing (Kafka → Delta medallion), fraud (Flink CEP).
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Four separate pipelines, each with distinct requirements:
@@ -97,13 +103,23 @@ Infrastructure summary:
   Estimated throughput: 5,000 events/sec peak, 1,000 events/sec average
 ```
 
----
+</details>
 
-## Scenario 2: Streaming Pipeline Latency Degradation
+</article>
 
-**Question:** Your streaming pipeline normally processes events with < 2-second end-to-end latency. This morning, latency jumped to 45 seconds and is still climbing. The Grafana dashboard shows consumer lag growing on 3 of 16 Kafka partitions, but not all. Flink checkpoint duration increased from 30 seconds to 4 minutes. How do you diagnose and fix this?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Streaming Pipeline Latency Degradation
+
+**Scenario:** Your streaming pipeline normally processes events with < 2-second end-to-end latency. This morning, latency jumped to 45 seconds and is still climbing. The Grafana dashboard shows consumer lag growing on 3 of 16 Kafka partitions, but not all. Flink checkpoint duration increased from 30 seconds to 4 minutes. How do you diagnose and fix this?
+
+<details>
+<summary>💡 Hint</summary>
+Consumer lag growing on only 3/16 partitions suggests hot partitions, not a global throughput issue. Check per-subtask state size and input rate. A hot-key scenario (bot accounts or specific user_id range) causes one partition's subtask to fall behind.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Symptoms summary:
@@ -179,13 +195,23 @@ Resolution timeline:
   T+2hr: bot user_ids identified and filtered
 ```
 
----
+</details>
 
-## Scenario 3: Designing for Regulatory Compliance in Streaming
+</article>
 
-**Question:** You need to add PII (Personally Identifiable Information) compliance to an existing Kafka + Flink streaming pipeline. Requirements: (a) no PII in Kafka topics accessible to analytics engineers; (b) PII must be erasable within 30 days of a GDPR deletion request; (c) audit trail of who accessed PII data and when. How do you redesign the pipeline?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Designing for Regulatory Compliance in Streaming
+
+**Scenario:** You need to add PII (Personally Identifiable Information) compliance to an existing Kafka + Flink streaming pipeline. Requirements: (a) no PII in Kafka topics accessible to analytics engineers; (b) PII must be erasable within 30 days of a GDPR deletion request; (c) audit trail of who accessed PII data and when. How do you redesign the pipeline?
+
+<details>
+<summary>💡 Hint</summary>
+Use a PII separation Flink job as the first stage: split each event into anonymized record (no PII) and encrypted PII record (per-user KMS key). Two output Kafka topics with different ACLs. GDPR erasure = delete the KMS key (crypto shredding).
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Current state:
@@ -290,6 +316,9 @@ Architecture benefits:
   - No streaming pipeline change needed for erasure (just KMS key deletion)
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -299,3 +328,4 @@ Architecture benefits:
 > **Tip 2:** "How do you handle a situation where your streaming pipeline needs to be upgraded but you can't have any downtime?" — Blue-green deployment with savepoints: (a) take a savepoint of the current job; (b) deploy the new job version and restore from the savepoint (new job picks up exactly where old job left off — same Kafka offsets, same state); (c) new job runs in parallel briefly (seconds, consuming from same offset); (d) stop the old job. Kafka consumer groups allow two consumers at the same offset only during the overlap window — both jobs process the same events briefly. For idempotent sinks: duplicate processing is harmless (ON CONFLICT DO NOTHING). For non-idempotent: ensure new job starts consuming only after old job stops (use operator UID to match state, different consumer group ID for new job). Zero downtime: consumers never stop reading from Kafka (only a brief duplicate window during the switchover).
 
 > **Tip 3:** "What are the top three metrics you monitor in a production streaming system?" — (1) Consumer lag (per topic, per partition): measures how far behind consumers are from the latest messages. P0 alert if lag > 30 minutes of data (approaching retention boundary, risk of data loss). This is the single most important streaming metric. (2) End-to-end latency (event_time to sink write time): measures whether the pipeline is meeting its SLA. Embed a `produced_at` timestamp in Kafka messages; measure `current_time - produced_at` when writing to the sink. Alert if p99 > 2× SLA. (3) Checkpoint duration and success rate: a failing or slow checkpoint means the job can't recover to a recent state. If checkpoints start failing, the recovery point is getting older. Alert if checkpoint duration > 5 minutes or if 3 consecutive checkpoints fail. Secondary metrics: DLQ message rate, state size growth, late event rate.
+

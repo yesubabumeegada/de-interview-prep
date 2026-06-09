@@ -2,19 +2,25 @@
 title: "Azure Data Factory — Scenarios"
 topic: azure
 subtopic: azure-data-factory
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, adf, scenarios, interview, pipeline-design]
 ---
 
 # Azure Data Factory — Interview Scenarios
 
-## Scenario 1: Design a Daily ETL for 50 Tables from On-Prem SQL Server
+<article data-difficulty="mid-level">
 
-**Question:** You need to ingest 50 tables daily from an on-premises SQL Server into ADLS Gen2. Each table has an `updated_at` column. Some tables are small (10K rows), some are large (100M rows). Design the ADF pipeline.
+## 🟡 Mid-Level: Design a Daily ETL for 50 Tables from On-Prem SQL Server
 
-**Answer:**
+**Scenario:** You need to ingest 50 tables daily from an on-premises SQL Server into ADLS Gen2. Each table has an `updated_at` column. Some tables are small (10K rows), some are large (100M rows). Design the ADF pipeline.
+
+<details>
+<summary>💡 Hint</summary>
+Think about: metadata-driven pipelines with a control table. Consider a master pipeline (Lookup → ForEach) calling a parameterized child pipeline. Handle large vs small tables differently via configuration.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture: metadata-driven pipeline with SHIR
@@ -75,13 +81,23 @@ Result:
   Runtime estimate: 50 tables / 10 parallel = 5 "waves" × ~5 min/table = ~25 min total
 ```
 
----
+</details>
 
-## Scenario 2: ADF Pipeline Is Failing on 3rd Day of Month, Never Fails Otherwise
+</article>
 
-**Question:** A tumbling window pipeline loads monthly sales data. It fails every 3rd day of the month but succeeds other days. How do you investigate?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: ADF Pipeline Is Failing on 3rd Day of Month, Never Fails Otherwise
+
+**Scenario:** A tumbling window pipeline loads monthly sales data. It fails every 3rd day of the month but succeeds other days. How do you investigate?
+
+<details>
+<summary>💡 Hint</summary>
+The monthly pattern is the key clue. Investigate which activity fails and check if it's a volume problem (3rd day = end-of-prior-month data). Look at timeout settings, partition strategies, and Data Flow memory.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Clue: monthly pattern, not daily. Likely cause: large volume on 3rd day (end-of-previous-month data settled).
@@ -120,13 +136,23 @@ Root cause pattern: monthly summary creates 30× the volume of a typical daily r
 General rule: design pipelines for worst-case volume (month-end, year-end), not average
 ```
 
----
+</details>
 
-## Scenario 3: Real-Time File Arrival Trigger
+</article>
 
-**Question:** Files land in an ADLS Gen2 container from 50 partner systems throughout the day. Each file must trigger processing within 5 minutes of arrival. Design the pipeline.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Real-Time File Arrival Trigger
+
+**Scenario:** Files land in an ADLS Gen2 container from 50 partner systems throughout the day. Each file must trigger processing within 5 minutes of arrival. Design the pipeline.
+
+<details>
+<summary>💡 Hint</summary>
+Event-based triggers use Azure Event Grid under the hood. Think about: trigger variable extraction, how to derive partner identity from the file path, concurrency settings for 50 simultaneous arrivals, and failure handling.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Solution: Event-based trigger (Storage Event Trigger)
@@ -178,6 +204,9 @@ Latency:
   Total end-to-end: ~3-5 minutes ✓ (meets 5-minute SLA)
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -187,3 +216,4 @@ Latency:
 > **Tip 2:** "What's the max scale of ADF?" — Single factory limits: 5,000 pipeline runs per 24 hours (soft limit, can increase), 100 concurrent pipeline runs per factory (default), 40 activities per pipeline (logical), no hard limit on number of pipelines. For enterprise: use separate ADF factories per environment (dev/stage/prod), not per team. If hitting 100 concurrent runs: request limit increase from Microsoft or batch operations in ForEach with batchCount to stay under limit.
 
 > **Tip 3:** "How would you migrate from an on-premises SSIS-based ETL to ADF?" — Four options: (1) Lift-and-shift: deploy Azure-SSIS IR, run existing .dtsx packages unchanged (fastest migration, no Azure-native optimization). (2) Re-platform: recreate SSIS packages as ADF Copy + Mapping Data Flow (more work, better cost and performance). (3) Hybrid: move simple packages to ADF, keep complex SSIS on Azure-SSIS IR while modernizing. (4) Replace with Databricks for heavy transformation packages. In practice: audit all SSIS packages, categorize by complexity, apply Pareto — 80% of packages are simple copies that can become ADF Copy Activities.
+

@@ -2,19 +2,25 @@
 title: "Azure Databricks — Scenarios"
 topic: azure
 subtopic: azure-databricks
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, databricks, scenarios, interview, performance, architecture]
 ---
 
 # Azure Databricks — Interview Scenarios
 
-## Scenario 1: Migrate Legacy Hadoop/Hive to Azure Databricks
+<article data-difficulty="mid-level">
 
-**Question:** Your company has a 500TB Hadoop/Hive-based data lake on-premises. You need to migrate to Azure Databricks + ADLS Gen2. Design the migration plan.
+## 🟡 Mid-Level: Migrate Legacy Hadoop/Hive to Azure Databricks
 
-**Answer:**
+**Scenario:** Your company has a 500TB Hadoop/Hive-based data lake on-premises. You need to migrate to Azure Databricks + ADLS Gen2. Design the migration plan.
+
+<details>
+<summary>💡 Hint</summary>
+Structure the migration in phases: assessment (inventory, lineage), infrastructure setup, data migration (method depends on volume), pipeline recreation, and cutover with parallel validation.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Migration phases:
@@ -79,13 +85,23 @@ Cost: $0 for ADLS storage + Databricks clusters during migration period (minimiz
 Risk mitigation: keep on-prem as fallback until parallel validation complete
 ```
 
----
+</details>
 
-## Scenario 2: Optimize a Slow Databricks Job
+</article>
 
-**Question:** A nightly Databricks job transforms 500GB of Silver orders data to Gold. It runs in 4 hours but should finish in 30 minutes. How do you diagnose and fix?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Optimize a Slow Databricks Job
+
+**Scenario:** A nightly Databricks job transforms 500GB of Silver orders data to Gold. It runs in 4 hours but should finish in 30 minutes. How do you diagnose and fix?
+
+<details>
+<summary>💡 Hint</summary>
+Start with Spark UI → Stages to identify the bottleneck stage. Look for data skew (one task 100× longer), too many small shuffle partitions, small files at source, or missing broadcast hints for dimension joins.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Profile the job
@@ -139,13 +155,23 @@ Step 3: Apply and measure
 Expected result: 4 hours → 25-35 minutes (8-10× improvement)
 ```
 
----
+</details>
 
-## Scenario 3: Design a Multi-Tenant Data Platform
+</article>
 
-**Question:** Build a Databricks-based data platform for 5 business units (Finance, Marketing, HR, Operations, Legal). Each unit has its own data and analysts. They should not see each other's data. One central data engineering team manages pipelines.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Design a Multi-Tenant Data Platform
+
+**Scenario:** Build a Databricks-based data platform for 5 business units (Finance, Marketing, HR, Operations, Legal). Each unit has its own data and analysts. They should not see each other's data. One central data engineering team manages pipelines.
+
+<details>
+<summary>💡 Hint</summary>
+Use Unity Catalog with domain-specific catalogs. Think about: row-level security via row filters and column masks, cluster policies to restrict analyst cluster size, and cost attribution via cluster tags.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture: Unity Catalog with domain catalogs + shared Silver
@@ -215,6 +241,9 @@ Governance:
     SELECT * FROM system.access.audit WHERE user_identity LIKE '%finance%'
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -224,3 +253,4 @@ Governance:
 > **Tip 2:** "What is `dbutils.secrets.get` and why is it used instead of environment variables?" — `dbutils.secrets.get(scope, key)` retrieves secrets from Azure Key Vault-backed secret scopes. The returned value is redacted in notebook output (shown as `[REDACTED]`) to prevent accidental logging. Environment variables in notebooks can be accidentally printed or logged. Databricks secret scopes integrate directly with Azure Key Vault: create a secret scope backed by your Key Vault, then `dbutils.secrets.get("my-scope", "storage-key")` retrieves the Key Vault secret at runtime. Secrets are never stored in the notebook.
 
 > **Tip 3:** "What's the Databricks lakehouse architecture decision: one large cluster vs many small clusters?" — One large cluster for ETL + one SQL warehouse for analytics is simpler and cheaper for small-medium teams. For large enterprises: separate job clusters per pipeline (isolation, right-sizing), one SQL warehouse per business unit (cost attribution, performance isolation). Clusters should be sized for the workload: a 10GB daily ETL doesn't need a 20-node cluster. Profile data volumes: `df.count()` and expected shuffle size determine correct cluster size. The wrong size (over-provisioned) is a common Databricks cost issue.
+

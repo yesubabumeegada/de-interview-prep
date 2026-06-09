@@ -2,19 +2,25 @@
 title: "ADLS Gen2 — Scenarios"
 topic: azure
 subtopic: adls
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, adls, scenarios, interview, storage-design, security]
 ---
 
 # ADLS Gen2 — Interview Scenarios
 
-## Scenario 1: Design Storage Architecture for a Healthcare Company
+<article data-difficulty="mid-level">
 
-**Question:** A healthcare company needs to store patient data including lab results, imaging metadata, and billing records. Requirements: HIPAA compliance, 7-year retention, different access for clinical vs billing teams, no cross-team data visibility.
+## 🟡 Mid-Level: Design Storage Architecture for a Healthcare Company
 
-**Answer:**
+**Scenario:** A healthcare company needs to store patient data including lab results, imaging metadata, and billing records. Requirements: HIPAA compliance, 7-year retention, different access for clinical vs billing teams, no cross-team data visibility.
+
+<details>
+<summary>💡 Hint</summary>
+Think about: separate storage accounts vs containers for different compliance domains. Consider CMK per domain, private endpoints, RBAC with ACLs for path-level isolation, and immutable storage for HIPAA retention.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture: separate storage accounts per data domain
@@ -75,13 +81,23 @@ Cost estimate (1PB total):
   Total: ~$8,100/month
 ```
 
----
+</details>
 
-## Scenario 2: Accidental Delete Recovery
+</article>
 
-**Question:** A data engineer accidentally ran `az storage fs directory delete --recursive` on the `/silver/customers/` directory, deleting 500GB of production data. What do you do?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Accidental Delete Recovery
+
+**Scenario:** A data engineer accidentally ran `az storage fs directory delete --recursive` on the `/silver/customers/` directory, deleting 500GB of production data. What do you do?
+
+<details>
+<summary>💡 Hint</summary>
+First check if soft delete is enabled — that determines whether data is recoverable at all. If recoverable, stop any running pipelines first before restoring to avoid conflicts.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Immediate response:
@@ -143,13 +159,23 @@ Post-incident:
   Terraform: enforce soft delete via Azure Policy
 ```
 
----
+</details>
 
-## Scenario 3: Storage Cost Spike Investigation
+</article>
 
-**Question:** Azure bill shows ADLS Gen2 storage costs went from $5,000/month to $20,000/month in one week. Investigate.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Storage Cost Spike Investigation
+
+**Scenario:** Azure bill shows ADLS Gen2 storage costs went from $5,000/month to $20,000/month in one week. Investigate.
+
+<details>
+<summary>💡 Hint</summary>
+Break the cost down by meter type (Data Stored vs Operations vs Bandwidth). Identify which day the spike started, which container grew, and whether it was a backfill job, small files explosion, or Delta log accumulation.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Azure Cost Management breakdown
@@ -198,6 +224,9 @@ Step 4: Fix
     Cost alert: Azure Budget alert at $8,000/month (fires before doubling)
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -207,3 +236,4 @@ Step 4: Fix
 > **Tip 2:** "Can ADLS Gen2 support atomic writes for multiple files simultaneously?" — No — ADLS Gen2 has atomic operations per file (single-file atomic rename/overwrite) but not multi-file atomic transactions. For multi-file atomic commits (e.g., Spark job writes 100 files to a partition, all must be visible together or none), the convention is the "rename commit protocol": Spark writes to a temporary `_temporary/` directory, then renames each file to the final path atomically. Delta Lake and Iceberg handle this automatically — they write data files first, then update the transaction log (single file atomic write) making all new files visible simultaneously.
 
 > **Tip 3:** "What's the security implication of disabling public network access on ADLS Gen2?" — When public network access is disabled, only requests from approved networks (private endpoints or VNet service endpoints) are accepted. All Azure services that access the storage account (ADF, Databricks, Synapse) must either: (a) use private endpoints in the same or peered VNet, or (b) be on the approved VNet subnet. This prevents accidental data exposure but requires careful network design. Key risk: if the private endpoint is misconfigured, all jobs fail. Always test connectivity in dev before enabling in production. Use "Allow trusted Microsoft services" exception for Azure Backup, Azure Monitor, and other Azure-native services.
+

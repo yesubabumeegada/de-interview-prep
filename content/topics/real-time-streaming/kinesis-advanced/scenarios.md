@@ -2,19 +2,25 @@
 title: "Kinesis Advanced — Scenarios"
 topic: real-time-streaming
 subtopic: kinesis-advanced
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [kinesis, aws, interview, scenarios, firehose, kcl, resharding, exactly-once]
 ---
 
 # Kinesis Advanced — Interview Scenarios
 
-## Scenario 1: Design a Real-Time Ad Click Attribution System
+<article data-difficulty="mid-level">
 
-**Question:** A digital advertising company needs to attribute ad clicks to conversions (purchases). Events flow: ad impressions, ad clicks, and purchase events. You have 500K events/sec total. Design a Kinesis-based solution that can attribute a purchase to the last ad click within 24 hours.
+## 🟡 Mid-Level: Design a Real-Time Ad Click Attribution System
 
-**Answer:**
+**Scenario:** A digital advertising company needs to attribute ad clicks to conversions (purchases). Events flow: ad impressions, ad clicks, and purchase events. You have 500K events/sec total. Design a Kinesis-based solution that can attribute a purchase to the last ad click within 24 hours.
+
+<details>
+<summary>💡 Hint</summary>
+Think about: how to join ad clicks to purchases within a 24-hour window. Consider KDS for high throughput, Lambda or KDA for processing, DynamoDB for stateful click tracking, and idempotency for exactly-once attribution.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture:
@@ -73,13 +79,23 @@ Exactly-once:
 Latency: < 5 seconds (click → attribution → DynamoDB update)
 ```
 
----
+</details>
 
-## Scenario 2: Kinesis Consumer Falling Behind After Traffic Spike
+</article>
 
-**Question:** Your KCL consumer application processes 2 million events/hour normally. After a product launch, traffic spiked to 20 million events/hour for 4 hours. Your CloudWatch shows GetRecords.IteratorAgeMilliseconds reached 8 hours. Now, 2 hours after the spike, traffic is back to normal but you have 8 hours of backlog. How do you recover?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Kinesis Consumer Falling Behind After Traffic Spike
+
+**Scenario:** Your KCL consumer application processes 2 million events/hour normally. After a product launch, traffic spiked to 20 million events/hour for 4 hours. Your CloudWatch shows GetRecords.IteratorAgeMilliseconds reached 8 hours. Now, 2 hours after the spike, traffic is back to normal but you have 8 hours of backlog. How do you recover?
+
+<details>
+<summary>💡 Hint</summary>
+Calculate your recovery rate vs production rate. If processing rate > production rate, lag will drain. Consider: add shards (resharding), add Lambda concurrency (parallelization factor), or let it drain naturally. Communicate an ETA based on math.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Immediate diagnosis:
@@ -134,13 +150,23 @@ Prevention:
   CloudWatch alarm: WriteProvisionedThroughputExceeded → immediate scale-up trigger
 ```
 
----
+</details>
 
-## Scenario 3: Migrating from SQS to Kinesis
+</article>
 
-**Question:** Your team uses SQS for a clickstream pipeline: 10 Lambda → SQS → 3 Lambda consumers. You want to add a second consumer (analytics) and keep the existing one (processing). Also, you want to retain events for 7 days for replay. Why can't SQS handle this, and how would you redesign with Kinesis?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Migrating from SQS to Kinesis
+
+**Scenario:** Your team uses SQS for a clickstream pipeline: 10 Lambda → SQS → 3 Lambda consumers. You want to add a second consumer (analytics) and keep the existing one (processing). Also, you want to retain events for 7 days for replay. Why can't SQS handle this, and how would you redesign with Kinesis?
+
+<details>
+<summary>💡 Hint</summary>
+SQS fundamentals that prevent this use case: messages consumed-and-deleted (no replay), one consumer per message (no fan-out), no offset-based consumption. Kinesis solves all three. Design the migration in shadow-run mode.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 SQS limitations for this use case:
@@ -203,6 +229,9 @@ Cost comparison:
   Business value: replay = prevents $10K+ ad spend misattribution on bug → ROI positive
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -212,3 +241,4 @@ Cost comparison:
 > **Tip 2:** "How do you handle a Kinesis stream that consistently hits write throttling?" — WriteProvisionedThroughputExceeded means producers are hitting 1 MB/sec or 1,000 records/sec per shard. Solutions: (a) split the hot shard (increase total capacity); (b) use KPL aggregation to pack multiple records per Kinesis record (reduces records/sec); (c) fix hot partition key — if one key generates 80% of traffic, spread writes by appending random suffix `key-{random.randint(0,9)}`; (d) implement producer-side retry with exponential backoff (PutRecords returns per-record success/failure). Monitor with CloudWatch alarm: `WriteProvisionedThroughputExceeded` metric, alert if sum > 0 in any 5-minute window.
 
 > **Tip 3:** "How does Kinesis compare to SQS for a job queue use case?" — SQS is designed for job queues (task distribution, competing consumers, at-least-once delivery with visibility timeout). Use SQS for: distributing work items across multiple workers, delayed processing (SQS delay queues), FIFO ordering with deduplication (SQS FIFO). Use Kinesis for: event streaming (multiple independent consumers, replay, ordering per key, high-throughput ingest). The key difference: SQS messages are CONSUMED AND DELETED (one consumer wins). Kinesis records are READ AND RETAINED (multiple consumers, replay possible). For a mixed requirement (work queue + audit log): put events in Kinesis, use a Lambda consumer to push to SQS for worker distribution.
+

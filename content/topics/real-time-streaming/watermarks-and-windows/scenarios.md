@@ -2,19 +2,25 @@
 title: "Watermarks & Windows — Scenarios"
 topic: real-time-streaming
 subtopic: watermarks-and-windows
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [streaming, watermarks, windows, interview, scenarios, late-data, debugging]
 ---
 
 # Watermarks & Windows — Interview Scenarios
 
-## Scenario 1: Streaming Counts Don't Match Batch Job
+<article data-difficulty="mid-level">
 
-**Question:** Your real-time dashboard shows 50,000 orders per hour, but the batch job (reading from the same Delta Lake source) shows 65,000 orders for the same hour. The streaming job uses event-time windowing with a 2-minute watermark. Root-cause and fix.
+## 🟡 Mid-Level: Streaming Counts Don't Match Batch Job
 
-**Answer:**
+**Scenario:** Your real-time dashboard shows 50,000 orders per hour, but the batch job (reading from the same Delta Lake source) shows 65,000 orders for the same hour. The streaming job uses event-time windowing with a 2-minute watermark. Root-cause and fix.
+
+<details>
+<summary>💡 Hint</summary>
+When streaming count < batch count for the same window, the events are there — they're just being dropped as 'too late'. Check the watermark tolerance vs actual event delay distribution. Mobile apps and IoT devices can delay events by 5-30 minutes.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Quantify the discrepancy
@@ -78,13 +84,23 @@ Chosen fix: Option A (increase watermark to 5 minutes)
   Monitor: set alert if late event rate > 5%
 ```
 
----
+</details>
 
-## Scenario 2: Session Window Design for a Ride-Sharing App
+</article>
 
-**Question:** Design session window analytics for a ride-sharing app. A "trip session" starts when a user requests a ride and ends when they rate the trip. If they don't rate within 30 minutes of trip completion, session closes automatically. Track: trip duration, wait time, surge pricing, rating.
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Session Window Design for a Ride-Sharing App
+
+**Scenario:** Design session window analytics for a ride-sharing app. A "trip session" starts when a user requests a ride and ends when they rate the trip. If they don't rate within 30 minutes of trip completion, session closes automatically. Track: trip duration, wait time, surge pricing, rating.
+
+<details>
+<summary>💡 Hint</summary>
+Model the session as: start event (ride_request), end event (trip_rated OR timeout after 30 min). Use Flink Session Windows with a 30-minute gap. Track: wait_time = pickup_time - request_time, trip_duration = dropoff - pickup, rating = final event value.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Event flow:
@@ -164,13 +180,23 @@ Monitoring:
   Session state size: 10M active trips × 200 bytes = 2 GB state (RocksDB backend)
 ```
 
----
+</details>
 
-## Scenario 3: Watermark Stalling Under Low Traffic
+</article>
 
-**Question:** Your streaming job processes Kafka events, but at 3 AM (low traffic period), all windows stop firing. By 4 AM, you have 1,200 windows waiting to fire. When traffic resumes at 8 AM, all 1,200 windows fire simultaneously, overwhelming the downstream database. How do you prevent this?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Watermark Stalling Under Low Traffic
+
+**Scenario:** Your streaming job processes Kafka events, but at 3 AM (low traffic period), all windows stop firing. By 4 AM, you have 1,200 windows waiting to fire. When traffic resumes at 8 AM, all 1,200 windows fire simultaneously, overwhelming the downstream database. How do you prevent this?
+
+<details>
+<summary>💡 Hint</summary>
+The root cause is idle Kafka partitions at 3 AM — the global watermark stalls at the idle partition's last event time. Fix: withIdleness() to exclude idle partitions from watermark calculation. Also distribute window firing over time rather than all at once when traffic resumes.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Root cause analysis:
@@ -235,6 +261,9 @@ Implementation priority:
   3. DB write rate limiting → defense in depth
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -244,3 +273,4 @@ Implementation priority:
 > **Tip 2:** "What is the trade-off between window size and state size in sliding windows?" — State size for sliding windows = O(keys × (window_size / slide_interval) × state_per_accumulator). A 1-hour window with 1-minute slide = 60 concurrent window states per key. With 1 million users: 60M window states. If each accumulator is 100 bytes: 6 GB state. Solutions: (a) Use `AggregateFunction` (O(1) accumulator, not O(N) records); (b) Reduce slide granularity (10-minute slide instead of 1-minute → 6× less state); (c) Use RocksDB state backend for large state; (d) Consider whether sliding windows are necessary — tumbling windows with shorter intervals often achieve similar business goals with less state.
 
 > **Tip 3:** "How do you handle clock skew between event generators (e.g., IoT devices with drifted clocks)?" — IoT devices may have clocks off by minutes or hours. Signs: event_time far in the future or past relative to Kafka ingestion time. Strategies: (a) Set `max_allowed_skew = abs(event_time - kafka_timestamp)`: if skew > 10 minutes, replace event_time with Kafka timestamp and flag for investigation; (b) Per-device calibration: track clock drift per device ID, apply correction factor; (c) Use relative timestamps: instead of absolute timestamps, have devices send `seconds_since_last_event` and reconstruct event_time server-side; (d) Wide watermark tolerance (e.g., 30 minutes) accepts most clock drift at the cost of higher latency. Always monitor `avg(event_time - kafka_time)` per device type as a health indicator.
+

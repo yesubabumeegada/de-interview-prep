@@ -2,19 +2,25 @@
 title: "Spark Structured Streaming — Scenarios"
 topic: real-time-streaming
 subtopic: spark-structured-streaming
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [spark, structured-streaming, interview, scenarios, delta-lake, kafka, debugging]
 ---
 
 # Spark Structured Streaming — Interview Scenarios
 
-## Scenario 1: Design a Near-Real-Time Analytics Platform
+<article data-difficulty="mid-level">
 
-**Question:** An e-commerce company wants to show sellers their sales metrics updated every 5 minutes: total orders, revenue, top products, and conversion rate. Data comes from Kafka. Design the system using Spark Structured Streaming and Delta Lake.
+## 🟡 Mid-Level: Design a Near-Real-Time Analytics Platform
 
-**Answer:**
+**Scenario:** An e-commerce company wants to show sellers their sales metrics updated every 5 minutes: total orders, revenue, top products, and conversion rate. Data comes from Kafka. Design the system using Spark Structured Streaming and Delta Lake.
+
+<details>
+<summary>💡 Hint</summary>
+Design a Bronze → Silver → Gold medallion pipeline. Think about: trigger(processingTime='5 minutes'), foreachBatch for Delta MERGE at Silver, tumbling window aggregations at Gold. Serving layer reads from Delta.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture:
@@ -83,13 +89,23 @@ Estimated latency:
   Total: ~10 minutes end-to-end (acceptable for 5-min dashboard refresh)
 ```
 
----
+</details>
 
-## Scenario 2: Streaming Job Processing Latency Growing Over Time
+</article>
 
-**Question:** Your Spark Structured Streaming job started processing in 30 seconds per batch. After 3 days, each batch takes 8+ minutes, causing your 5-minute trigger interval to queue up. The Spark UI shows the job is stuck on a shuffle stage. Diagnose and fix.
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Streaming Job Processing Latency Growing Over Time
+
+**Scenario:** Your Spark Structured Streaming job started processing in 30 seconds per batch. After 3 days, each batch takes 8+ minutes, causing your 5-minute trigger interval to queue up. The Spark UI shows the job is stuck on a shuffle stage. Diagnose and fix.
+
+<details>
+<summary>💡 Hint</summary>
+Growing batch duration usually means growing state. Check stream-stream joins (unbounded state without watermark), window aggregations with stale data, or accumulating deduplication state. Add watermarks and state TTL.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Check query.lastProgress for trends
@@ -143,13 +159,23 @@ Lesson: always add watermarks and time bounds to stream-stream joins.
         Monitor stateOperators.numRowsTotal weekly.
 ```
 
----
+</details>
 
-## Scenario 3: Migrate Batch Job to Streaming
+</article>
 
-**Question:** You have a batch Spark job that runs every hour reading from S3 (new Parquet files dropped hourly) and writing aggregated results to a PostgreSQL database. Business wants results every 5 minutes. How do you migrate to Spark Structured Streaming?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Migrate Batch Job to Streaming
+
+**Scenario:** You have a batch Spark job that runs every hour reading from S3 (new Parquet files dropped hourly) and writing aggregated results to a PostgreSQL database. Business wants results every 5 minutes. How do you migrate to Spark Structured Streaming?
+
+<details>
+<summary>💡 Hint</summary>
+Map the batch job components to streaming equivalents: S3 file listing → Auto Loader (cloudFiles), hourly batch read → trigger(processingTime='5 minutes'), aggregate write to Postgres → foreachBatch with JDBC UPSERT.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Current batch architecture:
@@ -227,6 +253,9 @@ Outcome:
   Cost:   Similar (small cluster × 12 runs/hour vs large cluster × 1 run/hour)
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -236,3 +265,4 @@ Outcome:
 > **Tip 2:** "How do you handle exactly-once writes to PostgreSQL from Spark Structured Streaming?" — PostgreSQL doesn't have a native streaming connector with 2PC support, so use foreachBatch with idempotent writes. Approach 1: UPSERT — `INSERT INTO ... ON CONFLICT (primary_key) DO UPDATE SET ...`. Re-running the same batch produces the same result (upsert is idempotent). Approach 2: Delete-then-insert per batch ID — `DELETE FROM table WHERE batch_id = N; INSERT INTO table ...`. Approach 3: Use a staging table — insert all, then merge from staging to final. Include `batch_id` in the table for audit/replay detection. The key insight: exactly-once at the sink requires idempotent writes, not distributed transactions.
 
 > **Tip 3:** "How would you handle a sudden spike in Kafka data (10× normal volume) in your streaming job?" — The `maxOffsetsPerTrigger` option limits how much data is consumed per batch (provides back-pressure). With 10× spike: Spark processes at its max rate but consumer lag builds temporarily. The lag resolves as the spike subsides. Ensure: (a) the downstream sink can handle burst writes (connection pooling, Delta table write throughput); (b) state store has enough memory for the burst (RocksDB handles spikes better than heap); (c) monitoring alerts on consumer lag > 10 minutes; (d) if sustained 10× growth, increase Databricks cluster size (add workers) or increase Kafka partition count to allow higher Spark parallelism.
+

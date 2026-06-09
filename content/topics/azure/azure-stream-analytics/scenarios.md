@@ -2,19 +2,25 @@
 title: "Azure Stream Analytics — Scenarios"
 topic: azure
 subtopic: azure-stream-analytics
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, stream-analytics, scenarios, interview, real-time, architecture]
 ---
 
 # Azure Stream Analytics — Interview Scenarios
 
-## Scenario 1: Real-Time Retail Dashboard
+<article data-difficulty="mid-level">
 
-**Question:** A retail company wants to show live store performance on a Power BI dashboard: current hour sales by store, running 7-day trend, and real-time low inventory alerts. Design the ASA pipeline.
+## 🟡 Mid-Level: Real-Time Retail Dashboard
 
-**Answer:**
+**Scenario:** A retail company wants to show live store performance on a Power BI dashboard: current hour sales by store, running 7-day trend, and real-time low inventory alerts. Design the ASA pipeline.
+
+<details>
+<summary>💡 Hint</summary>
+Think about multiple ASA queries in one job with different outputs: tumbling windows for current-hour KPIs → Power BI streaming dataset, WHERE filter for immediate alerts → Service Bus, SELECT * → ADLS for historical.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Architecture:
@@ -82,13 +88,23 @@ Cost estimate:
   Total streaming: ~$1,350/month for real-time retail dashboard
 ```
 
----
+</details>
 
-## Scenario 2: ASA Job Stops Producing Output
+</article>
 
-**Question:** Production ASA job was running fine, but Power BI stopped updating 3 hours ago. Alerts haven't fired in 3 hours either. How do you diagnose?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: ASA Job Stops Producing Output
+
+**Scenario:** Production ASA job was running fine, but Power BI stopped updating 3 hours ago. Alerts haven't fired in 3 hours either. How do you diagnose?
+
+<details>
+<summary>💡 Hint</summary>
+Systematic investigation: check job status first, then metrics (InputEventBytes, OutputEventBytes, ResourceUtilization), then check Event Hubs for publisher health, then check output sinks. Each combination of zeros points to a different root cause.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Systematic investigation:
@@ -143,13 +159,23 @@ Post-incident:
   Add alert: InputEventBytes == 0 for 30 minutes → escalate
 ```
 
----
+</details>
 
-## Scenario 3: Design Real-Time Anomaly Detection for Industrial IoT
+</article>
 
-**Question:** A factory has 5,000 machines, each with 10 sensors reporting every second. You need to detect anomalies (temperature/pressure spikes, equipment failure signatures) in real time. Design the system.
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Design Real-Time Anomaly Detection for Industrial IoT
+
+**Scenario:** A factory has 5,000 machines, each with 10 sensors reporting every second. You need to detect anomalies (temperature/pressure spikes, equipment failure signatures) in real time. Design the system.
+
+<details>
+<summary>💡 Hint</summary>
+Scale calculation: 5,000 machines × 10 sensors × 1/sec = 50K events/sec. Think about: PARTITION BY machine_id for parallelism, threshold-based immediate alerts (no window), ML anomaly detection (ANOMALYDETECTION_SPIKEANDDIP), and different latency targets per output.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Scale:
@@ -216,6 +242,9 @@ Latency targets:
   Dashboard update: 30 seconds (tumbling window)
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -225,3 +254,4 @@ Latency targets:
 > **Tip 2:** "When would you replace ASA with Databricks Structured Streaming?" — When you need: (a) exactly-once semantics (ASA is at-least-once), (b) complex stateful processing (CEP, multi-event patterns across long time windows), (c) Python UDFs for sophisticated ML scoring, (d) joins with Delta Lake tables (historical data enrichment), (e) throughput > 1 GB/sec, (f) sub-100ms latency. ASA strengths: zero infra, SQL-only, fast setup, cheap at moderate scale. Databricks strengths: flexibility, exactly-once, rich ecosystem, handles petabyte scale.
 
 > **Tip 3:** "How do you handle a schema change in the Event Hubs input (new field added)?" — ASA queries are schema-agnostic for non-referenced fields: if you use SELECT specific_columns FROM input, new fields are ignored. If you use SELECT *, the new fields appear in output (may break downstream if output has strict schema like SQL DB). Best practice: SELECT named columns (not *) in production queries — new fields are transparently ignored. For SELECT * to ADLS (schema-on-read): new fields appear in new files and Databricks/Spark can read them with `mergeSchema=true`. Update query in ASA: stop job, update query, restart (processes from last checkpoint — no data loss).
+

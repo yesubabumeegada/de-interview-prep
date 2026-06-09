@@ -2,19 +2,25 @@
 title: "Cosmos DB — Scenarios"
 topic: azure
 subtopic: cosmos-db
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, cosmos-db, scenarios, interview, design, performance]
 ---
 
 # Cosmos DB — Interview Scenarios
 
-## Scenario 1: Design a Global User Profile Store
+<article data-difficulty="mid-level">
 
-**Question:** Build a user profile store for a social media app with 500M users globally. Users are in NA, EU, APAC. Each user has: profile info, preferences, connection counts, recent activity (last 100 actions). Read latency requirement: < 10ms. Writes: 100K/sec globally.
+## 🟡 Mid-Level: Design a Global User Profile Store
 
-**Answer:**
+**Scenario:** Build a user profile store for a social media app with 500M users globally. Users are in NA, EU, APAC. Each user has: profile info, preferences, connection counts, recent activity (last 100 actions). Read latency requirement: < 10ms. Writes: 100K/sec globally.
+
+<details>
+<summary>💡 Hint</summary>
+Think about container design: user_profiles partitioned by /userId for sub-10ms point reads. Consider global distribution model (multi-master vs single-master), consistency level trade-offs, and enabling Synapse Link for analytics without RU impact.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Scale:
@@ -81,13 +87,23 @@ Cost estimate:
   Total: ~$6,000/month for 500M user global profile store
 ```
 
----
+</details>
 
-## Scenario 2: Cosmos DB Throttling (429 Too Many Requests)
+</article>
 
-**Question:** Your Cosmos DB container starts returning 429 errors at 2 PM every weekday. The container has 10,000 RU/s provisioned. How do you diagnose and fix?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Cosmos DB Throttling (429 Too Many Requests)
+
+**Scenario:** Your Cosmos DB container starts returning 429 errors at 2 PM every weekday. The container has 10,000 RU/s provisioned. How do you diagnose and fix?
+
+<details>
+<summary>💡 Hint</summary>
+Check Normalized RU Consumption % at 2 PM. Find the expensive operation (log x-ms-request-charge per request type). Cross-partition aggregation queries at peak time are a common culprit — the fix is moving analytics to Synapse Link.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Identify which requests are being throttled
@@ -138,13 +154,23 @@ Recommended: Option B immediately, then Option C for permanent fix
 Result: 2PM throttling eliminated, provisioned RU reduced by 50%
 ```
 
----
+</details>
 
-## Scenario 3: Choose Between Cosmos DB and Azure SQL for a New Service
+</article>
 
-**Question:** You're building a product recommendation engine that needs to: store product data (structured: name, category, price, specs in JSON), store user interaction history (viewed, clicked, purchased — 500M records/month), serve real-time recommendations (< 50ms), and support analytics on interaction data (daily ML model training).
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: Choose Between Cosmos DB and Azure SQL for a New Service
+
+**Scenario:** You're building a product recommendation engine that needs to: store product data (structured: name, category, price, specs in JSON), store user interaction history (viewed, clicked, purchased — 500M records/month), serve real-time recommendations (< 50ms), and support analytics on interaction data (daily ML model training).
+
+<details>
+<summary>💡 Hint</summary>
+Map each requirement to the right data store: product catalog (flexible JSON schema), interaction history (high write volume, TTL for old data), recommendations serving (point read < 50ms), ML training (Synapse Link for zero-RU analytics). Consider Cosmos DB for the first three, Synapse/Databricks for ML.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Analyze each requirement:
@@ -202,6 +228,9 @@ vs Azure SQL Hyperscale for 6TB: ~$3,000/month + higher query complexity
 Decision: Cosmos DB wins on flexibility, latency, and manageable cost
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -211,3 +240,4 @@ Decision: Cosmos DB wins on flexibility, latency, and manageable cost
 > **Tip 2:** "What's the maximum item size in Cosmos DB and how do you handle larger documents?" — Maximum item size is 2MB. For larger payloads: (a) Split the document into smaller related documents (e.g., user profile + user activity + user media as separate containers), (b) Store large binary data (images, PDFs) in ADLS Gen2 and store only the URL in Cosmos DB, (c) Compress large JSON strings before storing (gzip in application, store as Base64), (d) Chunking pattern: split large document into chunks (chunk_0, chunk_1...) and reassemble in application. In practice, 2MB is rarely hit for properly modeled NoSQL data — if you're approaching 2MB, reconsider the data model.
 
 > **Tip 3:** "How do you implement pagination in Cosmos DB?" — Use the continuation token: Cosmos DB returns `x-ms-continuation` header when there are more results. Store the token, pass it in the next request's `RequestOptions`. In Python SDK: `query_items` returns a pageable iterator — use `.by_page()` to get pages with continuation tokens. For user-facing pagination (page 1, 2, 3): store the continuation token in the session/cache, associate it with page number. Note: Cosmos DB doesn't support `OFFSET/SKIP` in most APIs — continuation token is the correct pattern. For large result sets, consider materializing paginated views in a separate container.
+

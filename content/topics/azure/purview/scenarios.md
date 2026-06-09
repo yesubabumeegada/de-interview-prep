@@ -2,19 +2,25 @@
 title: "Microsoft Purview — Scenarios"
 topic: azure
 subtopic: purview
-content_type: study_material
-difficulty_level: mid-level
-layer: scenarios
+content_type: scenario_question
 tags: [azure, purview, scenarios, interview, compliance, data-governance, gdpr]
 ---
 
 # Microsoft Purview — Interview Scenarios
 
-## Scenario 1: Build a Data Governance Program from Scratch
+<article data-difficulty="mid-level">
 
-**Question:** A 500-person fintech company has 50TB of data across Azure SQL, ADLS Gen2, Synapse, and Power BI. They have no data catalog, no data ownership, and are approaching a SOC 2 audit in 6 months. Design a Purview-based data governance program.
+## 🟡 Mid-Level: Build a Data Governance Program from Scratch
 
-**Answer:**
+**Scenario:** A 500-person fintech company has 50TB of data across Azure SQL, ADLS Gen2, Synapse, and Power BI. They have no data catalog, no data ownership, and are approaching a SOC 2 audit in 6 months. Design a Purview-based data governance program.
+
+<details>
+<summary>💡 Hint</summary>
+Design a phased 6-month program: Month 1 foundation (scan all sources), Month 2 classification + ownership, Month 3 business glossary, Month 4 lineage enablement, Month 5 SOC 2 evidence package, Month 6 ongoing operations.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Program design (6-month rollout):
@@ -92,13 +98,23 @@ Month 6: Ongoing Operations
     Lineage coverage: 90% of Gold-layer tables
 ```
 
----
+</details>
 
-## Scenario 2: Impact Analysis for a Schema Change
+</article>
 
-**Question:** The data engineering team wants to rename the `orders.customer_id` column to `orders.cust_id` in the Azure SQL DB. How do you use Purview to understand the impact before making the change?
+<article data-difficulty="mid-level">
 
-**Answer:**
+## 🟡 Mid-Level: Impact Analysis for a Schema Change
+
+**Scenario:** The data engineering team wants to rename the `orders.customer_id` column to `orders.cust_id` in the Azure SQL DB. How do you use Purview to understand the impact before making the change?
+
+<details>
+<summary>💡 Hint</summary>
+Use Purview's column-level lineage API. Search for the specific column, trace OUTPUT lineage depth=5 to find all downstream systems. For each impacted system, plan a backward-compatible migration: add new column, dual-read period, drop old.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Find the column in Purview catalog
@@ -155,13 +171,23 @@ Step 4: Plan backward-compatible migration
     With Purview: 30 minutes of lineage review, complete impact list
 ```
 
----
+</details>
 
-## Scenario 3: GDPR Right-to-Erasure Request
+</article>
 
-**Question:** A customer submits a GDPR erasure request. Their customer_id is 'CUST_78421'. You have data across ADLS, Azure SQL, Cosmos DB, and Power BI (cached reports). How do you use Purview to locate and erase all their data?
+<article data-difficulty="senior">
 
-**Answer:**
+## 🔴 Senior: GDPR Right-to-Erasure Request
+
+**Scenario:** A customer submits a GDPR erasure request. Their customer_id is 'CUST_78421'. You have data across ADLS, Azure SQL, Cosmos DB, and Power BI (cached reports). How do you use Purview to locate and erase all their data?
+
+<details>
+<summary>💡 Hint</summary>
+Use Purview to discover all tables/columns with PII classification across all sources. Then execute erasure per system: DELETE for SQL, Delta DELETE + VACUUM for ADLS, delete_item for Cosmos DB, dataset refresh for Power BI. Document in a compliance audit trail.
+</details>
+
+<details>
+<summary>✅ Solution</summary>
 
 ```
 Step 1: Use Purview to find all data stores with customer data
@@ -242,6 +268,9 @@ Step 4: Verify with Purview re-scan
 Timeline: < 30 days (GDPR requirement). With Purview, discovery: 1 day. Execution: 2-3 days.
 ```
 
+</details>
+
+</article>
 ---
 
 ## Interview Tips
@@ -251,3 +280,4 @@ Timeline: < 30 days (GDPR requirement). With Purview, discovery: 1 day. Executio
 > **Tip 2:** "What are the limitations of Purview that you should be aware of?" — Key limitations: (a) Scan latency: new assets appear in catalog 1-24 hours after creation (not real-time); (b) Classification sampling: samples 1,000 rows (not all rows) — may miss infrequent PII patterns in large tables; (c) Column-level lineage gaps: only available for native integrations (ADF, Synapse, Databricks) — custom pipelines need OpenLineage instrumentation; (d) Deletes are not surfaced in lineage: Purview tracks assets and processes, but if a table is deleted, lineage edges become orphaned (not automatically cleaned up); (e) Power BI certified datasets only: some Power BI metadata only available with Premium workspace licensing.
 
 > **Tip 3:** "How does Purview differ from Azure Policy?" — Purview: data catalog and governance (knows what data exists, classifies it, tracks lineage, assigns ownership). Azure Policy: infrastructure governance (enforces rules on Azure resource deployment — e.g., "all storage accounts must have HTTPS-only", "all VMs must have a specific tag"). They complement each other: Azure Policy ensures your infrastructure meets standards (HTTPS, encryption, tags, regions), Purview ensures your data meets governance standards (classified, owned, lineage tracked). For compliance: Azure Policy = infrastructure compliance evidence; Purview = data compliance evidence.
+
