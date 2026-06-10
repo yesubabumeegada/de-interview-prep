@@ -65,7 +65,7 @@ interface ValidationResult {
 
 // --- Constants ---
 
-const EXPECTED_TOPIC_COUNT = 26;
+const EXPECTED_TOPIC_COUNT = 27;
 const MIN_SCENARIO_QUESTIONS_PER_TOPIC = 10;
 const MIN_FOLLOW_UP_PROBES = 2;
 const REQUIRED_LAYERS = ['fundamentals', 'intermediate', 'senior-deep-dive', 'real-world'];

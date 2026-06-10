@@ -141,7 +141,8 @@
         { "id": "packaging", "displayName": "Virtual Environments & Packaging", "order": 16 },
         { "id": "async-asyncio", "displayName": "Async / asyncio", "order": 17 },
         { "id": "dataclasses-pydantic", "displayName": "Dataclasses & Pydantic", "order": 18 },
-        { "id": "profiling-performance", "displayName": "Profiling & Performance", "order": 19 }
+        { "id": "profiling-performance", "displayName": "Profiling & Performance", "order": 19 },
+        { "id": "interview-coding-problems", "displayName": "Interview Coding Problems", "order": 20 }
       ]
     },
     {
@@ -186,7 +187,8 @@
         { "id": "stored-procedures", "displayName": "Stored Procedures", "order": 8 },
         { "id": "transaction-isolation", "displayName": "Transaction Isolation", "order": 9 },
         { "id": "partitioning", "displayName": "Partitioning", "order": 10 },
-        { "id": "execution-plans", "displayName": "Execution Plans", "order": 11 }
+        { "id": "execution-plans", "displayName": "Execution Plans", "order": 11 },
+        { "id": "interview-coding-problems", "displayName": "Interview Coding Problems", "order": 12 }
       ]
     },
     {
@@ -471,6 +473,19 @@
         { "id": "cost-optimization", "displayName": "Cost Optimization", "order": 6 },
         { "id": "end-to-end-case-studies", "displayName": "End-to-End Case Studies", "order": 7 },
         { "id": "trade-off-analysis", "displayName": "Trade-off Analysis", "order": 8 }
+      ]
+    },
+    {
+      "id": "interview-prep",
+      "displayName": "Interview Prep & Career",
+      "order": 27,
+      "icon": "interview",
+      "subtopics": [
+        { "id": "study-roadmaps", "displayName": "Study Roadmaps (Junior to Senior)", "order": 1 },
+        { "id": "behavioral-questions", "displayName": "Behavioral Questions", "order": 2 },
+        { "id": "project-walkthrough", "displayName": "Project Walkthrough", "order": 3 },
+        { "id": "interview-process-formats", "displayName": "Interview Process & Formats", "order": 4 },
+        { "id": "negotiation-and-leveling", "displayName": "Negotiation & Leveling", "order": 5 }
       ]
     }
   ]
