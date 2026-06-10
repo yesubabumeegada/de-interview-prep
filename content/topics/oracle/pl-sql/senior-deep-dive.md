@@ -333,3 +333,90 @@ END;
 > **Tip 2:** "Explain PRAGMA AUTONOMOUS_TRANSACTION." — An autonomous transaction runs in an independent transaction context, invisible to the calling transaction. COMMIT or ROLLBACK inside affects only the autonomous transaction. Primary use: audit logging — you want the log entry to persist even if the calling transaction rolls back due to an error. Must always commit or rollback within the autonomous block before returning.
 
 > **Tip 3:** "How do you handle performance in PL/SQL procedures processing millions of rows?" — Three techniques: (1) BULK COLLECT with LIMIT to avoid memory issues while reducing context switches, (2) FORALL instead of row-by-row DML, (3) SAVE EXCEPTIONS in FORALL to skip bad rows without stopping the batch. Measure with `DBMS_UTILITY.GET_TIME` or real-time SQL monitoring to confirm the bottleneck before optimizing.
+
+## ⚡ Cheat Sheet
+
+**PL/SQL essentials**
+```sql
+-- Stored procedure with exception handling
+CREATE OR REPLACE PROCEDURE load_orders(p_date IN DATE) AS
+    v_count NUMBER;
+BEGIN
+    INSERT INTO orders SELECT * FROM staging WHERE order_date = p_date;
+    v_count := SQL%ROWCOUNT;
+    DBMS_OUTPUT.PUT_LINE('Inserted: ' || v_count);
+    COMMIT;
+EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20001, 'Duplicate order key for ' || p_date);
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END load_orders;
+/
+```
+
+**AWR / performance tuning**
+```sql
+-- Top SQL by elapsed time (from AWR)
+SELECT sql_id, elapsed_time/1000000 AS elapsed_sec, executions,
+       elapsed_time/NULLIF(executions,0)/1000000 AS avg_sec,
+       sql_text
+FROM v$sqlstats
+ORDER BY elapsed_time DESC FETCH FIRST 10 ROWS ONLY;
+
+-- Explain plan
+EXPLAIN PLAN FOR SELECT * FROM orders WHERE customer_id = 123;
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(format=>'ALL'));
+
+-- Force index hint
+SELECT /*+ INDEX(o IDX_ORDERS_CUST) */ * FROM orders o WHERE customer_id = 123;
+```
+
+**Partitioning**
+```sql
+-- Range partitioning (most common for DE)
+CREATE TABLE orders (order_id NUMBER, order_date DATE, amount NUMBER)
+PARTITION BY RANGE (order_date) INTERVAL (NUMTOYMINTERVAL(1,'MONTH'))
+(PARTITION p_first VALUES LESS THAN (DATE '2024-01-01'));
+
+-- Partition pruning: WHERE order_date = '2024-01-15' reads only one partition
+```
+
+**Oracle RAC key concepts**
+```
+Cache Fusion:  nodes share buffer cache via high-speed interconnect
+GCS:           Global Cache Service — coordinates block ownership
+GES:           Global Enqueue Service — distributed lock management
+Interconnect:  low-latency private network between RAC nodes (mandatory)
+VIP:           Virtual IP — client transparent failover on node failure
+```
+
+**SQL tuning checklist**
+```
+1. Check execution plan: is it using the right index?
+2. Check cardinality estimates: are they close to actual rows?
+3. Statistics stale? Run DBMS_STATS.GATHER_TABLE_STATS
+4. High parse time? Consider bind variables or cursor_sharing=FORCE
+5. Full table scan on large table? Add index or partition pruning
+6. Nested loops on large tables? Consider hash join hint
+7. High I/O? Check if result fits in buffer cache (db_cache_size)
+```
+
+**Materialized view fast refresh**
+```sql
+CREATE MATERIALIZED VIEW LOG ON orders WITH ROWID, SEQUENCE (order_id, amount, region)
+INCLUDING NEW VALUES;
+
+CREATE MATERIALIZED VIEW mv_orders_by_region
+REFRESH FAST ON COMMIT AS
+SELECT region, SUM(amount) AS total FROM orders GROUP BY region;
+```
+
+**Key interview points**
+- Bind variables: prevent hard parse; critical for OLTP performance (cursor reuse)
+- Partition pruning: Oracle auto-prunes when filter on partition key
+- Data Guard: physical standby (redo apply) vs logical standby (SQL apply)
+- Exadata: Smart Scan offloads WHERE/column projection to storage cells (iDB protocol)
+- RAC: active-active; all nodes can read/write; best for OLTP scale-out

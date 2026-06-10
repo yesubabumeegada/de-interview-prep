@@ -484,3 +484,51 @@ extra = json.dumps({
 > **Tip 2:** "Walk me through a complete secrets backend setup." — "Install the provider (e.g., amazon). Configure airflow.cfg with the backend class and prefix. Create secrets in Secrets Manager with the naming convention (e.g., 'airflow/connections/my_conn'). Airflow resolves the connection chain: secrets backend first, then env vars, then metadata DB. Grant the Airflow worker IAM role read access to the specific secret ARNs. Zero credentials in the metadata DB or DAG files."
 
 > **Tip 3:** "How do you test hooks in CI without real external services?" — "Mock at the get_connection() level to inject test Connection objects without a database. Mock at the session/client level to control API responses. Use pytest.mark.integration to separate tests that require real connectivity — run those only in staging environments. The key is that your hook's get_conn() accepts the Connection object from get_connection(), so you can inject any credentials in tests."
+
+## ⚡ Cheat Sheet
+
+**Connection Resolution Chain (Priority Order)**
+1. Secrets backend (AWS Secrets Manager, Vault, custom) — checked first
+2. Environment variable `AIRFLOW_CONN_<CONN_ID>` (uppercase)
+3. Metadata DB (Fernet-encrypted at rest)
+4. `AirflowNotFoundException` — fails loudly, never silent fallback
+
+**Secrets Backend Setup (AWS)**
+```ini
+[secrets]
+backend = airflow.providers.amazon.aws.secrets.secrets_manager.SecretsManagerBackend
+backend_kwargs = {"connections_prefix": "airflow/connections", "variables_prefix": "airflow/variables"}
+```
+- Secret name format: `airflow/connections/<conn_id>`
+- Zero-downtime rotation: update secret in SM → new DAG runs fetch fresh creds automatically
+
+**Pool Types for SQLAlchemy Hooks**
+| Pool | When to Use |
+|---|---|
+| `QueuePool` (default) | Persistent workers sharing memory |
+| `NullPool` | KubernetesExecutor / CeleryExecutor (per-process, no sharing) |
+| `StaticPool` | SQLite / tests only |
+
+**Hook Testing Pattern**
+```python
+@patch('hooks.my_hook.MyHook.get_connection')
+def test_auth_header(self, mock_get_conn, mock_connection):
+    mock_get_conn.return_value = mock_connection  # inject test Connection
+    hook = MyHook(http_conn_id='test_api')
+    session = hook.get_conn()
+    assert session.headers['Authorization'] == 'Bearer test_token'
+```
+- Mock at `get_connection()` level — no DB needed
+- Separate `@pytest.mark.integration` tests for real network calls
+- Run integration tests only on `main` branch in staging env
+
+**Credential Rotation Without Restart**
+- `BaseHook.get_connection()` never caches — always calls secrets backend
+- For caching hooks: implement TTL check (`_token_fetched_at + TTL > now`)
+- For SQLAlchemy hooks: detect password change → `engine.dispose()` → rebuild pool
+
+**Anti-Patterns**
+- ❌ Hardcoded credentials in DAG files (in source control)
+- ❌ Creating new `requests.Session()` in `poke()` (N sessions per sensor lifetime)
+- ❌ Storing full private keys in Connection `extra` field (only store references/names)
+- ✅ Use hook's `get_conn()` → caches session, reads from secrets backend

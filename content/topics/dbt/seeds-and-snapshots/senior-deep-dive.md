@@ -183,3 +183,58 @@ dbt snapshot --select snap_customers
 CREATE TABLE snapshots.snap_customers_backup_20240601 AS
 SELECT * FROM snapshots.snap_customers;
 ```
+
+## ⚡ Cheat Sheet
+
+**Seeds**
+```bash
+dbt seed                          # loads all CSVs in seeds/ to warehouse
+dbt seed --select my_seed         # single seed
+dbt seed --full-refresh           # truncate + reload
+```
+
+```yaml
+# dbt_project.yml
+seeds:
+  my_project:
+    my_seed:
+      +column_types: {revenue: float64}
+      +quote_columns: false
+```
+
+**When to use seeds vs sources**
+- Seeds: small static reference data (<10K rows); changes via PR; version-controlled
+- Sources: data loaded by external pipelines; large volumes; not managed by dbt
+- Never use seeds for: raw event data, large lookups, frequently-changing data
+
+**Snapshots (SCD Type 2)**
+```sql
+{% snapshot orders_snapshot %}
+{{ config(
+    target_schema='snapshots',
+    unique_key='order_id',
+    strategy='timestamp',          -- or 'check'
+    updated_at='updated_at',       -- for timestamp strategy
+    check_cols=['status', 'amount'] -- for check strategy
+) }}
+SELECT * FROM {{ source('app', 'orders') }}
+{% endsnapshot %}
+```
+
+**Snapshot columns added by dbt**
+| Column | Meaning |
+|---|---|
+| `dbt_scd_id` | Surrogate key for each version |
+| `dbt_updated_at` | When dbt detected the change |
+| `dbt_valid_from` | Start of this version |
+| `dbt_valid_to` | End of this version (NULL = current) |
+
+**Strategy choice**
+- `timestamp`: preferred; uses `updated_at` column; efficient (only checks changed rows)
+- `check`: compares column values; use when no reliable `updated_at`; slower (full scan)
+
+**Snapshot best practices**
+- Run snapshots BEFORE models that depend on them (via `depends_on` or job ordering)
+- `dbt snapshot` in a dedicated job before `dbt run`
+- Never `--full-refresh` a snapshot in production (loses history)
+- Add `dbt_valid_to IS NULL` filter in models referencing snapshot for current records

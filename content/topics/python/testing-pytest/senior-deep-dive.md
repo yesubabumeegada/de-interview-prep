@@ -364,3 +364,69 @@ flowchart TD
 > **Tip 2:** Property-based testing impresses in senior interviews. Frame it: "Instead of testing specific examples, I test invariants — 'dedup never adds records', 'serialization is lossless', 'partitioning preserves all items'. Hypothesis generates hundreds of edge cases I'd never think of, like empty inputs, unicode strings, and extreme values."
 
 > **Tip 3:** Know the test pyramid tradeoffs for DE: "Unit tests for transform logic are fast and focused. Integration tests with testcontainers give confidence in real DB interactions. E2E tests verify the full pipeline works but are expensive to maintain. I invest most in unit tests, use integration for critical paths, and have minimal E2E for smoke tests."
+
+## ⚡ Cheat Sheet
+
+**Key fixtures**
+```python
+@pytest.fixture
+def db_conn(tmp_path):          # tmp_path: built-in temp directory
+    conn = sqlite3.connect(tmp_path / "test.db")
+    yield conn
+    conn.close()
+
+@pytest.fixture(scope="session")  # shared across all tests in session
+def spark_session():
+    return SparkSession.builder.master("local[*]").getOrCreate()
+```
+
+**Fixture scopes**: `function` (default) → `class` → `module` → `package` → `session`
+
+**Parametrize**
+```python
+@pytest.mark.parametrize("input,expected", [
+    (1, 2), (0, 1), (-1, 0)
+])
+def test_increment(input, expected):
+    assert increment(input) == expected
+```
+
+**Exceptions and warnings**
+```python
+with pytest.raises(ValueError, match="must be positive"):
+    process(-1)
+with pytest.warns(DeprecationWarning):
+    old_api()
+```
+
+**Mocking**
+```python
+from unittest.mock import patch, MagicMock
+def test_s3_upload(monkeypatch):
+    mock_client = MagicMock()
+    monkeypatch.setattr("boto3.client", lambda *a, **k: mock_client)
+    upload_to_s3("file.csv", "bucket", "key")
+    mock_client.upload_file.assert_called_once_with("file.csv", "bucket", "key")
+```
+
+**Marks and selection**
+```python
+@pytest.mark.slow          # custom mark
+@pytest.mark.skip("reason")
+@pytest.mark.xfail(reason="known bug")
+@pytest.mark.skipif(sys.platform == "win32", reason="Linux only")
+# Run: pytest -m "not slow"  or  pytest -k "test_s3"
+```
+
+**pytest.ini / pyproject.toml**
+```toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: slow integration tests", "unit: fast unit tests"]
+addopts = "-ra --tb=short --strict-markers"
+```
+
+**Coverage**
+```bash
+pytest --cov=mypackage --cov-report=html --cov-fail-under=80
+```

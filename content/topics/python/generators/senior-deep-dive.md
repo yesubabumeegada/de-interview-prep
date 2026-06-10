@@ -402,3 +402,42 @@ scheduler.run()  # Interleaves all three tasks cooperatively
 > **Tip 2:** For memory profiling questions, know that a generator's advantage is O(1) memory vs O(n) for lists, but the constant factor matters too — generator frames have overhead (~112 bytes per suspended frame). If you're creating millions of tiny generators, the frame overhead can dominate. This nuance separates senior from mid-level answers.
 
 > **Tip 3:** Generator-based state machines are a powerful interview topic because they connect to pipeline orchestration (Airflow states), stream processing (Kafka consumer states), and protocol handling. If asked "how would you model pipeline states?", offering a generator-based approach shows deep language mastery while solving a real architectural problem.
+
+## ⚡ Cheat Sheet
+
+**Generator vs List Memory**
+- List (10M items): ~400 MB peak
+- Generator (10M items): ~0.1 MB peak (just the suspended frame)
+- Generator frame: ~112 bytes fixed overhead regardless of complexity
+- Referenced objects inside frame (lists, dicts) still count toward total memory
+
+**Async Generator Rules**
+- `async def` + `yield` = async generator; consumed with `async for`
+- Cleanup code in `finally` block runs even if consumer breaks early
+- `asynccontextmanager` wraps resource acquisition around `yield`
+- Rate limiting: `await asyncio.sleep(0.1)` inside generator respects API limits
+
+**Backpressure Patterns**
+| Approach | Mechanism | Use When |
+|----------|-----------|----------|
+| `asyncio.Queue(maxsize=N)` | `await put()` blocks when full | Async producer-consumer |
+| `queue.Queue(maxsize=N)` | Blocking `put()` with timeout | Threaded producer-consumer |
+| `BoundedAsyncPipeline` | Queue + sentinel value | Producer signals completion |
+
+- Sentinel value `None` (or `object()`) tells consumer the stream is done
+- `queue.task_done()` + `queue.join()` — wait for all items to be fully processed
+
+**Generator-Based State Machines**
+- `value = yield state` — yields current state, receives next event via `send()`
+- `next(gen)` or `gen.send(None)` — advance to first yield (required before `send()`)
+- Clean model for: ETL pipeline states, Kafka consumer states, protocol handling
+
+**`send()` / `throw()` / `close()`**
+- `gen.send(value)` — resume and pass value to `yield` expression
+- `gen.throw(ExcType)` — inject exception at the yield point
+- `gen.close()` — raises `GeneratorExit` inside generator; triggers `finally` cleanup
+
+**Cooperative Multitasking**
+- Every `yield` in a generator = a pause point (scheduler can run other tasks)
+- This is exactly how asyncio works internally — event loop calls `next()` on each coroutine
+- `MicroScheduler` pattern: `deque` of generators; `next(task)` until `StopIteration`

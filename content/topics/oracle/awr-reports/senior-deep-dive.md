@@ -218,3 +218,38 @@ ALTER SYSTEM SET dispatchers = '(PROTOCOL=TCP)(SERVICE=XDBXDB)';
 > **Tip 2:** "What is the Time Model and how does it help tuning?" — The Time Model hierarchically breaks down DB Time: SQL execution → parse → hard parse → PL/SQL → background. High parse/DB time ratio → bind variables issue. High hard parse % → shared pool problem. High SQL execution but low CPU → I/O bound. High background time → LGWR/DBW bottleneck. It tells you which layer to investigate before diving into SQL-level analysis.
 
 > **Tip 3:** "You need to compare performance before and after an application release. What do you do?" — Create AWR baselines before the release (for 3-5 normal business days). After the release: generate an AWR Diff Report comparing the two baseline periods (`DBMS_WORKLOAD_REPOSITORY.AWR_DIFF_REPORT_TEXT`). The diff report highlights: SQL that got slower (plan changed), new wait events, changes in top SQL rankings, hard parse spikes (new SQL not using bind variables). This is the standard post-release performance validation process.
+
+## ⚡ Cheat Sheet
+
+**AWR Key Numbers**
+- Default snapshot interval: 60 min; retention: 8 days (change with `DBMS_WORKLOAD_REPOSITORY.MODIFY_SNAPSHOT_SETTINGS`)
+- AWR compare period report: `DBMS_WORKLOAD_REPOSITORY.AWR_DIFF_REPORT_TEXT(dbid1,inst1,snap1a,snap1b,dbid2,inst2,snap2a,snap2b)`
+- Snap overhead: ~1–2% CPU; disable with `statistics_level = BASIC` (also disables AWR/ASH/ADDM)
+
+**Top-5 Wait Events Decision Rules**
+- `db file sequential read` → single-block I/O; check index scans on large tables, missing indexes
+- `db file scattered read` → multi-block FTS; consider result cache or partition pruning
+- `log file sync` → LGWR commit waits; batch commits, faster storage, async commit option
+- `latch: shared pool` → hard parse storm; enforce bind variables, increase shared_pool_size
+- `enq: TX - row lock contention` → application-level lock; find blocker via `v$session`
+
+**Time Model Hierarchy**
+- DB Time = CPU Time + Wait Time (non-idle)
+- Hard parse % > 10% → bind variable problem
+- PL/SQL execution > 50% of DB Time → bulk operations needed (FORALL/BULK COLLECT)
+- Background CPU > 20% → LGWR/DBWn saturation
+
+**Key AWR Views**
+| View | Use |
+|---|---|
+| `dba_hist_sqlstat` | Historical SQL execution stats by snap |
+| `dba_hist_sys_time_model` | DB Time breakdown over time |
+| `dba_hist_active_sess_history` | Sampled ASH (1-of-10 samples kept) |
+| `dba_hist_tbspc_space_usage` | Tablespace growth for capacity planning |
+| `dba_hist_osstat` | OS CPU/memory historical stats |
+
+**ADDM & Baselines**
+- ADDM auto-runs after each AWR snapshot; findings in `dba_advisor_findings`
+- Baseline types: Fixed (date range), Moving Window (rolling N days), Template
+- `v$sysmetric_history` → 1-min rolling metrics; `v$sysmetric_summary` → current hour avg
+- AWR PDB-level reports available from Oracle 19c with `awr_pdb_*` views

@@ -265,3 +265,47 @@ s3.put_object_retention(
 > **Tip 2:** "How do you handle the small files problem?" — "Three approaches: (1) Compaction job (Spark repartition + overwrite), (2) Delta Lake OPTIMIZE command (auto-compacts), (3) Streaming: buffer in Kinesis Firehose with 128MB buffer size before writing to S3."
 
 > **Tip 3:** "How do you ensure data quality in a data lake?" — "Schema-on-read is the trap — data quality issues hide until query time. Solution: enforce schema at the Silver layer (reject rows that don't conform), run automated DQ checks after each load (null rates, duplicates, row counts vs thresholds), quarantine bad records separately for investigation."
+
+## ⚡ Cheat Sheet
+
+**Storage classes decision**
+| Class | Access pattern | Min duration | Cost model |
+|---|---|---|---|
+| Standard | Frequent | None | GB/month |
+| Intelligent-Tiering | Unknown | 30 days | GB + monitoring fee |
+| Standard-IA | Infrequent | 30 days | Lower storage, retrieval fee |
+| One Zone-IA | Infrequent, non-critical | 30 days | Cheaper, single AZ |
+| Glacier Instant | Archive, ms retrieval | 90 days | Very low storage |
+| Glacier Flexible | Archive, hours retrieval | 90 days | Lowest storage |
+| Deep Archive | Long-term, 12h retrieval | 180 days | Cheapest |
+
+**Lifecycle rules**
+```json
+{"Rules": [{"Filter": {"Prefix": "logs/"}, "Status": "Enabled",
+  "Transitions": [
+    {"Days": 30, "StorageClass": "STANDARD_IA"},
+    {"Days": 90, "StorageClass": "GLACIER"}
+  ],
+  "Expiration": {"Days": 365}}]}
+```
+
+**Performance**
+- Request rate: 3,500 PUT/COPY/DELETE + 5,500 GET per prefix per second
+- Use random prefixes or date-based partitioning to distribute across prefixes
+- Multipart upload: required >5 GB; recommended >100 MB; parallel part upload
+- Transfer Acceleration: CloudFront edge network; use for cross-region uploads
+
+**Security**
+- Block Public Access: enable at account level; overrides bucket/object ACLs
+- Bucket policies vs IAM: both evaluated; explicit deny wins; IAM alone sufficient for cross-account
+- Encryption: SSE-S3 (default), SSE-KMS (audit trail), SSE-C (customer-provided key)
+- VPC endpoint: S3 traffic stays within AWS network (no NAT gateway cost)
+
+**Consistency model**
+- Strong consistency (since Dec 2020): read-after-write for all operations
+- No eventual consistency edge cases; safe to list after PUT
+
+**Key S3 features for DE**
+- Event notifications: Lambda/SQS/SNS on `s3:ObjectCreated`; trigger pipelines
+- S3 Inventory: daily/weekly CSV of objects + metadata; replace expensive LIST calls
+- Object Lock (WORM): compliance mode (even root can't delete) vs governance mode

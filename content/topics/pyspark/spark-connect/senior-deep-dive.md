@@ -191,3 +191,44 @@ spec:
 > **Tip 2:** "How do you handle multi-tenancy?" — "Each client gets an isolated SparkSession with its own configs and temp views. Resource isolation uses FAIR scheduler pools with per-team weights and minShare guarantees. Data isolation integrates with a catalog layer for table-level access control."
 
 > **Tip 3:** "What's the migration path from embedded to Connect?" — "Three phases: audit for RDD/SparkContext usage, refactor to DataFrame-only patterns, then run tests in both modes. A session factory lets you toggle between embedded and Connect without code changes. Most modern PySpark code already uses DataFrames and needs minimal refactoring."
+
+## ⚡ Cheat Sheet
+
+**Spark Connect Architecture**
+- Client (Python/Scala/R) → Protobuf plan → gRPC → Spark Connect Server → Catalyst → Executors
+- Server is a thin gRPC service sitting in front of a standard Spark cluster
+- Default port: 15002
+
+**Key Differences from Classic Spark**
+| Classic Spark | Spark Connect |
+|---------------|---------------|
+| SparkContext in driver process | No SparkContext on client |
+| Client = driver (same JVM) | Client is remote (any process) |
+| SparkSession tied to JVM | SparkSession over network |
+| Direct RDD access | No RDD API (DataFrame only) |
+| Driver OOM affects executors | Client crash ≠ job crash |
+
+**Connection Setup**
+```python
+from pyspark.sql import SparkSession
+spark = SparkSession.builder \
+    .remote("sc://localhost:15002") \
+    .getOrCreate()
+# sc:// scheme = Spark Connect; spark:// = classic cluster manager
+```
+
+**Multi-Tenancy Benefits**
+- Multiple clients → single shared Spark server; no per-user driver overhead
+- Client isolation: one client's failure doesn't kill other sessions
+- Enables Spark usage from Jupyter, notebooks, CI/CD without embedded driver
+
+**Limitations (know for interviews)**
+- No RDD API on client side
+- `sc.broadcast()` RDD-style not available; use DataFrame broadcast hints
+- SparkContext-level configs must be set server-side
+- Streaming support added in Spark 3.5 (limited); full support in 4.x roadmap
+
+**Interview Traps**
+- Spark Connect does NOT remove the driver — it moves it server-side, away from client
+- Plans are serialized as Protobuf, not Python bytecode — language-agnostic by design
+- Lazy evaluation still applies; actions still trigger execution over gRPC

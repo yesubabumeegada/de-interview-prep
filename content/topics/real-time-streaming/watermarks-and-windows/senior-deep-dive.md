@@ -269,3 +269,98 @@ GROUP BY
 > **Tip 2:** "What's the memory impact of using sliding windows vs tumbling windows?" — A sliding window with window_size W and slide_interval S requires each event to be stored in W/S windows simultaneously. Example: 5-minute window with 1-minute slide → each event in 5 windows at once → 5× the state size of a tumbling window. For large sliding windows: prefer `AggregateFunction` (O(1) per window per accumulator) over `ProcessWindowFunction` that collects all records. With RocksDB: 1M events × 5 windows × 500 bytes = 2.5 GB state (manageable). With in-memory: same data causes GC pressure. Always use `AggregateFunction` for sliding windows to keep state bounded at O(keys × windows) not O(keys × windows × events).
 
 > **Tip 3:** "How do you handle a Kafka topic where one partition receives no events for hours (e.g., a rarely-used partition)?" — An idle Kafka partition causes the watermark to stall at its last event's timestamp. All windows waiting for watermark advancement will never fire. Solution: `withIdleness(Duration.ofMinutes(N))` — after N minutes without an event, Flink marks the partition as "idle" and excludes it from watermark calculation. The remaining active partitions advance the watermark independently. When the idle partition receives events again, it rejoins the watermark calculation (the global watermark may decrease temporarily if the idle partition's resuming events are old). Always use idle detection for any production job sourcing from Kafka — sparse partitions are common.
+
+## ⚡ Cheat Sheet
+
+**Streaming fundamentals**
+```
+Event time:    when the event actually occurred (on the device)
+Processing time: when the system processes it (can be much later)
+Ingestion time: when it arrives at the message broker
+Watermark:     max expected event time lag — defines when a window closes
+Late data:     events arriving after the watermark → handled by allowedLateness or drop
+```
+
+**Apache Flink key concepts**
+```java
+// Keyed stream + window + aggregate
+stream.keyBy(event -> event.userId)
+      .window(TumblingEventTimeWindows.of(Time.minutes(5)))
+      .aggregate(new RevenueAggregator());
+
+// Watermark strategy
+WatermarkStrategy.<OrderEvent>forBoundedOutOfOrderness(Duration.ofSeconds(30))
+    .withTimestampAssigner((event, ts) -> event.eventTimeMs);
+```
+
+**Spark Structured Streaming**
+```python
+# Read from Kafka
+stream = spark.readStream.format("kafka") \
+    .option("kafka.bootstrap.servers", "broker:9092") \
+    .option("subscribe", "orders") \
+    .load()
+
+# Window aggregation
+from pyspark.sql.functions import window, col
+agg = stream \
+    .withWatermark("event_time", "30 seconds") \
+    .groupBy(window("event_time", "5 minutes"), "region") \
+    .sum("amount")
+
+# Write to Delta (trigger: every 1 min or micro-batch)
+agg.writeStream.format("delta").trigger(processingTime="1 minute") \
+    .outputMode("append").option("checkpointLocation", "/chk/orders").start()
+```
+
+**Window types**
+| Window | Description | Use case |
+|---|---|---|
+| Tumbling | Fixed non-overlapping | Hourly totals |
+| Sliding | Fixed size, moves by slide interval | 5-min avg, every 1 min |
+| Session | Gap-based (closes after inactivity) | User sessions |
+| Global | Accumulates all events | Running total |
+
+**Exactly-once semantics**
+```
+Source: idempotent read (Kafka offset tracking)
+Processing: checkpointing (Flink) or write-ahead log (Spark)
+Sink: idempotent write (Delta MERGE, upsert) or transactional sink
+Kafka → Flink/Spark → Delta = exactly-once end-to-end (with checkpointing)
+```
+
+**CDC streaming (Debezium → Kafka → Lakehouse)**
+```
+1. Debezium captures MySQL/Postgres binlog → Kafka topic (op: c/u/d/r)
+2. Flink/Spark reads Kafka topic
+3. MERGE INTO Delta/Iceberg table:
+   INSERT on c, UPDATE on u, DELETE on d
+4. Result: real-time replicated lakehouse table
+```
+
+**Kinesis key operations**
+```python
+import boto3
+kinesis = boto3.client('kinesis', region_name='us-east-1')
+# Put record
+kinesis.put_record(StreamName='orders', Data=json.dumps(event).encode(), PartitionKey=order_id)
+# Get shard iterator
+it = kinesis.get_shard_iterator(StreamName='orders', ShardId='shardId-000000000000',
+                                 ShardIteratorType='LATEST')['ShardIterator']
+# Read records
+records = kinesis.get_records(ShardIterator=it, Limit=100)['Records']
+```
+
+**Stateful processing patterns**
+```
+Running total:    keyed state (ValueState[Double])
+Sessionization:   keyed + timer-based (clear state after N seconds inactivity)
+Pattern detection: CEP (Flink Complex Event Processing) — detect A then B within 5 min
+Deduplication:    keyed state stores seen event IDs (with TTL for cleanup)
+```
+
+**Key interview points**
+- Checkpointing: Flink snapshots operator state to S3/HDFS for fault tolerance
+- Backpressure: slow downstream = upstream stops reading Kafka = natural flow control
+- Parallelism = Kafka partitions: each Flink/Spark task reads one partition
+- Streaming vs micro-batch: Flink = true streaming (event-by-event); Spark = micro-batch (more latency, simpler)

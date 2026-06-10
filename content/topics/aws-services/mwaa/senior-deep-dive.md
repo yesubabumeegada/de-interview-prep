@@ -235,3 +235,42 @@ MWAA DR Strategy:
 > **Tip 2:** "MWAA vs self-hosted Airflow on EKS?" — "MWAA: zero ops, 20-min setup, auto-scaling workers, AWS-managed HA. But: minimum $500/month, CeleryExecutor only, 25 max workers. Self-hosted EKS: full control, KubernetesExecutor (pods scale to zero), custom images, potentially cheaper at scale. But: you manage the infra (upgrades, HA, monitoring). Choose MWAA unless you have specific requirements it can't meet or strong K8s expertise."
 
 > **Tip 3:** "How do you handle MWAA failures?" — "Environment-level: MWAA handles scheduler/web server HA automatically (2 schedulers in 2.x). Task-level: use Airflow retries + on_failure_callback for alerting. DAG deployment failures: CI/CD tests catch syntax errors before S3 sync. Dependency install failures: test requirements.txt locally with matching Python version before updating environment."
+
+## ⚡ Cheat Sheet
+
+**Environment Sizing & Cost**
+| Size | Fixed/month | Max Workers | Use Case |
+|---|---|---|---|
+| mw1.small | ~$360 | 25 | Dev/light prod |
+| mw1.medium | ~$690 | 25 | Most production workloads |
+| mw1.large | ~$1,380 | 25 | Scheduler-heavy (many DAGs) |
+- MWAA cannot be paused — delete and recreate dev environments to save ~65% (creation takes 20–30 min)
+- Workers billed per-minute on top of fixed cost; set `MaxWorkers` to actual peak to avoid over-provisioning
+
+**CI/CD Deploy Pattern**
+1. Git push → GitHub Actions runs `python -c "from dags import *"` (import test)
+2. Run `pytest tests/` (unit tests)
+3. `aws s3 sync dags/ s3://bucket/dags/ --delete`
+4. MWAA picks up changes within ~60 seconds
+5. Manual approval gate before production sync
+
+**Scaling Limits & Workarounds**
+- Max workers: 25 → need more? Split into domain-specific environments or self-host on EKS
+- Sub-minute scheduling: EventBridge Scheduler (MWAA scheduler granularity = 1 minute)
+- DAG parsing timeout: 150 s → keep DAG files lightweight (defer heavy imports inside task callables)
+- `requirements.txt` timeout: 10 min → test locally with matching Python version first
+
+**MWAA vs Self-Hosted Airflow on EKS**
+- MWAA wins: zero ops, auto-HA, AWS-managed upgrades, fast setup
+- EKS wins: KubernetesExecutor (pods scale to zero), custom images, potentially cheaper at scale, >400 concurrent tasks
+- Choose MWAA unless: strong K8s expertise, CeleryExecutor constraints, or need >25 workers
+
+**DR Strategy**
+- RPO ~0: DAGs in S3 (replicate cross-region), Connections/Variables in Secrets Manager (replicate cross-region)
+- RTO ~30 min: create new MWAA environment in DR region pointing to replicated S3
+- DAG run history NOT replicated — accept history loss on failover
+
+**Hybrid Orchestration**
+- MWAA: schedule, retries, complex dependencies, monitoring, Python logic
+- Step Functions: parallel fan-out (Map state), sub-minute execution, AWS service chains
+- Use `StepFunctionStartExecutionOperator` to delegate sub-workflows to Step Functions

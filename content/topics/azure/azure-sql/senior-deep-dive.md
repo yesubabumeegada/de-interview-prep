@@ -228,3 +228,47 @@ ORDER BY improvement_measure DESC;
 > **Tip 2:** "What is Always Encrypted and what SQL features does it prevent?" — Always Encrypted encrypts column data in the client application using keys stored in Azure Key Vault (or local cert store). The SQL Server engine only ever sees ciphertext — not even DBAs can read the values. This prevents: privileged user attacks (DBAs reading sensitive columns), data exposure from SQL injection (returned data is ciphertext), and cloud provider data access (Microsoft cannot read Always Encrypted columns). Limitations: no LIKE/range queries on randomized-encrypted columns, no ORDER BY/GROUP BY, no aggregates on encrypted columns. Only equality search works on deterministic encryption.
 
 > **Tip 3:** "How would you migrate a 5TB on-premises SQL Server database to Azure with minimal downtime?" — Use Azure Database Migration Service (DMS) in online mode: (1) Assessment: run DMS assessment on source to identify compatibility issues (SQL MI is best for minimal changes). (2) Initial load: DMS migrates full backup to MI (hours). (3) Online sync: DMS uses SQL Server log shipping or CDC to continuously sync changes from on-prem to MI (near-zero lag). (4) Cutover: schedule maintenance window (1-5 min), let DMS complete final sync, point applications to MI endpoint, verify. Total downtime: 1-5 minutes (just the DNS/connection string switch). This is Azure's recommended migration approach for large databases.
+
+## ⚡ Cheat Sheet
+
+**Service tiers**
+| Tier | Architecture | Best for |
+|---|---|---|
+| General Purpose | Remote storage (vCore) | Standard OLTP workloads |
+| Business Critical | Local SSD + replicas | High IOPS, HA, read replicas |
+| Hyperscale | Distributed storage | Large DBs (up to 100 TB), fast backups |
+| Serverless | Auto-pause/scale | Dev/test, intermittent workloads |
+
+**HA and disaster recovery**
+- General Purpose: 99.99% SLA; single replica; storage-level HA
+- Business Critical: 99.995% SLA; 3 AlwaysOn replicas; read scale-out included
+- Active Geo-Replication: up to 4 readable secondaries; any region; manual failover
+- Auto-failover group: DNS-based endpoint; automatic failover; `ReadWriteEndpoint` always points to primary
+
+**Query performance**
+```sql
+-- Find top CPU consumers
+SELECT TOP 10 qs.total_worker_time/qs.execution_count as avg_cpu,
+    qs.execution_count, SUBSTRING(qt.text, 1, 200) as query_text
+FROM sys.dm_exec_query_stats qs
+CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) qt
+ORDER BY avg_cpu DESC;
+-- Check missing indexes
+SELECT * FROM sys.dm_db_missing_index_details ORDER BY avg_total_user_cost DESC;
+```
+
+**Connection resilience**
+- Always use retry logic: transient errors (40197, 40501, 40613)
+- Connection string: `ConnectRetryCount=3;ConnectRetryInterval=10`
+- Application-level: exponential backoff; 5 retries with jitter
+
+**Security**
+- Entra ID (AAD) auth: `ALTER DATABASE ... ADD SID ...`; preferred over SQL auth
+- Always Encrypted: client-side encryption; data never decrypted on server
+- Dynamic Data Masking: mask columns for non-privileged users (not encryption)
+- TDE: transparent disk encryption; on by default
+
+**Scaling**
+- vCore model: scale up/down without downtime (General Purpose); minutes to complete
+- DTU model: legacy; fixed ratio CPU/memory/IO; avoid for new workloads
+- Elastic Pool: share resources across multiple databases; cost-effective for many small DBs

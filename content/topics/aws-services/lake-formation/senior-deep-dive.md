@@ -241,3 +241,38 @@ ORDER BY eventTime DESC
 > **Tip 2:** "How do you migrate from IAM-based to Lake Formation access control?" — "Phased approach: (1) Enable LF in hybrid mode (both IAM and LF checked). (2) Register S3 locations. (3) Create LF grants that mirror existing IAM access. (4) Test thoroughly. (5) Revoke IAMAllowedPrincipals one database at a time. Key risk: revoking IAMAllowedPrincipals breaks all access not explicitly granted in LF. Always have a rollback plan."
 
 > **Tip 3:** "How do you handle fine-grained access at scale with hundreds of tables?" — "LF-Tags. Define a tag taxonomy (domain, classification, PII level) and assign tags to tables. Grant access to tag expressions instead of individual tables. When new tables are tagged, permissions apply automatically. This scales from 10 to 10,000 tables without changing any grant statements. Combine with data cell filters for row/column restrictions on sensitive tables."
+
+## ⚡ Cheat Sheet
+
+**LF-Tag vs Table-Level Grants**
+- Table grants: explicit per-table → doesn't scale past ~50 tables
+- LF-Tags: grant to tag expression (`domain=orders AND tier=gold`) → applies automatically to all matching tables
+- New table tagged correctly = access granted automatically — zero grant statement changes
+
+**Migration from IAM-Only (Phased Approach)**
+1. Enable LF (CreateDatabase/Table default permissions = empty → NOT IAMAllowedPrincipals)
+2. Register S3 locations with service-linked role
+3. Create explicit LF grants mirroring existing IAM access
+4. Test each role/service
+5. Revoke `IAMAllowedPrincipals` one database at a time
+- ⚠ Revoking `IAMAllowedPrincipals` immediately breaks access not explicitly granted in LF — always have rollback plan
+
+**Data Cell Filter Capabilities**
+- Row filter: SQL expression (`region IN ('eu-west-1') AND date >= '2024-01-01'`)
+- Column exclusion: list columns to hide (`customer_email`, `card_last_four`, `ip_address`)
+- Multiple filters per table: different views for different principals
+
+**Data Mesh Architecture**
+- Domain accounts own their S3 + Glue catalog; central governance account owns tag taxonomy
+- Cross-account sharing via RAM: no data copy; consumer queries data in place
+- `PermissionsWithGrantOption` allows domain leads to grant within their scope
+
+**Audit Key Events (CloudTrail)**
+- `GrantPermissions`, `RevokePermissions`, `BatchGrantPermissions`
+- `GetTemporaryGlueTableCredentials` = data access (query-time credential issuance)
+- Athena query CloudTrail logs for 30-day access patterns before migration
+
+**Governed Tables Note**
+- Being superseded by Apache Iceberg in modern architectures
+- Iceberg: better ecosystem compatibility (Athena v3, EMR, Spark), time travel, MERGE support
+- Use governed tables only for legacy setups or when Iceberg isn't an option

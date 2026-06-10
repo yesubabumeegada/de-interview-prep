@@ -291,3 +291,42 @@ if __name__ == "__main__":
 > **Tip 2:** "How do you get domain teams to adopt governance?" — Make it easy (pre-built templates, linters), make it visible (compliance dashboard by team), link it to business outcomes (SOC2 passing, GDPR fines avoided), and include team leads in policy design so they have buy-in.
 
 > **Tip 3:** "How does OPA fit into data governance?" — OPA evaluates policies as code at runtime. You define access rules in Rego, then query OPA from your data platform (Trino query engine, API gateway) to allow/deny reads. Enables centralized, auditable, version-controlled policy enforcement without per-tool configuration.
+
+## ⚡ Cheat Sheet
+
+**Governance pillars**
+```
+Data Quality    — accuracy, completeness, consistency, timeliness
+Access Control  — RBAC/ABAC, masking, least privilege
+Data Catalog    — discoverability, metadata, glossary
+Lineage         — upstream/downstream tracing, impact analysis
+Classification  — public/internal/confidential/restricted
+Compliance      — GDPR, CCPA, HIPAA, SOC 2, SOX, PCI-DSS
+Stewardship     — owners accountable for quality and metadata
+```
+
+**RACI**
+- **Data Owner**: accountable for quality, access, compliance
+- **Data Steward**: day-to-day metadata and quality monitoring
+- **Data Consumer**: reads data; responsible for correct usage
+- **Data Platform**: builds governance tooling and pipelines
+
+**Maturity model**
+```
+Level 1: Ad hoc    — no policies, manual everything
+Level 2: Reactive  — docs exist, ticket-based access
+Level 3: Defined   — catalog deployed, CI checks, owners assigned
+Level 4: Managed   — automated enforcement, SLA tracking, lineage complete
+Level 5: Optimized — self-service with guardrails, continuous improvement
+```
+
+**Key regulations**
+| Reg | Key DE obligations |
+|---|---|
+| GDPR | Erasure (30 days), minimization, 72h breach notification |
+| CCPA | Right to know, delete, opt-out of sale |
+| HIPAA | PHI controls, audit logs, Business Associate Agreement |
+| SOX | Financial data integrity, access logs, change control |
+| PCI-DSS | Card data isolation, encryption, quarterly scans |
+
+**CI governance gates**: block deploy if missing owner, description, sensitivity tag, or masking policy on PII columns

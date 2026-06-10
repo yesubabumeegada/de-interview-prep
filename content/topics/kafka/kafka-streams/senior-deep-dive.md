@@ -249,3 +249,49 @@ config.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
 > **Tip 4:** The Processor API gives you capabilities the DSL cannot: multi-store access in one processor, fine-grained punctuation scheduling, custom forwarding logic. Know when to drop down to it.
 
 > **Tip 5:** RocksDB block cache sizing is a common production problem. Default 50MB per store is too small for any significant state. Describe the `RocksDBConfigSetter` interface and the block cache metric to watch.
+
+## ⚡ Cheat Sheet
+
+**Task/Thread/Instance Hierarchy**
+- 1 task per source partition (tasks are unit of parallelism, NOT threads)
+- `num.stream.threads=N` → N threads per instance, each runs multiple tasks
+- Instance = JVM; scale out = add instances; no rebalance coordinator needed
+
+**Stateful Operator State Store Tuning**
+```properties
+# RocksDB tuning (per task)
+rocksdb.config.setter=com.example.MyRocksDBConfigSetter
+# Key settings in your setter:
+blockBasedTableConfig.setBlockCacheSize(256 * 1024 * 1024L)  # 256MB block cache
+options.setMaxWriteBufferNumber(2)
+options.setWriteBufferSize(64 * 1024 * 1024L)  # 64MB memtable
+```
+- Default block cache = 50MB total (shared) → too small for high-cardinality aggregations
+
+**Standby Replica Failover**
+- Standby replica = shadow task consuming changelog topic
+- On failure: standby promoted → restores from local RocksDB (not full changelog replay)
+- `num.standby.replicas=1` for production; = N means N copies per partition
+- Without standby: full restoration from changelog on failure (slow for large state)
+
+**EOS in Streams**
+- `processing.guarantee=exactly_once_v2` (recommended since Kafka 2.6)
+- EXACTLY_ONCE_V2: one producer per StreamThread (not per task like v1)
+- v1 required one producer per task → N tasks × M threads = many producers (resource-heavy)
+
+**Topology Optimization**
+```properties
+topology.optimization=all  # Merges redundant repartition topics
+# Before: 3 operators → 3 repartition topics
+# After optimized: 1 shared repartition topic
+```
+
+**Key Interview Decision Points**
+| Need | Kafka Streams Approach |
+|---|---|
+| Stateless transform | `mapValues()`, `flatMap()` |
+| Stateful aggregation | `groupBy().aggregate()` + KTable |
+| Stream-stream join | Both KStreams + join window |
+| Stream-table join | KStream + KTable (no window needed) |
+| Global lookup | `GlobalKTable` (full replica on every instance) |
+| Suppress output until window closes | `.suppress(Suppressed.untilWindowCloses(...))` |

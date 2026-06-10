@@ -358,3 +358,39 @@ flowchart TD
 > **Tip 2:** When discussing webhooks, address security and reliability: "I verify webhook signatures using HMAC to prevent spoofing, process events asynchronously via background tasks for fast 200 responses, and implement idempotency keys so duplicate deliveries don't cause double-processing."
 
 > **Tip 3:** Connection pooling shows you think about performance at scale: "HTTP/2 multiplexing allows multiple requests over a single connection, and a semaphore-bounded pool prevents overwhelming the target API. For extracting 100K records, this achieves 10-50x throughput over sequential requests while staying within rate limits."
+
+## ⚡ Cheat Sheet
+
+**FastAPI Design Rules**
+- Use `Depends()` for DI: DB pool, auth, query params — keeps routes thin
+- `response_model=` enforces output schema and strips extra fields automatically
+- `BackgroundTasks.add_task()` for fire-and-forget work (returns 200 immediately)
+- Use `@app.on_event("startup"/"shutdown")` to open/close connection pools
+- `HTTPException(status_code=422)` is auto-raised by Pydantic validation failures
+
+**Pydantic Request/Response**
+- `@validator` for field-level; `@root_validator` for cross-field rules (v1) / `@model_validator(mode="after")` (v2)
+- `Field(default_factory=dict)` for mutable defaults; never use `= {}`
+- `Generic[T]` + `PaginatedResponse[EventRecord]` — reusable paginated wrappers
+- `SecretStr` for passwords — `repr()` masks value, use `.get_secret_value()` for actual string
+
+**Connection Pooling**
+- `httpx.Limits(max_connections=100, max_keepalive_connections=20)` — cap both
+- `asyncio.Semaphore(N)` inside `fetch_batch` prevents overwhelming the target
+- `http2=True` enables multiplexing — multiple requests per TCP connection
+- Process endpoints in batches of 500 to bound memory, not concurrency
+
+**Webhook Security**
+- Always verify HMAC signature: `hmac.compare_digest(expected, received)` (timing-safe)
+- Return `200` immediately; do real work in `background_tasks` (prevents gateway timeout)
+- Idempotency key: hash `(event_id + source)` → deduplicate retried deliveries
+
+**API Gateway Pattern**
+- `TTLCache(maxsize=1000, ttl=300)` — 5-min read cache reduces backend load
+- Service registry (`dict[name → base_url]`) — single place to add/remove services
+- Forward `request.query_params` transparently for passthrough proxy routes
+
+**Key Numbers**
+- S3 multipart: min part size 5 MB; use 50 MB chunks for high-throughput uploads
+- asyncpg pool: `min_size=5, max_size=20` typical; match to semaphore limit
+- FastAPI default response timeout: none (set via reverse proxy, e.g., ALB 60 s)

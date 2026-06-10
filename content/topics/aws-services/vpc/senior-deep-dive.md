@@ -246,3 +246,48 @@ ALTER CLUSTER analytics-cluster ENHANCED VPC ROUTING ON;
 > **Tip 2:** "How do you handle Glue/EMR connectivity to RDS?" — "Create a Glue Connection with VPC config (subnet + security group). Critical: the security group needs a self-referencing rule (all TCP from itself) — Glue creates ENIs that must communicate. Route to RDS via private subnet. Route to S3 via Gateway endpoint (or NAT, but that costs money). For EMR: place in private subnet, security groups between master/core/service, enhanced VPC routing for S3 access within the network."
 
 > **Tip 3:** "How do you reduce data transfer costs in a VPC?" — "Three strategies: (1) S3 Gateway endpoints — free, eliminate NAT charges for S3 access (biggest cost saver for data workloads). (2) Keep compute in the same AZ as storage when possible (cross-AZ transfer costs $0.01/GB). (3) VPC peering instead of Transit Gateway for high-bandwidth connections (peering same-AZ is free, TGW charges $0.02/GB). For a data platform processing TBs daily, these can save thousands per month."
+
+## ⚡ Cheat Sheet
+
+**CIDR planning**
+- VPC: /16 to /28; `/16` = 65,536 IPs (standard for prod)
+- Subnet: reserve 5 IPs per subnet (AWS uses first 4 + last)
+- Private subnets: 3 AZs × `/24` = 251 usable IPs each
+- Public subnets: smaller (e.g., `/28` = 11 usable) — only for load balancers/NAT
+
+**Subnet types**
+| Type | Route table | Use |
+|---|---|---|
+| Public | IGW route | ALB, bastion, NAT GW |
+| Private | NAT GW route | App servers, databases, Lambda |
+| Isolated | No internet route | RDS, ElastiCache with no outbound |
+
+**Security Groups vs NACLs**
+| | Security Groups | NACLs |
+|---|---|---|
+| Stateful | Yes (return traffic auto-allowed) | No (explicit inbound+outbound rules) |
+| Level | Instance/ENI | Subnet |
+| Rules | Allow only | Allow + Deny |
+| Order | All rules evaluated | First matching rule wins |
+
+**VPC Endpoints (cost + security)**
+- Gateway endpoint: S3, DynamoDB — free; route table entry; no data transfer cost
+- Interface endpoint (PrivateLink): ENI in subnet; $0.01/hr + data; all other services
+- Always use S3 gateway endpoint: free + keeps S3 traffic off internet
+
+**NAT Gateway**
+- $0.045/hr + $0.045/GB processed; use one per AZ for HA
+- Replace with NAT Instance for very low traffic (<10 GB/month)
+- Egress-only IGW: free IPv6 outbound (replaces NAT for IPv6)
+
+**VPC Peering vs Transit Gateway**
+- Peering: 1:1; no transitive routing; free (same region); cross-region: $0.01/GB
+- Transit Gateway: hub-spoke; supports 5000 VPCs; $0.05/hr + $0.02/GB; use for >3 VPCs
+
+**Data engineering security pattern**
+```
+Public subnet: ALB (HTTPS only)
+Private subnet: EKS/ECS workers, Glue connections
+Isolated subnet: RDS, Redshift, ElastiCache
+VPC Endpoints: S3, Glue, Secrets Manager, KMS
+```

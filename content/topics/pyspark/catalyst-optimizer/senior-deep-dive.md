@@ -267,3 +267,43 @@ spark.sql("SELECT /*+ REBALANCE */ * FROM skewed_table")
 > **Tip 2:** "What are the limitations of Catalyst?" — "Four main limitations: (1) UDFs are opaque — can't push predicates through them or include in codegen, (2) Statistics can be stale or missing — leading to wrong join strategy choices, (3) Can't optimize across separate queries or through caches, (4) Complex correlated subqueries may not decorrelate efficiently. The fix for most: avoid UDFs, keep statistics fresh, and write optimizer-friendly code."
 
 > **Tip 3:** "What is whole-stage code generation?" — "Instead of executing each operator as a separate method call per row (virtual dispatch overhead), Spark generates a single Java method that fuses multiple operators together. A filter → project → aggregate pipeline becomes one tight loop. This eliminates method dispatch, enables CPU pipelining, and can be 2-5x faster for CPU-bound operations. UDFs and some complex operators break codegen boundaries, causing a performance cliff."
+
+## ⚡ Cheat Sheet
+
+**Catalyst Pipeline Stages**
+1. Parsed Logical Plan → 2. Analyzed Logical Plan → 3. Optimized Logical Plan → 4. Physical Plan(s) → 5. Selected Physical Plan → 6. Code Generation
+
+**Key Optimizer Rules (know these)**
+- Predicate Pushdown — filters moved below joins/aggregations
+- Column Pruning — unused columns dropped early
+- Constant Folding — `1 + 1` → `2` at plan time
+- Join Reordering — smaller tables moved to build side (with CBO enabled)
+
+**UDF Barriers — The #1 Catalyst Gotcha**
+- Python UDFs: Catalyst cannot inspect them; all optimizations stop at UDF boundary
+- No predicate pushdown through UDF, no column pruning past it
+- Fix: replace with native Spark SQL functions; if must UDF, use Pandas UDF (Arrow) for throughput
+
+**CBO (Cost-Based Optimizer)**
+- Enable: `spark.sql.cbo.enabled=true` + `spark.sql.statistics.histogram.enabled=true`
+- Requires `ANALYZE TABLE t COMPUTE STATISTICS FOR ALL COLUMNS` — stale stats = bad plans
+- CBO helps: join reordering, better build-side selection
+
+**Reading explain() Output**
+```
+df.explain("extended")   # shows all 4 plan stages
+df.explain("cost")       # shows estimated row counts (CBO)
+df.explain("codegen")    # shows generated Java code
+```
+- Read bottom-up: leaves = data sources, root = final output
+- `Exchange` = shuffle; `Sort` = sort; `BroadcastHashJoin` = broadcast join
+
+**Code Generation**
+- Whole-Stage CodeGen fuses operators into single JVM method (look for `*(1)` prefix in plan)
+- Falls back to interpreted mode for: UDFs, complex expressions, very long pipelines
+- `spark.sql.codegen.wholeStage=false` disables it (for debugging only)
+
+**Interview Traps**
+- Catalyst is rule-based + cost-based, not ML-based
+- Adding `.filter()` after `.join()` is fine — Catalyst will push it before the join anyway
+- Calling `.explain()` is free (no data scanned); calling `.count()` triggers full execution

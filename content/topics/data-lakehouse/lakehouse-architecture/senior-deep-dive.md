@@ -194,3 +194,39 @@ Decision trigger: consider lakehouse when ANY of:
 > **Tip 2:** "How does a lakehouse handle schema evolution without breaking downstream consumers?" — Delta Lake schema evolution: `option("mergeSchema", "true")` adds new columns. Old columns remain. Downstream SQL queries that use explicit column names still work. If a column is renamed or dropped, downstream breaks — handle with: aliases, backward-compatible views in the catalog layer, or a schema registry for streaming. The catalog view layer acts as a contract between producers and consumers.
 
 > **Tip 3:** "Databricks Lakehouse vs Snowflake — how do you choose?" — Not either/or. Frame it by workload: Snowflake is best for SQL analytics with large BI teams (better query isolation, easier RBAC, Marketplace). Databricks is best for ML + data engineering + streaming (Python-first, MLflow, Delta streaming, Unity Catalog lineage). Most large companies run both: Databricks for data engineering and ML, Snowflake for BI. The integration is well-established (Databricks → Snowflake via connector).
+
+## ⚡ Cheat Sheet
+
+**Medallion architecture**
+```
+Bronze  — raw ingest, exactly as received (append-only, schema-on-read)
+Silver  — cleaned, deduplicated, validated (schema-on-write, typed)
+Gold    — business aggregates, optimized for BI consumption
+```
+
+**Layer contracts**
+| Layer | Schema | Dedup | SLA | Access |
+|---|---|---|---|---|
+| Bronze | None (raw) | No | Hours | DE only |
+| Silver | Enforced | Yes | 1 hour | DE + DS |
+| Gold | Enforced + versioned | Yes | 15 min | All teams |
+
+**Lakehouse vs alternatives**
+```
+Data Lake:       cheap + schema-on-read + no ACID → data swamp risk
+Data Warehouse:  ACID + governance + expensive + rigid schema
+Lakehouse:       open formats + ACID (Delta/Iceberg) + unified governance
+```
+
+**Serving patterns**
+```
+BI/SQL analysts  → Gold Delta tables via SQL Warehouse / Databricks SQL
+Data scientists  → Silver/Gold via notebooks + MLflow feature store
+Streaming        → Kafka → Bronze (auto-loader) → Silver → Gold (DLT)
+```
+
+**Key interview points**
+- Open formats (Parquet + Delta/Iceberg): no vendor lock-in; any engine reads
+- Feature store: curated Silver/Gold features reused across ML models + served online
+- Data contracts at layer boundaries: schema + SLA + quality check before promotion
+- Cost: partition on query predicate columns; vacuum frequently in dev

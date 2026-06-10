@@ -164,3 +164,34 @@ Scoring (1-5 per dimension):
 > **Tip 2:** "How do you make a table format recommendation to a VP?" — Avoid technical jargon. Frame as business risk and cost: "Delta gives us the best developer experience on our Databricks platform — our team is already trained, we get Databricks support, and our query performance is optimized. The risk is vendor dependency — if we ever leave Databricks, migrating Delta tables to Iceberg is a month-long effort. Given our 3-year Databricks contract, Delta is the right choice. We'll build in Iceberg read capability via UniForm so external partners can access our data without us sharing credentials."
 
 > **Tip 3:** "A new team member asks: should we start new tables in Delta or Iceberg?" — For a Databricks shop: Delta, because Databricks' managed operations (Liquid Clustering, auto-optimization, Unity Catalog lineage) add significant value that only works with Delta. Add UniForm to any table that needs to be accessed from non-Databricks tools. For a non-Databricks shop: Iceberg, because the multi-engine support and open standard avoid premature lock-in decisions. The worst answer is "let's support both natively" — that doubles operational complexity for no benefit.
+
+## ⚡ Cheat Sheet
+
+**Delta Lake vs Apache Iceberg vs Apache Hudi**
+
+| Feature | Delta Lake | Iceberg | Hudi |
+|---|---|---|---|
+| Origin | Databricks (2019) | Netflix (2018) | Uber (2016) |
+| ACID | Yes | Yes | Yes |
+| Time travel | Yes | Yes | Yes |
+| Multi-engine | Databricks-first | Best (all engines) | Good |
+| Upserts | MERGE INTO | MERGE INTO | COW/MOR (best) |
+| Schema evolution | Yes | Best (column IDs) | Yes |
+| Streaming CDC | Good | Good | Best |
+| Compaction | OPTIMIZE | rewrite_data_files | Inline/async |
+
+**When to choose**
+```
+Delta:   Databricks ecosystem; Delta Live Tables; deep Spark integration
+Iceberg: Multi-engine (Spark + Trino + Flink); AWS Glue; partition evolution
+Hudi:    High-frequency CDC upserts from RDBMS; streaming ingestion pipelines
+```
+
+**Common ground**: All three use Parquet underneath; all support ACID, time travel, schema evolution, data skipping
+
+**Key interview points**
+- Choice is often ecosystem-driven (not purely technical)
+- Iceberg: strongest open/interoperable option
+- Delta: best Databricks integration (CDF, DLT, Auto-optimize)
+- Hudi: best for CDC ingestion (Debezium → Hudi → lakehouse)
+- Apache XTable (OneTable): translate metadata across formats — write once, read as any

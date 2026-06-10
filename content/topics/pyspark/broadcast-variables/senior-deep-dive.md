@@ -298,3 +298,39 @@ result.explain(mode="formatted")
 > **Tip 2:** "What are the memory implications of broadcasting?" — "Three concerns: (1) Driver must hold the entire serialized table in memory — this is often the bottleneck. (2) Each executor stores a deserialized copy in storage memory — multiply by executor count for total cluster memory used. (3) Memory pressure from broadcasts reduces available storage for caching. A 100MB table broadcast to 50 executors uses 5GB of cluster memory. If that doesn't fit, you get executor OOM or cache eviction."
 
 > **Tip 3:** "When would broadcast be the wrong choice?" — "Four cases: (1) The table is too large — anything over ~500MB risks driver OOM or memory pressure. (2) Both sides are large — broadcast one and you still shuffle the other. (3) The data needs frequent updates — broadcast is immutable within a job. (4) You have many concurrent joins with different dimensions — the cumulative memory of multiple broadcasts can exhaust executor memory. In these cases, use SortMergeJoin with appropriate partitioning or bucketing."
+
+## ⚡ Cheat Sheet
+
+**Broadcast Thresholds**
+- `spark.sql.autoBroadcastJoinThreshold` = 10MB default; set -1 to disable auto-broadcast
+- Rule of thumb: broadcast tables ≤ 200MB; risk OOM on executors above that
+- DataFrame join hint: `df.join(broadcast(small_df), "key")` — forces broadcast regardless of size
+
+**Lifecycle & Memory**
+- Broadcast data lives in executor BlockManager (memory tier, then disk)
+- Driver serializes → sends to each executor once → executors cache in-memory
+- `bc.unpersist()` — removes from executor memory; `bc.destroy()` — removes + frees driver memory
+- Not calling `unpersist`/`destroy` = memory leak across multiple broadcast variables in loops
+
+**Failure Modes & Fixes**
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `SparkException: Broadcast variable already destroyed` | Used after destroy() | Re-create broadcast before next job |
+| Driver OOM on broadcast | Table too large for driver heap | Increase driver memory or use SortMergeJoin |
+| Executor OOM | Sum of broadcasts exceeds executor storage | Unpersist unused broadcasts, reduce threshold |
+| Timeout on broadcast | Slow serialization or network | Increase `spark.sql.broadcastTimeout` (default 300s) |
+
+**Broadcast Variables vs Broadcast Joins**
+- `sc.broadcast(value)` — manual RDD-era API; good for lookup dicts in UDFs/RDD maps
+- `broadcast(df)` hint — SQL/DataFrame API; triggers BroadcastHashJoin physical plan
+- Both use same underlying BlockManager mechanism
+
+**Key Numbers**
+- Default timeout: 300s (`spark.sql.broadcastTimeout`)
+- Max safe size per broadcast: ~200–500MB depending on executor heap
+- Serialized size ≠ in-memory size; Python dicts can expand 3–5× after deserialization
+
+**Interview Traps**
+- Broadcast joins still require the small table to fit in **driver** memory first (to serialize)
+- AQE can dynamically convert SortMergeJoin → BroadcastHashJoin at runtime if build side is small
+- `sc.broadcast()` variables are NOT automatically cleaned up at end of action — always call `unpersist`

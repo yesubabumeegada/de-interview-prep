@@ -224,3 +224,46 @@ MSK EBS storage: 1 TB to 16 TB per broker (resize without restart)
 > **Tip 4:** The heap size cap at 6-8 GB is counter-intuitive. Larger heaps mean longer GC pauses, not better performance. The page cache (OS RAM) is more valuable to Kafka than heap. Show you understand this Linux memory architecture detail.
 
 > **Tip 5:** Benchmarking with `kafka-producer-perf-test.sh` and `kafka-consumer-perf-test.sh` is how you validate tuning changes. Always benchmark before and after tuning to demonstrate actual improvement, not just theoretical reasoning.
+
+## ⚡ Cheat Sheet
+
+**Bottleneck Diagnosis Flowchart**
+```
+RequestHandlerAvgIdlePercent < 30%? → CPU bottleneck → add brokers or reduce clients
+NetworkProcessorAvgIdlePercent < 30%? → Network I/O → tune num.network.threads=vCPUs/4
+UnderReplicatedPartitions > 0? → Follower lag → check broker disk or network
+Consumer lag growing? → Consumer throughput → increase parallelism or batch size
+Producer acks latency > SLA? → Check batch.size, linger.ms, compression
+```
+
+**Critical Broker Thread Configs**
+```properties
+num.network.threads=<vCPUs/4>     # Default 3 — too low for high-throughput
+num.io.threads=<2×disk_count>     # Default 8; match to disk I/O capacity
+num.replica.fetchers=4            # Default 1 — increase for faster replication
+log.flush.interval.messages=10000 # Batch OS flushes; rely on replication not fsync
+```
+
+**Heap vs Page Cache Rule**
+- Kafka broker heap: 6–8 GB MAX (larger = longer GC pauses = leader elections)
+- Remaining RAM → OS page cache (Kafka reads happen from page cache, not heap)
+- GC recommendation: G1GC for brokers, never Parallel GC for heap > 4GB
+
+**Compression Decision**
+| Codec | CPU | Ratio | Use |
+|---|---|---|---|
+| none | zero | 1.0× | Never for production |
+| gzip | high | 2-4× | Archival, rare real-time |
+| lz4 | very low | 1.5-2× | Default choice for throughput |
+| zstd | low | 2-3× | Best ratio/CPU tradeoff; prefer for high-throughput |
+- Set `compression.type` on producer, not broker (producer knows data shape best)
+
+**KRaft vs ZooKeeper Mode**
+- KRaft: controller failover < 1 second vs ZK mode 30+ seconds
+- KRaft: 10M+ partitions vs ZK practical limit ~200K partitions
+- Migration: `kafka-storage.sh` + `kafka-features.sh` for in-place upgrade path
+
+**JBOD vs RAID**
+- JBOD (`log.dirs=/disk1/kafka,/disk2/kafka,...`): Kafka stripes by partition → uses all disks
+- RAID10: hardware striping; slight write amplification; better for broker hosting many small partitions
+- JBOD preferred: single disk failure = only its partitions go under-replicated (not all)

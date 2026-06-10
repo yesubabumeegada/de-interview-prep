@@ -211,3 +211,35 @@ WHERE segment_name = 'MV_SALES_MONTHLY';
 > **Tip 2:** "Can you build an MV on top of another MV? What are the considerations?" — Yes, nested MVs (or multilevel MVs) are supported. Oracle allows an MV query to reference another MV. Considerations: (1) refresh order — the base MV must be refreshed before the dependent MV, (2) fast refresh support is limited for nested MVs (often must use COMPLETE), (3) DBMS_MVIEW.REFRESH with dependency resolution handles the order automatically when using refresh groups. Nested MVs are common in DW: daily aggregation MV → weekly → monthly.
 
 > **Tip 3:** "When would you recommend building an MV vs a caching layer in the application?" — MV when: (1) the query can benefit from Oracle's query rewrite (existing applications unchanged), (2) aggregation complexity is high and data is in Oracle, (3) data must be transactionally consistent with the base tables. Application cache when: (1) the data is small and read extremely frequently (millions of requests/second), (2) the application already has a caching framework (Redis, Memcached), (3) you need sub-millisecond latency that even an MV can't provide. MVs are ideal for DW/reporting; app cache for OLTP hot paths.
+
+## ⚡ Cheat Sheet
+
+**Refresh Type Decision**
+| Refresh | When to Use | Requirement |
+|---|---|---|
+| FAST (incremental) | Frequent small changes | MV log on base table; no complex constructs |
+| COMPLETE | Large changes, complex SQL | No log needed; rewrites entire MV |
+| FORCE | Default; tries FAST, falls back COMPLETE | Flexibility but unpredictable time |
+| ON QUERY COMPUTATION (Real-Time) | Need current data without refresh overhead | MV log; extra query-time work |
+
+**Fast Refresh Blockers (must use COMPLETE)**
+- DISTINCT, GROUP BY with ROLLUP/CUBE, CONNECT BY
+- Set operators (UNION ALL allowed with restrictions)
+- Subqueries in SELECT list or non-join WHERE
+- Outer joins without MV log on outer table
+
+**Query Rewrite Rules**
+- `QUERY_REWRITE_ENABLED = TRUE` (system) and `ENABLE QUERY REWRITE` on MV
+- `QUERY_REWRITE_INTEGRITY`: ENFORCED (default) → only rewrite if constraints proven; TRUSTED → trust NOT ENFORCED constraints
+- Check rewrite: `EXPLAIN PLAN` → look for `MAT_VIEW REWRITE ACCESS FULL` in plan
+- Troubleshoot: `DBMS_MVIEW.EXPLAIN_MVIEW('MV_NAME')` shows why rewrite failed
+
+**MV Log Gotchas**
+- `CREATE MATERIALIZED VIEW LOG ON orders WITH ROWID, PRIMARY KEY, SEQUENCE (col1, col2) INCLUDING NEW VALUES`
+- Log must include all columns referenced in the MV SELECT
+- Log purged automatically after FAST refresh; if refresh fails, log grows unboundedly → monitor `dba_mview_logs`
+
+**Nested MVs & Refresh Groups**
+- Refresh group ensures consistent point-in-time across multiple MVs: `DBMS_REFRESH.MAKE`
+- Refresh order in nested MVs: base MV first; `DBMS_MVIEW.REFRESH(list, method, atomic_refresh=>FALSE)` is faster (parallel)
+- `atomic_refresh=>FALSE` uses TRUNCATE+INSERT instead of DELETE+INSERT — much faster for large MVs but non-atomic

@@ -335,3 +335,41 @@ def security_audit():
 > **Tip 2:** "How do you prevent privilege escalation in IAM?" — "Block the dangerous action combinations: iam:PassRole + lambda:CreateFunction, iam:CreatePolicyVersion, iam:AttachRolePolicy. Implement via SCP at the org level so it applies regardless of individual account policies. Only SecurityAdmin and PlatformAdmin roles are exempt. Regular audits scan for roles with these permissions."
 
 > **Tip 3:** "How do SCPs interact with IAM policies?" — "SCPs are guardrails, not grants. They set the maximum permissions for an entire account. Even if a role has AdministratorAccess, if the SCP denies that action, it's denied. SCPs affect all principals in the account EXCEPT the management account. Use them for: region restrictions, preventing audit trail deletion, enforcing encryption, blocking public S3 access. They're the 'outer fence' around all IAM policies in the account."
+
+## ⚡ Cheat Sheet
+
+**Policy Evaluation Order (memorize this)**
+1. Explicit Deny (SCP or identity policy) → **DENY** (always wins)
+2. SCP Allow required at org level
+3. Resource policy Allow (for cross-account)
+4. Identity policy Allow
+5. No matching Allow → **DENY** (implicit deny by default)
+
+**SCP vs IAM Policy**
+- SCPs are guardrails — they limit what can be done, they do NOT grant permissions
+- Affects ALL principals in the account EXCEPT the management account root
+- SCP `Allow` + IAM `Allow` = allowed; SCP `Deny` + IAM `Allow` = denied
+- Use SCPs for: region lock, prevent CloudTrail deletion, require encryption, block public S3
+
+**ABAC vs RBAC Scale Rule**
+- RBAC: 1 policy per team × N teams = policy sprawl at >10 teams
+- ABAC: 1 policy using `${aws:PrincipalTag/team}` == `${s3:ExistingObjectTag/team}` — scales to 100+ teams
+- ABAC prerequisite: tag discipline (all resources must be tagged correctly)
+
+**Privilege Escalation Paths to Block**
+- `iam:PassRole` + `lambda:CreateFunction` → create Lambda with admin role
+- `iam:CreatePolicyVersion` → overwrite existing policy with admin
+- `iam:AttachRolePolicy` → attach `AdministratorAccess` to own role
+- Block all of these via SCP; exempt only `SecurityAdmin` and `PlatformAdmin` roles
+
+**Least-Privilege Workflow**
+1. Start with AWS managed policy for development
+2. After 90 days: IAM Access Analyzer policy generation from CloudTrail (actual usage)
+3. Apply permission boundary as outer guardrail
+4. Quarterly: `generate_service_last_accessed_details` → remove unused services
+
+**Audit Red Flags**
+- Role with `"Resource": "*"` + `"Effect": "Allow"` (wildcard resource)
+- Role unused for 90+ days (`RoleLastUsed` check)
+- Trust policy allowing `"Principal": "*"` or unknown external account IDs
+- Users with both console access and programmatic keys (prefer IAM Identity Center)

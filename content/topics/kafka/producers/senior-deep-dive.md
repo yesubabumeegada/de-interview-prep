@@ -214,3 +214,48 @@ The broker validates:
 > **Tip 4:** The "zombie producer" scenario is a classic senior-level question. The answer involves epoch bumping, not timeouts — the broker fences old epochs synchronously, not after a timeout.
 
 > **Tip 5:** Know the formula for `buffer.memory` sizing. Under-sizing leads to `BufferExhaustedException`; over-sizing wastes memory. The formula `num_partitions × batch.size × max.in.flight` gives a practical lower bound.
+
+## ⚡ Cheat Sheet
+
+**Idempotence + Transaction Config Requirements**
+```properties
+enable.idempotence=true
+acks=all                          # Forced when idempotence=true
+max.in.flight.requests.per.connection=5  # Max with idempotence (not 1!)
+retries=2147483647                # Integer.MAX_VALUE — retry forever
+transactional.id=unique-per-instance   # Required for transactions
+```
+
+**Buffer Memory Formula**
+- `buffer.memory ≥ num_partitions × batch.size × max.in.flight`
+- Default: 32MB buffer, 16KB batch, 5 in-flight = covers ~400 partitions
+- Under-sized → `TimeoutException: Failed to allocate memory within the configured max block time`
+
+**Epoch / Fencing Sequence**
+1. `initTransactions()` → broker increments producer epoch for `transactional.id`
+2. Old producer sends with stale epoch → `ProducerFencedException` (non-retriable)
+3. New producer has monopoly on that transactional.id
+- Purpose: prevent zombie producer from completing old transactions
+
+**Exception Handling Rules**
+| Exception | Retriable | Action |
+|---|---|---|
+| `TimeoutException` | Yes | Automatic retry |
+| `NetworkException` | Yes | Automatic retry |
+| `OutOfOrderSequenceException` | NO | Restart producer — state corrupted |
+| `ProducerFencedException` | NO | Crash — another instance owns the transactional.id |
+| `CommitFailedException` | NO | Abort and restart |
+
+**Claim-Check Pattern (Large Messages)**
+```python
+# For messages > 1MB (Kafka default max.message.bytes=1MB)
+s3_key = upload_to_s3(large_payload)
+producer.send(topic, key=event_id, value=json({"s3_key": s3_key, "metadata": ...}))
+# Consumer: read pointer, download from S3
+```
+
+**Throughput Tuning**
+- `linger.ms=5-20` — wait to batch more records before send
+- `batch.size=65536` (64KB) — increase from 16KB for throughput
+- `compression.type=lz4` or `zstd` — always compress in production
+- `buffer.memory=67108864` (64MB) — increase for high partition count

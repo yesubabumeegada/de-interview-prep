@@ -195,3 +195,62 @@ Tips to reduce compile time:
 2. Cache expensive lookups in variables: `{% set columns = ... %}` once, reuse
 3. Avoid deeply nested macro calls (> 5 levels)
 4. Use `dbt ls` instead of `dbt compile` for graph inspection
+
+## ⚡ Cheat Sheet
+
+**Jinja essentials**
+```jinja
+{{ ref('model_name') }}           -- compiled to full table path
+{{ source('schema', 'table') }}   -- source reference with freshness
+{{ config(materialized='table') }}-- model config
+{{ var('run_date', '2024-01-01') }}-- project variable with default
+{{ env_var('DBT_ENV', 'dev') }}   -- environment variable
+```
+
+**Macro structure**
+```sql
+{% macro generate_surrogate_key(columns) %}
+    {{ dbt_utils.generate_surrogate_key(columns) }}
+{% endmacro %}
+
+{% macro cents_to_dollars(column) %}
+    ({{ column }} / 100.0)::numeric(10,2)
+{% endmacro %}
+```
+
+**Control flow**
+```jinja
+{% if target.name == 'prod' %}
+    -- production-only logic
+{% elif target.name == 'dev' %}
+    LIMIT 1000
+{% endif %}
+
+{% for col in columns %}
+    {{ col }} {% if not loop.last %},{% endif %}
+{% endfor %}
+```
+
+**`run_query` for meta-programming**
+```sql
+{% set results = run_query("SELECT DISTINCT region FROM " ~ ref('regions')) %}
+{% set regions = results.columns[0].values() %}
+{% for region in regions %}
+    SELECT '{{ region }}' as region, COUNT(*) FROM {{ ref('sales') }}
+    WHERE region = '{{ region }}'
+    {% if not loop.last %} UNION ALL {% endif %}
+{% endfor %}
+```
+
+**dispatch (adapter polymorphism)**
+```sql
+-- Use adapter-specific implementation
+{{ adapter.dispatch('my_macro', 'my_package')() }}
+-- dbt resolves: my_package.bigquery__my_macro → my_package.default__my_macro
+```
+
+**Package ecosystem**
+- `dbt_utils`: `surrogate_key`, `pivot`, `date_spine`, `get_column_values`
+- `dbt_expectations`: GE-style test macros (`expect_column_values_to_be_between`)
+- `dbt_audit_helper`: compare model results before/after refactor
+- `codegen`: auto-generate source YAML from warehouse introspection

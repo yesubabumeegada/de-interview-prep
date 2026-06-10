@@ -221,3 +221,38 @@ COST_OPTIMIZATION = {
 > **Tip 2:** "Lakeflow Connect vs Fivetran?" — Lakeflow Connect: native to Databricks (writes directly to Delta + Unity Catalog, no intermediate staging), tighter governance integration, but fewer connectors currently. Fivetran: more mature, 300+ connectors, works with any destination. Choose Lakeflow Connect when fully on Databricks; choose Fivetran when you need rare connectors or multi-destination support.
 
 > **Tip 3:** "How would you handle initial load of a 500M-row source table?" — Lakeflow Connect handles this automatically: parallel snapshot (chunks the table, reads in parallel), writes to Delta in optimized batches, then transitions to CDC mode. Configure: high parallelism (8-16 threads), appropriate chunk size (1M rows), and expect 30-90 minutes for the initial load depending on source DB performance and network bandwidth.
+
+## ⚡ Cheat Sheet
+
+**Lakeflow vs older tools**
+| Feature | Lakeflow Pipelines | DLT | Workflows |
+|---|---|---|---|
+| Orchestration | Yes | No | Yes |
+| Declarative DQ | Limited | Full expectations | No |
+| Ingestion | Lakeflow Connect | Auto Loader | Manual |
+| Target | End-to-end ELT | Transform layer | Any jobs |
+
+**Lakeflow Connect sources**
+- Native connectors: Salesforce, ServiceNow, Workday, Google Analytics
+- Change capture: CDC from RDBMS via log-based ingestion
+- Connector config: source credentials + target schema in Unity Catalog
+
+**Pipeline orchestration**
+- Task types: DLT pipeline task, notebook, Python script, SQL, dbt
+- Task dependencies: `depends_on` with condition (`SUCCESS`, `FAILURE`, `ALL_DONE`)
+- Repair run: re-run only failed/skipped tasks without re-running successful ones
+
+**Key design principles**
+- Landing zone → Bronze (raw) → Silver (cleaned) → Gold (aggregated): standard medallion
+- Lakeflow manages schema evolution and checkpoint state automatically
+- Unity Catalog ownership: all Lakeflow-managed tables registered with lineage
+
+**Monitoring**
+- Pipeline event log: structured events for each task run (start, end, metrics)
+- Integration: event log → Delta table → query with SQL or alert with Databricks alerts
+- Job run history: accessible via UI, API (`/api/2.1/jobs/runs/list`), or CLI
+
+**When to use**
+- Lakeflow Connect: replacing custom ingestion scripts for SaaS sources
+- DLT inside Lakeflow: when you need DQ expectations + streaming transforms
+- Workflows only: any non-DLT workload (ML training, ad-hoc SQL, dbt runs)

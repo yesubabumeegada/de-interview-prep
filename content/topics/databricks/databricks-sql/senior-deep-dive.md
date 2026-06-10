@@ -303,3 +303,39 @@ st.line_chart(data)
 > **Tip 2:** "Materialized views vs gold tables?" — Gold tables: manually refreshed by ETL pipelines, full control over refresh logic. Materialized views: Databricks manages refresh (incremental, automatic), optimizer rewrites queries to use them transparently. Use MVs for standard aggregations; gold tables for complex business logic that MVs can't express.
 
 > **Tip 3:** "How do you govern SQL warehouse costs?" — Separate warehouses by workload (analysts vs dashboards vs APIs). Auto-stop on all warehouses (10-15 min). Serverless for bursty workloads (pay-per-query). Monitor via system.query.history (find expensive queries, heavy users). Set budget alerts. Create materialized views for repeated expensive queries (reduces compute needed).
+
+## ⚡ Cheat Sheet
+
+**Warehouse sizing**
+| Warehouse size | vCPUs | Use case |
+|---|---|---|
+| X-Small | 4 | Dev/test |
+| Small | 8 | Light BI (<10 concurrent) |
+| Medium | 16 | Standard BI (10–50 concurrent) |
+| Large | 32 | Heavy BI / large scans |
+| X-Large | 64 | Data science ad-hoc |
+
+**Warehouse types**
+- Classic: original; stable
+- Pro: serverless compute; faster start (~5s); auto-suspend to 0; recommended for new workloads
+- Serverless: fully managed; no cluster config; per-second billing
+
+**Query acceleration**
+- Predictive optimization: auto-runs OPTIMIZE/VACUUM on managed tables; enable at catalog level
+- Result cache: query result cached 24h if underlying data unchanged (Delta txn log verified)
+- Photon: always on in SQL warehouses; vectorized execution for SELECT/JOIN/AGG
+
+**Access control**
+- Row/column-level security: Unity Catalog policies; applied at query time
+- `GRANT SELECT ON TABLE` → fine-grained; Unity Catalog inherits from catalog → schema → table
+- Dynamic views: `current_user()` / `is_account_group_member()` for row-level filters
+
+**Monitoring**
+- Query history: tracks elapsed, rows, bytes scanned, spill — primary debug tool
+- Query profile: DAG of operators; look for `PhotonGroupingAgg` (good) vs `HashAggregate` (spilling)
+- `information_schema.query_history`: programmatic query history access
+
+**Alerts and dashboards**
+- Legacy: SQL Dashboards + Alerts (being deprecated)
+- Current: AI/BI Dashboards (Lakeview); Genie AI assistant for NL queries
+- Alert schedule: cron; notify via email/webhook/Slack when query condition met

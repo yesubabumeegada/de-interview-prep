@@ -253,3 +253,45 @@ class LineageStitcher:
 > **Tip 2:** "How would you design a lineage system for 10,000+ tables?" — Use a graph database (Neo4j or Amazon Neptune) for traversal queries. Separate the event ingestion (Kafka) from the graph store — consumers are decoupled and can replay. Implement lineage tiers: column-level only for PII-tagged columns, table-level for everything else. Cache impact analysis results for hot datasets.
 
 > **Tip 3:** "What is lineage 'stitching' and why is it hard?" — Each system emits lineage with its own naming conventions. S3 paths, Snowflake table names, Looker view names, dbt model names all refer to the same logical asset. Stitching normalizes these to a canonical URN so the lineage graph connects. Hard because naming is inconsistent, renames break existing edges, and external dashboards don't emit OpenLineage events.
+
+## ⚡ Cheat Sheet
+
+**Lineage granularity**: Table → Column → Row (increasing difficulty)
+
+**OpenLineage event**
+```json
+{
+  "eventType": "COMPLETE",
+  "job": {"namespace": "airflow", "name": "etl.load_orders"},
+  "inputs":  [{"namespace": "snowflake", "name": "silver.orders_cleaned"}],
+  "outputs": [{"namespace": "snowflake", "name": "gold.orders"}]
+}
+```
+
+**Native integrations**
+| Tool | Integration |
+|---|---|
+| dbt | openlineage-dbt plugin |
+| Spark | SparkOpenLineageListener |
+| Airflow | OpenLineageDAG / callbacks |
+| Looker | Custom API scraper (LookML) |
+
+**Impact analysis**
+```python
+downstream = lineage_client.get_downstream("gold.orders", max_hops=3)
+# ['gold.revenue_daily', 'looker.revenue_dashboard']
+upstream = lineage_client.get_upstream("gold.revenue_daily", max_hops=5)
+# ['silver.orders', 'bronze.orders_raw', 'postgres.source_orders']
+```
+
+**Neo4j traversal**
+```cypher
+MATCH path = (src {name:'silver.orders'})-[:DERIVED_FROM*1..5]->(tgt)
+RETURN [n IN nodes(path) | n.name] AS chain
+```
+
+**Key points**
+- URN stitching: normalize table names across systems before storing edges
+- Kafka buffer: decouple collection from graph store — no event loss on downtime
+- GDPR: lineage graph reveals every copy of PII across platform
+- Freshness propagation: upstream delay cascades to all downstream SLAs

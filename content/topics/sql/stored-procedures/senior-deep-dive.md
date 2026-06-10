@@ -338,3 +338,41 @@ flowchart LR
 > **Tip 2:** "How do you deploy changes to a stored procedure without breaking running processes?" — "In SQL Server I use `CREATE OR ALTER PROCEDURE` which is atomic. For PostgreSQL, `CREATE OR REPLACE PROCEDURE` replaces the definition atomically while existing sessions can finish with the old plan. For breaking changes, I use a blue-green approach: create the new version with a different name (v2), test thoroughly, then redirect callers to v2, then drop v1. All changes go through Flyway/Liquibase migrations in the CI/CD pipeline so they're version controlled."
 
 > **Tip 3:** "When would you move business logic from stored procedures back into application code?" — "When the team struggles to test the procedures (no unit tests), when the procedure language limits what we can do (no external HTTP calls, no ML inference), when we need to share the logic across multiple services rather than coupling everything to one database, or when horizontal scaling of compute is needed but the database is the bottleneck. Modern systems often use procedures for purely transactional data operations and keep complex business logic in application services."
+
+## ⚡ Cheat Sheet
+
+**Parameter Sniffing — 4 Fixes (SQL Server)**
+| Fix | When to Use |
+|---|---|
+| `OPTION(OPTIMIZE FOR (@p UNKNOWN))` | Variable distribution, most cases |
+| `WITH RECOMPILE` | Highly variable distribution; accepts recompile cost |
+| Local variable trick `DECLARE @local = @param` | Hides value from optimizer |
+| IF branching for known extremes | Status = 'pending' vs 'shipped' (very different plans) |
+
+**PostgreSQL Plan Caching**
+- Plans cached per session; after ~5 executions → generic plan ignoring parameter values
+- Force re-plan: use `EXECUTE format('SELECT ... WHERE col = %L', p_val)` in PL/pgSQL
+- `EXECUTE` inside PL/pgSQL always plans fresh
+
+**SP vs Application Logic Decision**
+- Use SP: multi-statement transaction, SECURITY DEFINER isolation, batch with zero network roundtrips, pure data manipulation
+- Use App: unit testing, external API calls, multi-service reuse, full CI/CD coverage needed, horizontal scaling
+
+**Error Handling Pattern (PostgreSQL)**
+```sql
+SAVEPOINT sp;
+-- DML attempt
+EXCEPTION
+  WHEN unique_violation   THEN ROLLBACK TO sp; -- upsert
+  WHEN foreign_key_violation THEN ROLLBACK TO sp; INSERT INTO error_log...
+  WHEN OTHERS             THEN ROLLBACK TO sp; INSERT INTO error_log...; RAISE;
+```
+
+**Deployment Best Practices**
+- `CREATE OR REPLACE PROCEDURE` (PG) / `CREATE OR ALTER PROCEDURE` (SQL Server) — atomic swap
+- Blue-green: deploy `proc_v2`, test, redirect callers, drop `proc_v1`
+- All changes through Flyway/Liquibase migrations — versioned like code
+
+**Monitoring**
+- SQL Server: `sys.dm_exec_procedure_stats` → `total_elapsed_time / execution_count` for avg_ms
+- PG: log start/end + `GET DIAGNOSTICS rows = ROW_COUNT` + `EXTRACT(MILLISECONDS FROM clock_timestamp()-start)` to audit table

@@ -329,3 +329,48 @@ newly_enriched.write.mode("append").parquet("s3://output/enriched/")
 - [ ] **DPP enabled** for partitioned fact tables
 - [ ] **Shuffle partitions** tuned or using AQE dynamic coalescing
 - [ ] **Join strategy validated** via `.explain(mode="formatted")` in PR review
+
+## ⚡ Cheat Sheet
+
+**Join Strategy Selection**
+| Strategy | When to Use | Shuffle |
+|----------|-------------|---------|
+| BroadcastHashJoin | Small table ≤ 10MB (auto) or ≤ ~200MB (hint) | No |
+| SortMergeJoin | Both tables large, same sort order | Yes (2 shuffles) |
+| ShuffleHashJoin | One side fits in memory after shuffle | Yes (1 shuffle) |
+| CartesianJoin | No join key (cross join) | Huge — avoid |
+| BroadcastNestedLoopJoin | Non-equi join with small table | Partial |
+
+**Hints**
+```python
+from pyspark.sql.functions import broadcast
+df.join(broadcast(small), "key")                  # BroadcastHashJoin
+spark.conf.set("spark.sql.autoBroadcastJoinThreshold", 50*1024*1024)  # 50MB
+# SQL hints:
+# SELECT /*+ BROADCAST(t2) */ ... FROM t1 JOIN t2
+# SELECT /*+ MERGE(t1, t2) */ ...   force SortMergeJoin
+# SELECT /*+ SHUFFLE_HASH(t2) */ ...
+```
+
+**Bucketed Joins (shuffle elimination)**
+```python
+df.write.bucketBy(64, "user_id").sortBy("user_id").saveAsTable("bucketed_t")
+# Both tables bucketed on same key + same bucket count = no shuffle at join time
+# Requires Hive metastore (saveAsTable, not parquet path)
+```
+
+**Skew Handling**
+- Salting: append random suffix `0..N` to skewed key, replicate other side N times
+- AQE skew join: automatic if `spark.sql.adaptive.skewJoin.enabled=true`
+- Null skew: `df.filter(F.col("key").isNotNull())` + union null-key partition separately
+
+**Key Numbers**
+- Default autoBroadcastJoinThreshold: 10MB
+- AQE skew threshold: 256MB per partition (5× median)
+- Bucket count: choose power of 2; must match on both sides for shuffle elimination
+
+**Interview Traps**
+- BroadcastHashJoin requires small table to fit in **executor memory** (not just driver)
+- Bucketed joins require BOTH tables in same Hive DB with same bucket count and key
+- Cross join guard: `spark.sql.crossJoin.enabled=false` — set true only when intentional
+- `df.join(other, "key")` drops duplicate key column; `df.join(other, df.key == other.key)` keeps both

@@ -323,3 +323,42 @@ ORDER BY pg_relation_size(i.indexrelid) DESC;
 > **Tip 2:** "What is index bloat and how do you fix it?" — "Index bloat occurs when dead tuples (from MVCC updates/deletes) accumulate in index pages faster than VACUUM can clean them up, or when page splits create sparsely-filled pages. Symptoms include growing index size without growing data. Fix: run `VACUUM ANALYZE` (routine), or `REINDEX INDEX CONCURRENTLY` to fully rebuild the index online. For SQL Server, use `ALTER INDEX REORGANIZE` for light fragmentation or `REBUILD WITH (ONLINE = ON)` for heavy fragmentation."
 
 > **Tip 3:** "When would you choose a columnstore index over a B-tree index?" — "Columnstore indexes are optimal for analytics queries that: scan large portions of the table, aggregate on a few numeric columns, and filter on a small number of columns. They're terrible for OLTP-style point lookups (`WHERE id = 42`) or small range scans. For a mixed workload in SQL Server, you can have both — a clustered B-tree for OLTP and a non-clustered columnstore for analytics, though DML performance suffers with both present."
+
+## ⚡ Cheat Sheet
+
+**B-Tree Key Numbers**
+- Page size: 8 KB (PG/SQL Server); tree height ≈ log₁₆(rows) — 1B rows ≈ 5–6 levels deep
+- Leaf pages doubly linked → range scans traverse without re-traversing tree
+- Fill factor default: 100% — reduce to 70–80% for update-heavy tables to prevent page splits
+
+**Index Bloat Detection & Fix**
+- PG: `pgstattuple_approx` → `avg_leaf_density < 70%` = bloated → `REINDEX INDEX CONCURRENTLY`
+- SQL Server: `avg_fragmentation_in_percent` < 30% → `REORGANIZE`; > 30% → `REBUILD WITH (ONLINE=ON)`
+- Autovacuum tuning: `autovacuum_vacuum_scale_factor = 0.01` for hot tables
+
+**UUID vs Sequential PK (InnoDB)**
+- UUID primary keys → random inserts → constant page splits → index fragmentation + slower reads
+- Fix: use `UUID_v7` / `ULID` (monotonic UUIDs) or BIGSERIAL; keep UUID as alternate unique key
+- HOT updates (PG): updating non-indexed columns = no index update needed = much faster
+
+**Index Skip Scan Rules**
+- Supported: MySQL 8+, Oracle; NOT supported natively in PostgreSQL (as of PG16)
+- Only useful when leading column has very few distinct values (< 10–20) and trailing column is selective
+- PG workaround: create a separate index on the trailing column
+
+**Columnstore vs B-Tree Decision**
+- B-Tree: OLTP point lookups, small range scans, ORDER BY LIMIT patterns
+- Columnstore: analytics aggregating millions of rows on few columns; terrible for `WHERE id = ?`
+- SQL Server: can combine both on same table; DML performance degrades with non-clustered columnstore
+
+**Production Index Commands**
+```sql
+-- Non-blocking build (PG)
+CREATE INDEX CONCURRENTLY idx ON tbl(col);
+-- MySQL online
+ALTER TABLE t ADD INDEX idx(col), ALGORITHM=INPLACE, LOCK=NONE;
+-- SQL Server online
+CREATE INDEX idx ON t(col) WITH (ONLINE=ON);
+-- Snowflake/Redshift equivalent
+ALTER TABLE orders CLUSTER BY (order_date);
+```

@@ -355,3 +355,45 @@ strategies = [
 > **Tip 2:** "When would you use Aurora Serverless v2 vs provisioned?" — "Aurora Serverless v2 for variable workloads: dev/test databases, applications with off-peak idle periods, or new services with unknown traffic patterns. It scales from 0.5 to 128 ACU in seconds. Provisioned is cheaper at steady utilization above 60-70%. For data engineering: use serverless for metadata databases and analytics endpoints with business-hours-only traffic."
 
 > **Tip 3:** "How do you perform zero-downtime schema changes on RDS?" — "Blue-green deployments. RDS creates a synchronized copy (Green), you apply schema changes to Green (DDL, indexes, engine upgrade), then switchover flips traffic in under a minute. Applications reconnect using the same endpoint. If issues arise, you can switch back. This replaced the old approach of manual replica promotion and DNS swaps."
+
+## ⚡ Cheat Sheet
+
+**Instance selection**
+| Workload | Instance family | Notes |
+|---|---|---|
+| General OLTP | `db.r7g` (ARM) | Best price/performance |
+| Memory-intensive | `db.x2g` | Large buffer pools |
+| Burst dev/test | `db.t4g` | Burstable; not for prod |
+| Analytics on RDS | `db.m7g` | Balanced CPU+mem |
+
+**Multi-AZ vs Read Replicas**
+- Multi-AZ: synchronous standby; auto-failover ~60s; same region; NOT for reads
+- Read Replica: asynchronous; for read scale; cross-region supported; manual promote
+- Aurora: 6-way synchronous replication across 3 AZs; sub-10ms replica lag
+
+**Parameter groups**
+- `max_connections`: set to `DBInstanceClassMemory / 12582880` (bytes per connection)
+- `work_mem`: per-sort memory in PostgreSQL; multiply by `max_connections` for total
+- `innodb_buffer_pool_size`: 70–80% of instance RAM for MySQL
+- Apply changes: static params need reboot; dynamic params apply immediately
+
+**Storage types**
+| Type | IOPS | Latency | Use case |
+|---|---|---|---|
+| gp3 | 3000–16000 (configurable) | ~1ms | Default OLTP |
+| io1/io2 | Up to 64K | Sub-ms | High IOPS workloads |
+| io2 Block Express | 256K IOPS | <0.1ms | Mission-critical |
+
+**Backup and recovery**
+- Automated backups: 0–35 days retention; stored in S3; enables PITR
+- PITR: restore to any second within retention window
+- Snapshot: manual; unlimited retention; base for cross-region copy
+- RTO: ~10min (Multi-AZ failover) vs ~30-60min (restore from snapshot)
+
+**Key operational commands**
+```bash
+# Force failover to test Multi-AZ
+aws rds reboot-db-instance --db-instance-identifier mydb --force-failover
+# Create read replica
+aws rds create-db-instance-read-replica --db-instance-identifier mydb-rr   --source-db-instance-identifier mydb
+```

@@ -233,3 +233,53 @@ df = spark.read.format("jdbc") \
 > **Tip 2:** "Design secret management for a multi-account data platform" — "Central account owns all secrets. Resource policies grant cross-account GetSecretValue to specific IAM roles. Naming convention: {env}/{service}/{purpose}. IAM policies grant by prefix: prod/* to production roles only. Cross-region replication for DR. CloudTrail + EventBridge for access auditing and anomaly detection."
 
 > **Tip 3:** "Secrets Manager vs Vault (HashiCorp) on AWS?" — "Secrets Manager: native AWS integration (IAM, Glue, Lambda, MWAA auto-discovery), managed rotation, no infrastructure. Vault: multi-cloud, dynamic secrets (generates temp credentials on demand), more powerful policy engine, but requires self-managed infrastructure. For AWS-only data platforms: Secrets Manager wins on simplicity. For multi-cloud: Vault."
+
+## ⚡ Cheat Sheet
+
+**Secrets Manager vs Parameter Store**
+| Feature | Secrets Manager | Parameter Store |
+|---|---|---|
+| Auto-rotation | Yes (built-in Lambda) | No |
+| Cost | $0.40/secret/month | Free (standard) |
+| Max size | 65 KB | 4 KB (std) / 8 KB (advanced) |
+| Best for | DB credentials, API keys | Config values, feature flags |
+
+**Rotation setup**
+```python
+# Rotation Lambda must implement 4 steps:
+# createSecret, setSecret, testSecret, finishSecret
+# AWS provides templates for RDS, Redshift, DocumentDB
+aws secretsmanager rotate-secret --secret-id mydb/prod/password   --rotation-lambda-arn arn:aws:lambda:...   --rotation-rules AutomaticallyAfterDays=30
+```
+
+**Access patterns**
+```python
+import boto3, json
+client = boto3.client('secretsmanager')
+secret = json.loads(client.get_secret_value(SecretId='mydb/prod')['SecretString'])
+# Cache with: aws-secretsmanager-caching-python (reduces API calls)
+```
+
+**Airflow integration**
+```python
+# In airflow.cfg:
+# [secrets]
+# backend = airflow.providers.amazon.aws.secrets.secrets_manager.SecretsManagerBackend
+# backend_kwargs = {"connections_prefix": "airflow/connections", "variables_prefix": "airflow/variables"}
+```
+
+**IAM policy (least privilege)**
+```json
+{"Effect": "Allow", "Action": ["secretsmanager:GetSecretValue"],
+ "Resource": "arn:aws:secretsmanager:us-east-1:123:secret:mydb/prod-*",
+ "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-1"}}}
+```
+
+**Cross-account access**
+- Resource-based policy on secret: grant `secretsmanager:GetSecretValue` to external account
+- KMS key policy: if using CMK, grant decrypt to the external account's role
+
+**Key operational rules**
+- Never put secrets in environment variables, code, or CloudFormation Parameters (plain)
+- Rotate within 24h of suspected compromise; use `force-delete-without-recovery` for immediate delete
+- Use secret ARN (not name) in cross-account and cross-region references

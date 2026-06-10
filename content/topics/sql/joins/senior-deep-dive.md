@@ -298,3 +298,42 @@ When diagnosing slow joins, look for these patterns:
 > **Tip 2:** For distributed SQL, mention: "I'd broadcast the dimension table since it's under 10MB, eliminating the shuffle of the billion-row fact table."
 
 > **Tip 3:** When asked about slow joins, check: (1) Is there skew? (2) Is there spill to disk? (3) Are we shuffling when we could broadcast? (4) Could we co-partition the tables?
+
+## ⚡ Cheat Sheet
+
+**Physical Join Algorithm Selection**
+| Scenario | Algorithm | Complexity |
+|---|---|---|
+| Small outer + indexed inner | Nested Loop (Index) | O(n × log m) |
+| Large × large, equality | Hash Join | O(n + m) |
+| Both pre-sorted on key | Sort-Merge | O(n + m) skip sort |
+| Inequality (`>`, `<`, `BETWEEN`) | Nested Loop only | O(n × m) worst case |
+| FULL OUTER on large tables | Sort-Merge | Hash can't do full outer |
+
+**Hash Join Memory Rule**
+- Build side must fit in `work_mem` (PG) / memory grant (SQL Server)
+- Spill to disk → "tempdb spill" / "external merge" in plan → huge slowdown
+- Fix: filter build side earlier, or increase memory for that session/query
+
+**Distributed Join Strategy**
+- Broadcast join: dimension < 10 MB → copy to every node; no shuffle of large table
+  - Spark: `/*+ BROADCAST(dim) */` or `spark.sql.autoBroadcastJoinThreshold=10485760`
+- Shuffle join: both tables large → repartition both by join key (expensive)
+- Collocated join: pre-partitioned on same key → zero network transfer (Redshift DISTKEY, Spark bucketing)
+
+**Data Skew Mitigation**
+- Detect: `SELECT key, COUNT(*) FROM t GROUP BY key ORDER BY 2 DESC LIMIT 10`
+- Salt large table: `key || '_' || FLOOR(RANDOM()*10)` for hot keys
+- Replicate small table: cross join with salt values (0–9) for hot keys only
+- Spark: `spark.sql.adaptive.skewJoin.enabled=true` (AQE auto-skew handling)
+
+**NULL Handling in Joins**
+- `NULL = NULL` → UNKNOWN (never matches in JOIN ON)
+- Safe NULL-equal join: `a.key IS NOT DISTINCT FROM b.key` (PG/Spark)
+- Or: `COALESCE(a.key, '__NULL__') = COALESCE(b.key, '__NULL__')`
+
+**Plan Red Flags**
+- `Nested Loops` on millions of rows without index → add index on inner join column
+- `Hash (Spill)` → reduce build side or increase work_mem
+- `Exchange (Shuffle)` on large table → can you broadcast the other side?
+- `CartesianJoin` in Snowflake profile → accidental cross join (missing ON clause)

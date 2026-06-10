@@ -218,3 +218,51 @@ Zstd vs Snappy at the codec level:
 > **Tip 2:** "When does dictionary encoding fail and hurt performance?" — Dictionary encoding fails when a column has high cardinality (millions of distinct values, e.g., UUID columns, customer_id with millions of customers). The dictionary grows large, requires dictionary page reads, and may fall back to plain encoding mid-file if the dictionary overflows. For UUID columns: disable dictionary encoding. For sequential integer IDs: delta encoding is better than dictionary. Profiling: check Parquet file footer statistics to see which encoding was actually used.
 
 > **Tip 3:** "How do you handle storage optimization for a table that's both hot (recent data) and cold (3-year archive)?" — Partition-level compaction: compact only the last 7 days of data weekly (where streaming created small files). Don't compact historical partitions (already large files, no benefit). Apply S3 lifecycle: recent 90 days → Standard, 90 days–2 years → Standard-IA, 2+ years → Glacier IR. Use Delta/Iceberg partition filters for lifecycle: OPTIMIZE WHERE order_date >= current_date - 7. This minimizes compaction cost while keeping recent data fast.
+
+## ⚡ Cheat Sheet
+
+**Target file size**: 128 MB – 1 GB per Parquet/Delta file (sweet spot for parallelism vs metadata overhead)
+
+**Compaction**
+```python
+# Delta
+DeltaTable.forPath(spark, path).optimize().executeCompaction()
+# Iceberg
+spark.sql("CALL system.rewrite_data_files('prod.gold.orders')")
+# Hudi: set hoodie.compact.inline=true or schedule async job
+```
+
+**Z-ordering (data skipping)**
+```python
+# Delta
+DeltaTable.forPath(spark, path).optimize().executeZOrderBy("customer_id", "order_date")
+# Iceberg: sort-order
+spark.sql("ALTER TABLE prod.gold.orders WRITE ORDERED BY customer_id, order_date")
+```
+
+**Partitioning rules**
+```python
+# Good: low-medium cardinality, query predicate columns
+df.write.partitionBy("region", "year", "month").format("delta").save(path)
+# Bad: high cardinality (user_id) → millions of tiny files
+# Bad: column never used in WHERE clause
+```
+
+**Parquet settings**
+```python
+spark.conf.set("spark.sql.parquet.compression.codec", "zstd")  # better than snappy
+spark.conf.set("spark.sql.parquet.enableVectorizedReader", "true")
+spark.conf.set("spark.sql.parquet.filterPushdown", "true")
+```
+
+**Vacuum / expiry**
+```python
+DeltaTable.forPath(spark, path).vacuum(retentionHours=168)  # Delta
+spark.sql("CALL system.expire_snapshots('table', TIMESTAMP '2024-01-01 00:00:00', 10)")  # Iceberg
+```
+
+**Key points**
+- Bloom filters: per-column, enable for high-cardinality point lookups (order_id, user_id)
+- Column statistics: min/max per file → data skipping without reading file
+- ZSTD > Snappy: better compression ratio; prefer for cold/archival storage
+- Partition evolution (Iceberg): change partition strategy without rewriting data

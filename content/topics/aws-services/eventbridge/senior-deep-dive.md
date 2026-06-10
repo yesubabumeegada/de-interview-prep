@@ -317,3 +317,41 @@ Cost optimization:
 > **Tip 2:** "EventBridge vs SNS/SQS for event-driven architecture?" — "Different layers: EventBridge for smart routing (rich pattern matching, 100+ AWS service integrations, archive/replay). SNS for high-volume fan-out (simpler, cheaper at scale). SQS for consumption buffering (DLQ, visibility timeout). In practice, combine them: EventBridge routes events based on content → SNS fans out to multiple SQS queues → consumers process from SQS with retry logic."
 
 > **Tip 3:** "How do you make an event-driven pipeline resilient?" — "Four mechanisms: (1) Archive + Replay for reprocessing after bugs (replay the exact events from the failed time window). (2) DLQ on targets (failed invocations captured). (3) Global endpoints for regional failover (health check triggers automatic routing). (4) Idempotent consumers (same event processed twice produces same result). The archive is the killer feature — you can literally replay yesterday's events through a fixed pipeline."
+
+## ⚡ Cheat Sheet
+
+**Pricing**
+- Custom events: $1.00/1M; AWS service events (Glue/S3/EC2 state changes): FREE
+- Scheduler invocations: $1.00/1M; Pipes: $0.40/1M + enrichment compute
+- Archive storage: $0.023/GB; Replay: $0.02/GB replayed
+
+**Pattern Matching Performance**
+- Always filter on `source` + `detail-type` first (most selective fields)
+- Avoid rules with no `source` filter (matches every event in the bus)
+- Rules evaluated in parallel — adding more rules doesn't slow individual rule evaluation
+- Deep nested matching (`detail.metadata.tags`) degrades performance vs flat matches
+
+**EventBridge vs SNS vs SQS**
+| | EventBridge | SNS | SQS |
+|---|---|---|---|
+| Filtering | Rich (prefix, numeric, exists) | Basic | None (filter in consumer) |
+| Sources | 100+ AWS services + custom | Custom only | Custom only |
+| Replay | Yes (archive) | No | No |
+| Best for | Routing, orchestration | Fan-out | Task queue |
+- Common combo: EventBridge routes → SNS fans out → SQS buffers for consumption
+
+**Cross-Account Architecture**
+- Central event bus resource policy: allow `events:PutEvents` scoped to org ID (`aws:PrincipalOrgID`)
+- Domain accounts forward events via rules targeting the central bus ARN with an IAM role
+- Central bus routes events to consumer account buses — producers never know about consumers
+
+**Resilience Patterns**
+- Archive + Replay: reprocess exact events from a failed time window (killer feature)
+- DLQ on targets: failed invocations captured for inspection/retry
+- Global Endpoints: Route 53 health check triggers automatic failover to secondary region
+- Idempotent consumers: processing the same event twice must produce the same result
+
+**API Destinations**
+- POST to any HTTPS endpoint (Slack, Jira, custom webhooks) with managed connection auth
+- Rate limit: `InvocationRateLimitPerSecond` (max 300/sec)
+- Use `InputTransformer` to reshape EventBridge event JSON into target API's expected format

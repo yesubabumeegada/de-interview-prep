@@ -203,3 +203,90 @@ ALTER SEQUENCE order_id_seq NOORDER;  -- unless strict order is truly required
 > **Tip 2:** "What is cluster fencing (node eviction) and why is it necessary?" — Cluster fencing is the forced eviction of a RAC node when it can't communicate with the cluster majority. Without fencing, a "partially alive" node might continue writing to shared storage even after the cluster considers it dead — causing data corruption when the surviving node also writes. Fencing ensures only one authoritative writer to each data block at any time. Oracle implements this via the Cluster Health Monitor and CSS (Cluster Synchronization Services) that evict nodes by cutting off their I/O to storage.
 
 > **Tip 3:** "How do you design a RAC application to minimize global cache contention?" — Key strategies: (1) Avoid hot blocks — use sequence CACHE > 1000, avoid NOORDER sequences if strict ordering isn't needed, use hash partitioned indexes for monotonic keys. (2) Partition data by instance affinity — if possible, route customer A's requests always to instance 1 and customer B's to instance 2 (reduces cross-instance block transfers). (3) Design services — assign OLTP to nodes 1-2, reporting to node 3; reporting queries don't pollute OLTP caches. (4) Minimize lock contention — avoid hot rows (status update counts, running totals); use DBMS_AQ or periodic batch updates instead.
+
+## ⚡ Cheat Sheet
+
+**PL/SQL essentials**
+```sql
+-- Stored procedure with exception handling
+CREATE OR REPLACE PROCEDURE load_orders(p_date IN DATE) AS
+    v_count NUMBER;
+BEGIN
+    INSERT INTO orders SELECT * FROM staging WHERE order_date = p_date;
+    v_count := SQL%ROWCOUNT;
+    DBMS_OUTPUT.PUT_LINE('Inserted: ' || v_count);
+    COMMIT;
+EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20001, 'Duplicate order key for ' || p_date);
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END load_orders;
+/
+```
+
+**AWR / performance tuning**
+```sql
+-- Top SQL by elapsed time (from AWR)
+SELECT sql_id, elapsed_time/1000000 AS elapsed_sec, executions,
+       elapsed_time/NULLIF(executions,0)/1000000 AS avg_sec,
+       sql_text
+FROM v$sqlstats
+ORDER BY elapsed_time DESC FETCH FIRST 10 ROWS ONLY;
+
+-- Explain plan
+EXPLAIN PLAN FOR SELECT * FROM orders WHERE customer_id = 123;
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(format=>'ALL'));
+
+-- Force index hint
+SELECT /*+ INDEX(o IDX_ORDERS_CUST) */ * FROM orders o WHERE customer_id = 123;
+```
+
+**Partitioning**
+```sql
+-- Range partitioning (most common for DE)
+CREATE TABLE orders (order_id NUMBER, order_date DATE, amount NUMBER)
+PARTITION BY RANGE (order_date) INTERVAL (NUMTOYMINTERVAL(1,'MONTH'))
+(PARTITION p_first VALUES LESS THAN (DATE '2024-01-01'));
+
+-- Partition pruning: WHERE order_date = '2024-01-15' reads only one partition
+```
+
+**Oracle RAC key concepts**
+```
+Cache Fusion:  nodes share buffer cache via high-speed interconnect
+GCS:           Global Cache Service — coordinates block ownership
+GES:           Global Enqueue Service — distributed lock management
+Interconnect:  low-latency private network between RAC nodes (mandatory)
+VIP:           Virtual IP — client transparent failover on node failure
+```
+
+**SQL tuning checklist**
+```
+1. Check execution plan: is it using the right index?
+2. Check cardinality estimates: are they close to actual rows?
+3. Statistics stale? Run DBMS_STATS.GATHER_TABLE_STATS
+4. High parse time? Consider bind variables or cursor_sharing=FORCE
+5. Full table scan on large table? Add index or partition pruning
+6. Nested loops on large tables? Consider hash join hint
+7. High I/O? Check if result fits in buffer cache (db_cache_size)
+```
+
+**Materialized view fast refresh**
+```sql
+CREATE MATERIALIZED VIEW LOG ON orders WITH ROWID, SEQUENCE (order_id, amount, region)
+INCLUDING NEW VALUES;
+
+CREATE MATERIALIZED VIEW mv_orders_by_region
+REFRESH FAST ON COMMIT AS
+SELECT region, SUM(amount) AS total FROM orders GROUP BY region;
+```
+
+**Key interview points**
+- Bind variables: prevent hard parse; critical for OLTP performance (cursor reuse)
+- Partition pruning: Oracle auto-prunes when filter on partition key
+- Data Guard: physical standby (redo apply) vs logical standby (SQL apply)
+- Exadata: Smart Scan offloads WHERE/column projection to storage cells (iDB protocol)
+- RAC: active-active; all nodes can read/write; best for OLTP scale-out

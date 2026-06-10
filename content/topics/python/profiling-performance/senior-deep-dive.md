@@ -450,3 +450,52 @@ def run_monitored_pipeline(records: list):
 3. **Memory leaks** in long-running pipelines usually come from unbounded global containers — use `lru_cache(maxsize=N)` and `deque(maxlen=N)`.
 4. **`py-spy`** can profile any Python process without code changes — essential for production performance investigation.
 5. **CPU vs I/O identification** determines the right solution: I/O-bound → async/threads, CPU-bound → multiprocessing/Spark. Threading Python CPU-bound work doesn't help due to the GIL.
+
+## ⚡ Cheat Sheet
+
+**UDF Performance in PySpark**
+| Method | 1M row time | Overhead |
+|--------|-------------|----------|
+| Native Spark SQL | ~0.5 s | 1× |
+| Pandas UDF (Arrow) | ~1.5 s | 3× |
+| Python UDF (row-by-row) | ~45 s | 90× |
+
+- Rule: native → pandas_udf → Python UDF (last resort)
+- Enable: `spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")`
+- `spark.sql.execution.arrow.maxRecordsPerBatch = 10000` — tune batch size
+
+**CPU-Bound vs I/O-Bound Identification**
+- Run 4 threads vs single: if `thread_time < single_time/2` → I/O-bound → use threads/async
+- Run 4 processes vs single: if `process_time < single_time/2` → CPU-bound → use multiprocessing
+- Neither improves: profile with `py-spy` — likely bottleneck inside C extension or wrong diagnosis
+
+**py-spy Commands**
+```bash
+py-spy top --pid <PID>                          # Live top view
+py-spy record -o profile.svg --pid <PID> --duration 30  # Flame graph
+py-spy dump --pid <PID>                         # Stack trace dump (diagnosing hangs)
+py-spy record -o profile.svg -- python script.py  # Profile from start
+```
+- Wide flat bars at bottom of flame graph = hot path → optimize those first
+- No code changes, no restart — safe for production use
+
+**Memory Leak Patterns**
+- Unbounded global dict: `global_cache = {}` never evicted → fix with `@lru_cache(maxsize=N)`
+- Growing list in long-running process: use `deque(maxlen=N)` for sliding window
+- Unclosed file handles: always use `with open()` — never bare `open()`
+- `tracemalloc`: `take_snapshot()` before/after + `.compare_to(before, "lineno")` → shows growth
+
+**Profiling Async Code**
+- `asyncio.set_debug(True)` + `loop.slow_callback_duration = 0.1` — logs coroutines blocking > 100 ms
+- `yappi.set_clock_type("wall")` — measures wall time including I/O wait per coroutine
+- Manual: `@asynccontextmanager async def async_timer(label)` with `time.perf_counter()`
+
+**Production Monitoring Pattern**
+- `PipelineMetrics.stage_times` sorted by duration → bottleneck always first in report
+- `timed_stage(metrics, "stage_name")` context manager wraps each step
+- Log `stage=X duration=Ns` as structured key-value → queryable in Elasticsearch/CloudWatch
+
+**Key Rules**
+- Never `time.sleep()` to "wait for results" — measure with `perf_counter()` instead
+- `cProfile` misses thread wait time — prefer `py-spy` (wall time) for real bottleneck ID
+- Profile before optimizing: assumption-based optimization is usually wrong

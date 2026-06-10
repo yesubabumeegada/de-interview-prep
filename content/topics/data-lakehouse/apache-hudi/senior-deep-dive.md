@@ -206,3 +206,39 @@ hudi_sync_options = {
 > **Tip 2:** "How does Hudi handle a record key that can change partition?" — By default, Hudi's BLOOM index doesn't handle cross-partition updates (if `customer_id=123` was in partition `date=2024-01-01` and an update moves it to `date=2024-01-15`, the old record won't be deleted). Fix: `hoodie.bloom.index.update.partition.path=true` OR use `GLOBAL_BLOOM` index (slower but cross-partition aware). Best practice: choose partition fields that never change per record to avoid this entirely.
 
 > **Tip 3:** "Hudi vs Delta Lake: which is better for CDC at high frequency?" — Hudi wins for pure CDC use cases: incremental queries are more mature, MOR write performance is optimized for frequent updates, and Hudi's index types (especially HBase/Record Index) are purpose-built for fast key lookups. Delta Lake is better for: Databricks environments (tight integration), interactive analytics (OPTIMIZE ZORDER is excellent), and teams using Python/dbt (better tooling ecosystem). For AWS + high-frequency CDC + non-Databricks: Hudi or Iceberg V2.
+
+## ⚡ Cheat Sheet
+
+**Table types**
+| Type | Write | Read | Use case |
+|---|---|---|---|
+| COW (Copy-on-Write) | Rewrites files on update | Fast reads | Batch BI/analytics |
+| MOR (Merge-on-Read) | Appends to delta log | Reads merge on-the-fly | Low-latency ingestion |
+
+**Key write options**
+```python
+hudi_options = {
+    "hoodie.table.name": "orders",
+    "hoodie.datasource.write.recordkey.field": "order_id",
+    "hoodie.datasource.write.precombine.field": "updated_at",
+    "hoodie.datasource.write.operation": "upsert",  # insert | bulk_insert | delete
+    "hoodie.datasource.write.partitionpath.field": "dt",
+}
+df.write.format("hudi").options(**hudi_options).mode("append").save("s3://bucket/orders/")
+```
+
+**Incremental reads**
+```python
+spark.read.format("hudi") \
+    .option("hoodie.datasource.query.type", "incremental") \
+    .option("hoodie.datasource.read.begin.instanttime", "20240101000000") \
+    .load("s3://bucket/orders/")
+```
+
+**Hudi timeline instants**: commit, deltacommit, compaction, clean, rollback
+
+**Key interview points**
+- COW = read-optimized; MOR = write-optimized
+- Hudi supports ACID transactions, time-travel, incremental pulls
+- Clustering: reorganize files for read performance (like Delta OPTIMIZE)
+- Compaction converts MOR delta files into COW Parquet files

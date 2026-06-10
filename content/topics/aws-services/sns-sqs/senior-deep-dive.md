@@ -298,3 +298,46 @@ saga_steps = {
 > **Tip 2:** "SQS vs Kinesis for a real-time data pipeline?" — "Kinesis for event streaming where you need replay, multiple consumers reading the same events, and ordering by partition key (clickstreams, IoT). SQS for task-based workloads where each message is processed once and deleted (ETL triggers, job notifications). Key differentiator: Kinesis retains events for replay; SQS deletes after consumption. Many platforms use both: Kinesis for ingestion, SQS for internal orchestration."
 
 > **Tip 3:** "How do you handle a message that's too large for SQS?" — "SQS limit is 256 KB. For larger payloads (data samples, file manifests, large JSON): store the payload in S3, send a reference (bucket + key) via SQS. Consumer reads the reference, fetches from S3. Use the SQS Extended Client Library (Java) or implement the pattern manually. Set S3 lifecycle to delete referenced objects after the retention period."
+
+## ⚡ Cheat Sheet
+
+**SNS vs SQS vs EventBridge**
+| Feature | SNS | SQS | EventBridge |
+|---|---|---|---|
+| Pattern | Pub/sub (push) | Queue (pull) | Event bus (routing) |
+| Persistence | No (fire-and-forget) | Yes (up to 14 days) | Yes (archive) |
+| Fan-out | Yes (multiple subscribers) | No (one consumer group) | Yes (multiple targets) |
+| Filtering | Attribute-based | No | Content-based (JSON) |
+| Best for | Notifications | Work queues, decoupling | Event routing, SaaS integration |
+
+**SQS key settings**
+| Setting | Default | Rule |
+|---|---|---|
+| Visibility timeout | 30s | Set to 6× max processing time |
+| Message retention | 4 days | Max 14 days |
+| Delivery delay | 0s | Up to 15 minutes |
+| Max message size | 256 KB | Use S3 pointer for larger |
+| Long polling | Off | Always enable (`WaitTimeSeconds=20`) |
+
+**Dead-letter queue (DLQ)**
+- Receives messages after `maxReceiveCount` failures (1–1000)
+- Set alarm on `ApproximateNumberOfMessagesVisible > 0` for immediate alert
+- DLQ message retention ≥ source queue retention
+
+**FIFO queues**
+- Exactly-once processing: deduplication ID (5-min window)
+- Ordering: per `MessageGroupId`; use customer_id or session_id as group
+- Throughput: 300 TPS standard; 3000 TPS with batching (10 msg/batch)
+
+**SNS fan-out to SQS**
+```
+SNS Topic → SQS Queue A (analytics)
+          → SQS Queue B (email service)
+          → Lambda (real-time alert)
+# Filter policy on subscription: {"event_type": ["order_placed"]}
+```
+
+**Lambda trigger from SQS**
+- `batchSize`: 1–10000 messages per Lambda invocation
+- `functionResponseTypes: ReportBatchItemFailures`: partial batch success
+- Concurrency: 1 Lambda per shard (FIFO) or up to 1000 concurrent (Standard)

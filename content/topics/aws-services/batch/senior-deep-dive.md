@@ -255,3 +255,40 @@ workflow = {
 > **Tip 2:** "How do you size compute environments for cost optimization?" — "Calculate: max concurrent vCPUs needed = total jobs × vCPUs per job / (parallelism × duration ratio). Set maxvCpus to this. Use Spot for 60-80% savings. Diversify instance types (10+) for Spot availability. Set minvCpus=0 (scale to zero when idle). Monitor actual utilization and right-size monthly."
 
 > **Tip 3:** "Batch vs Kubernetes (EKS) for batch workloads?" — "Batch: simpler (no K8s expertise needed), built-in Spot handling, array jobs, job queues/scheduling, auto-provisions compute. EKS: more control (custom schedulers like Volcano), existing K8s ecosystem, better for teams already on K8s, supports Spark natively. Choose Batch for pure batch processing; choose EKS if you already have a K8s platform and want consistency."
+
+## ⚡ Cheat Sheet
+
+**Spot Strategy Rules**
+- Always use `SPOT_CAPACITY_OPTIMIZED` for production (2–5% interruption vs 10–30% for BEST_FIT)
+- Provide 10+ instance types across families (c5, c5a, m5, r5, etc.) for maximum Spot pool diversity
+- Set `bidPercentage: 100` — let AWS optimize; never bid below 100% to avoid extra interruptions
+
+**Cost Comparison (2 vCPU, 4 GB, 2 min jobs)**
+| Compute Type | Cost/Run (10K jobs) | Notes |
+|---|---|---|
+| Fargate | ~$33 | No cluster management |
+| EC2 Spot | ~$9 | 70% cheaper, needs interruption handling |
+| EC2 On-Demand | ~$47 | Baseline reference |
+
+**Queue Priority Design**
+- `priority=100` → critical ETL on On-Demand; `priority=50` → standard on Spot + On-Demand fallback; `priority=1` → experiments on Spot only
+- Multiple compute environments per queue = automatic fallback (order matters)
+
+**Spot Interruption Handling**
+- SIGTERM = 2-minute warning before EC2 reclaims the instance
+- Checkpoint to S3 every N records; on SIGTERM save state and exit 0
+- `evaluateOnExit` in retry strategy: match `reason: "Host EC2*terminated"` to auto-resubmit
+
+**Array Jobs**
+- `ArrayProperties.Size=N` launches N child jobs with `AWS_BATCH_JOB_ARRAY_INDEX` env var
+- Use for embarrassingly parallel workloads (one file per child job)
+
+**Sizing Decision**
+- Fargate: sporadic, no cluster overhead required; max 16 vCPU, 120 GB
+- EC2: GPU workloads, >16 vCPU, or extreme cost sensitivity
+- `minvCpus=0`: scale to zero when idle (critical for cost)
+- Managed scaling: set `maxvCpus` = expected peak concurrent vCPUs
+
+**Step Functions Integration**
+- `arn:aws:states:::batch:submitJob.sync` — waits for job completion inline
+- Retry with `BackoffRate: 2`, `MaxAttempts: 2` on `Batch.JobFailed`

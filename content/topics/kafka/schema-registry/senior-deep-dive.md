@@ -246,3 +246,52 @@ serialized = serializer.serialize('my-topic', record)
 > **Tip 4:** At the senior level, frame schema management as a data governance problem. Mention schema ownership, versioning policies, backward compatibility as a cultural norm, and schema discovery (data catalog integration).
 
 > **Tip 5:** Know the AWS Glue Schema Registry for MSK contexts. The wire format is different from Confluent (UUID-based header vs magic byte + int32 ID). Mixing the two without awareness causes deserialization failures.
+
+## ⚡ Cheat Sheet
+
+**Wire Format (Confluent vs AWS Glue)**
+| Aspect | Confluent SR | AWS Glue SR |
+|---|---|---|
+| Header size | 5 bytes (0x00 + 4-byte schema ID) | 18 bytes (3-byte header + UUID) |
+| Schema lookup | `GET /schemas/ids/{id}` REST | Glue API call |
+| Caching | Client-side LRU | Client-side LRU |
+| Multi-region | Paid feature | Native (Glue is regional, replicate manually) |
+
+**Compatibility Modes**
+| Mode | Allowed Changes | Common Use |
+|---|---|---|
+| BACKWARD | Add optional fields, remove fields | Consumers upgrade first |
+| FORWARD | Remove optional fields, add fields | Producers upgrade first |
+| FULL | Only add optional fields | Maximum safety |
+| NONE | Anything | Dev/testing only |
+
+**Two-Phase Schema Migration (Safe)**
+1. Deploy new schema as new version (backward compatible)
+2. Deploy consumers first → they can read both old and new fields
+3. Deploy producers → start emitting new schema
+4. Verify all consumers are on new schema → optionally delete old version
+
+**Hard-Delete Danger**
+- `DELETE /subjects/{subject}/versions/{version}?permanent=true` removes schema from `_schemas`
+- Any unconsumed message serialized with that schema → `SchemaNotFoundException` at deserialization
+- Safe alternative: use `DELETE` (soft-delete) — schema still resolves but can't register new schemas
+- NEVER hard-delete without confirming all consumers have read past those messages (check LSO)
+
+**`_schemas` Topic Properties**
+```properties
+partitions=1          # Single partition for total ordering (do NOT repartition)
+replication.factor=3  # Must be RF=3 for HA
+cleanup.policy=compact  # Retain all schema versions
+```
+
+**Production SR Config**
+```properties
+# Producer
+schema.registry.url=https://sr.internal:8081
+auto.register.schemas=false   # NEVER auto-register in production (use CI/CD pipeline)
+use.latest.version=false      # Always serialize with explicit schema version
+
+# Client auth
+basic.auth.credentials.source=USER_INFO
+basic.auth.user.info=api-key:api-secret
+```

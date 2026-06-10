@@ -198,3 +198,68 @@ check_disk_space "/data" 85 || {
 > **Tip 2:** "How do you handle a 100 GB file in bash?" — Stream it (never load fully): `awk`, `sed`, `cut` process line-by-line with constant memory. Use `pigz` for parallel compression. Use `split` to chunk for parallel processing. Use named pipes (`mkfifo`) for complex streaming topologies. Key principle: data flows through pipes, never fully materializes.
 
 > **Tip 3:** "How do you prevent disk full from crashing pipelines?" — Pre-flight check: `df` before processing, abort if >85% full. Cleanup cron: delete files older than N days from temp/archive. Alert at 80%: notification before critical. Write to temp filesystem first, move to target only if complete. Monitor: track disk growth rate, predict full date.
+
+## ⚡ Cheat Sheet
+
+**Safe file operations**
+```bash
+# Atomic write (never leaves partial file)
+tmpfile=$(mktemp /tmp/output.XXXXXX)
+generate_data > "$tmpfile"
+mv "$tmpfile" /final/output.csv
+
+# Safe delete (to trash or with confirmation)
+[ -f "$file" ] && rm -f "$file" || echo "File not found: $file"
+
+# Check before overwrite
+[ -f output.csv ] && { cp output.csv output.csv.bak; }
+```
+
+**Finding files**
+```bash
+find /data -name "*.csv" -newer /tmp/last_run -type f  # newer than marker
+find /data -name "*.log" -mtime +30 -delete             # delete >30 days old
+find /data -size +100M -name "*.parquet"                # large files
+find /data -empty -delete                                # remove empty files/dirs
+```
+
+**Bulk operations**
+```bash
+# Process all CSVs (handles spaces in names)
+while IFS= read -r -d '' file; do
+    process "$file"
+done < <(find /data -name "*.csv" -print0)
+
+# GNU parallel
+find /data -name "*.csv" | parallel -j8 python process.py {}
+```
+
+**File locking**
+```bash
+exec 200>/tmp/mylock
+flock -x 200 || exit 1  # exclusive lock; wait or use -n for non-blocking
+# Lock auto-released when fd 200 closed (on script exit)
+```
+
+**Checksums and integrity**
+```bash
+md5sum file.csv > file.csv.md5
+md5sum -c file.csv.md5  # verify
+sha256sum -c checksums.sha256
+# Compare before/after
+md5sum before.csv > before.md5; process; md5sum -c before.md5
+```
+
+**Key patterns for DE**
+```bash
+# Wait for file to appear (polling)
+until [ -f /data/ready.flag ]; do sleep 5; done
+
+# Archive processed files
+mkdir -p /data/archive/$(date +%Y/%m/%d)
+mv /data/input/*.csv /data/archive/$(date +%Y/%m/%d)/
+
+# Disk usage check before writing
+avail=$(df -BG /data | awk 'NR==2{print $4}' | tr -d G)
+[ "$avail" -lt 10 ] && die "Less than 10 GB available"
+```

@@ -330,3 +330,48 @@ EXPLAIN SELECT * FROM orders WHERE customer_id IN (...);
 > **Tip 2:** "When does NOT IN perform poorly and what's the fix?" — "NOT IN is dangerous with NULLs in the subquery — any NULL in the subquery result causes the entire NOT IN to return no rows (because `x NOT IN {1, 2, NULL}` is UNKNOWN, not TRUE). Beyond correctness, NOT IN loads the full subquery result into memory. NOT EXISTS avoids both issues: it uses an anti-join plan, stops at first match, and handles NULLs correctly. I always use NOT EXISTS for anti-join patterns in production code."
 
 > **Tip 3:** "A query with a subquery in the SELECT clause is taking 30 minutes. What do you do?" — "First I EXPLAIN the query to check whether the subquery is executing per row (correlated) or being decorrelated (single pass). If it's executing per row for a 1M-row table, I rewrite it: if the subquery is an aggregate, I replace it with a GROUP BY + LEFT JOIN; if it's a ranked selection, I use ROW_NUMBER() in a CTE; if it's an existence check, I use LEFT JOIN + IS NULL or NOT EXISTS. Then I verify the new plan with EXPLAIN ANALYZE and compare actual runtimes."
+
+## ⚡ Cheat Sheet
+
+**Optimizer Rewrites**
+- `IN (subquery)` → Hash Semi-Join (single pass)
+- `NOT IN` → Hash Anti-Join ONLY if optimizer can prove no NULLs; otherwise conservative plan
+- Correlated aggregate subquery → GroupAggregate + Left Join (runs once, not N times)
+- Correlated `LIMIT` subquery → forced per-row execution; rewrite with `LATERAL`
+
+**NOT IN vs NOT EXISTS**
+- `NOT IN` with NULLs in subquery: returns zero rows (NULL propagation breaks the logic)
+- `NOT EXISTS` always correct; uses anti-join plan; stops at first match
+- Rule: always use `NOT EXISTS` for anti-join patterns in production
+
+**Decorrelation Blockers**
+| Pattern | Decorrelated? | Fix |
+|---|---|---|
+| Simple aggregate correlated | Yes (most engines) | N/A |
+| `DISTINCT` in correlated aggregate | Often no | Explicit CTE + JOIN |
+| `LIMIT` in correlated subquery | No | Use `LATERAL` JOIN |
+| Volatile function (`RANDOM()`, `NOW()`) | No | Pre-compute in CTE |
+
+**LATERAL Join Pattern (for per-row LIMIT)**
+```sql
+SELECT c.customer_id, t.order_id
+FROM customers c
+LEFT JOIN LATERAL (
+  SELECT order_id FROM orders WHERE customer_id = c.customer_id
+  ORDER BY amount DESC LIMIT 1
+) t ON TRUE;
+-- Uses index on (customer_id, amount DESC) — efficient per-row lookup
+```
+
+**Platform-Specific Rules**
+- BigQuery: scalar subquery in SELECT = separate scan; use `AVG(...) OVER ()` window instead
+- Snowflake: `LATERAL FLATTEN(input => col)` to unnest VARIANT/array columns
+- Redshift: correlated subqueries are expensive; prefer `DISTSTYLE ALL` on lookup tables to enable local joins
+- PG: `EXPLAIN ANALYZE` to confirm decorrelation — look for `GroupAggregate` + `Hash Left Join` (good) vs `SubPlan` (bad)
+
+**30-Minute Slow Query Diagnosis**
+1. `EXPLAIN` → is there a `SubPlan` node? (= correlated, per-row)
+2. If aggregate: rewrite as `GROUP BY` + `LEFT JOIN`
+3. If ranked selection: rewrite as `ROW_NUMBER()` in CTE
+4. If existence check: rewrite as `LEFT JOIN + IS NULL` or `NOT EXISTS`
+5. Verify fix with `EXPLAIN ANALYZE` and compare actual runtimes

@@ -237,3 +237,44 @@ Most companies: Level 2-3. Level 4+ requires dedicated governance team.
 > **Tip 2:** "A compliance audit asks: 'Show us everywhere customer SSN is stored and who can access it.'" — Without lineage: multi-week manual investigation. With mature governance: (1) DataHub search for tag `pii_class=ssn` → shows 3 tables. (2) Unity Catalog / Glue: list all IAM roles and users with SELECT on those tables. (3) Lineage graph: show the SSN flows from Bronze (raw) → Silver (masked) → Gold (hashed, only analysts with PII role). (4) Audit log: pull all SELECT queries on SSN tables from CloudTrail for last 90 days. Entire response: 2 hours, not 2 weeks.
 
 > **Tip 3:** "What's a data contract and how do you enforce it?" — A data contract is a formal schema + quality + SLA agreement between a data producer (pipeline team) and data consumers (analysts, downstream pipelines). Enforce it via: (1) schema validation at write time (Delta/Iceberg schema enforcement); (2) dbt tests that run on every pipeline execution (not_null, accepted_values, relationships); (3) Great Expectations checkpoints that gate pipeline promotion to Silver; (4) version the contract file in Git — breaking changes require major version bump and consumer notification. Contracts turn implicit assumptions into explicit, testable commitments.
+
+## ⚡ Cheat Sheet
+
+**Catalog types**
+| Catalog | Strengths | Use case |
+|---|---|---|
+| Hive Metastore | Broad compatibility | Legacy |
+| AWS Glue | Serverless, integrates Athena/EMR | AWS-native |
+| Unity Catalog | Fine-grained access + lineage | Databricks |
+| Iceberg REST | Open standard, multi-engine | Cross-platform |
+| Nessie | Git-like branching | Data version control |
+
+**Iceberg REST catalog config**
+```python
+spark.conf.set("spark.sql.catalog.prod", "org.apache.iceberg.spark.SparkCatalog")
+spark.conf.set("spark.sql.catalog.prod.type", "rest")
+spark.conf.set("spark.sql.catalog.prod.uri", "https://catalog.company.com/api/catalog")
+```
+
+**Nessie branching (data version control)**
+```python
+nessie_client.create_branch("feature/experiment-x")
+spark.conf.set("spark.sql.catalog.nessie.ref", "feature/experiment-x")
+# Run pipeline on branch — doesn't affect main
+nessie_client.merge("feature/experiment-x", "main")
+```
+
+**Governance layers**
+```
+Catalog:  who can discover tables (metadata access)
+Storage:  S3 bucket policies + IAM (file access)
+Engine:   column masking, row filtering at query time
+Lineage:  auto-track data flow (OpenLineage)
+Audit:    log all access for compliance
+```
+
+**Key interview points**
+- Catalog holds metadata; data stays in object storage
+- Multi-engine: one Iceberg table readable by Spark, Trino, Flink, DuckDB simultaneously
+- Schema registry = streaming (Kafka); catalog = batch tables (different tools)
+- Data products: catalog entry = contract (owner, SLA, schema, access policy)

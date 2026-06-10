@@ -259,3 +259,48 @@ streamsConfig.put(StreamsConfig.METRICS_RECORDING_LEVEL_CONFIG, "DEBUG");  // or
 > **Tip 4:** Distributed tracing for Kafka (OpenTelemetry) is often missed by candidates. Trace context in message headers lets you track a request from producer to consumer end-to-end. This is invaluable for debugging latency issues in multi-hop pipelines.
 
 > **Tip 5:** Runbooks attached to alerts demonstrate operational maturity. When describing your monitoring setup, mention that every production alert has a linked runbook with diagnosis steps and escalation criteria. Alerts without runbooks are just noise generators.
+
+## ⚡ Cheat Sheet
+
+**SLO Burn Rate Math**
+- 1-hour burn rate = `error_rate_in_window / (1 - SLO_target)`
+- 14.4× burn rate = exhausting 30-day error budget in 2 hours → page immediately
+- 1× burn rate = on track; < 1× = ahead of budget
+- Example: SLO=99.9%, error budget=0.1%; 14.4× = burning 1.44% per hour
+
+**MSK / Kafka Metric Tiers**
+| Tier | Granularity | Use When |
+|---|---|---|
+| DEFAULT | Broker-level only | Low cost baseline |
+| PER_BROKER | Per-broker | Diagnosing broker-specific issues |
+| PER_TOPIC_PER_BROKER | Topic × Broker | Production standard (find hot partitions) |
+| PER_TOPIC_PER_PARTITION | Topic × Partition | Debugging skew; very high cost |
+
+**CPU Saturation Signals**
+- `RequestHandlerAvgIdlePercent` < 0.30 (30%) → broker CPU saturated → reduce client connections or scale brokers
+- `NetworkProcessorAvgIdlePercent` < 0.30 → I/O threads saturated → check `num.network.threads`
+- Response time p99 rising while queue depth stable → CPU bottleneck
+
+**Lag Monitoring Rules**
+- Lag = HWM - consumer committed offset (per partition)
+- Alert when lag exceeds: max_batch_time × max_acceptable_recovery_time
+- Watch `consumer_lag_max` not `consumer_lag_sum` (one slow partition hides behind others)
+- Lag growing during business hours but stable at night → consumer throughput insufficient
+
+**Runbook Decision Tree**
+```
+Consumer lag growing?
+├── Consumer CPU > 80%? → reduce batch size or add parallelism
+├── Poll timeout breached? → increase max.poll.interval.ms or process async
+├── Rebalances happening? → add group.instance.id, check session.timeout.ms
+└── Slow downstream write? → batch writes, async flush, add consumer instances
+```
+
+**Key JMX Metrics Reference**
+| Metric | Alert Threshold |
+|---|---|
+| `UnderReplicatedPartitions` | > 0 |
+| `ActiveControllerCount` | != 1 |
+| `OfflinePartitionsCount` | > 0 |
+| `RequestHandlerAvgIdlePercent` | < 0.30 |
+| `consumer-fetch-manager-metrics:records-lag-max` | > SLA-defined |

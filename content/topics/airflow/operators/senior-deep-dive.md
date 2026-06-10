@@ -260,3 +260,57 @@ def test_dag_integrity():
 > **Tip 2:** Operators should be idempotent — running the same operator twice with the same context should produce the same result. This enables safe retries and backfills. If your operator can't be made idempotent (e.g., sending an email), wrap it in a guard: check if the action already happened before doing it again.
 
 > **Tip 3:** The separation between Hook (connection/auth) and Operator (orchestration logic) is a core Airflow design principle. In interviews, describe this when asked "how do you build a custom operator" — it shows architectural thinking, not just coding.
+
+## ⚡ Cheat Sheet
+
+**Operator Execution Flow**
+1. Scheduler: set state `queued` in metadata DB
+2. Executor: pick up queued task
+3. Worker: spawn process, import DAG file
+4. `pre_execute()` → `execute()` → `post_execute()`
+5. Return value serialized → XCom (key `return_value`)
+6. State → `success` or `failed`
+- Heavy imports (Spark, ML) happen on every task spawn → keep `__init__` lightweight
+
+**Deferrable vs Traditional — Slots Comparison**
+| Pattern | Slots During Wait |
+|---|---|
+| Standard operator | 1 slot held entire duration |
+| Sensor poke mode | 1 slot held entire duration |
+| Sensor reschedule | Released between polls |
+| Deferrable operator | ~0 (re-acquired only at completion) |
+- 500 concurrent Snowflake queries: deferrable → 1 triggerer process, not 500 worker slots
+
+**`template_fields` — Must-Know Rule**
+- Fields not listed → no Jinja rendering (silent fail, `{{ ds }}` stays as literal)
+- `template_ext = ('.sql',)` → render file contents as Jinja template
+- Always document which fields support templating in docstring
+
+**Templating Gotchas**
+```python
+# Date arithmetic
+BashOperator(bash_command="echo {{ macros.ds_add(ds, -7) }}")
+# Params override at trigger time
+PythonOperator(op_kwargs={'env': '{{ params.environment }}'}, params={'environment': 'prod'})
+# SQL from file (Jinja-rendered)
+SnowflakeOperator(sql='sql/merge.sql', template_searchpath='/dags/sql/')
+```
+
+**Hook + Operator Design Principle**
+- Hook: all connection/auth/retry logic → independently testable
+- Operator: thin wrapper calling hook → `hook = MyHook(conn_id); hook.run(sql)`
+- Never put connection logic in `execute()` directly
+
+**Callbacks and SLA**
+```python
+# Task-level callbacks
+default_args = {'on_failure_callback': alert_fn, 'on_retry_callback': log_fn}
+# DAG-level SLA
+DAG(..., sla_miss_callback=on_sla_miss)
+# Task-level SLA
+PythonOperator(..., sla=timedelta(hours=2))  # alert if not done within 2h of DAG start
+```
+
+**Idempotency Rule for Operators**
+- Same `context` (same `execution_date`) → same result regardless of how many times run
+- For non-idempotent side effects (email, SMS): guard with `ti.xcom_pull()` check before acting

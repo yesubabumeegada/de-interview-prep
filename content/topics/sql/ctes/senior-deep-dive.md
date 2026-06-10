@@ -303,3 +303,34 @@ SELECT * FROM final;
 > **Tip 2:** "How do you handle hierarchies in Redshift?" — "Redshift has supported recursive CTEs (`WITH RECURSIVE`) since 2021, so I'd use the standard anchor + recursive pattern. As an alternative for very deep hierarchies, I can iterate with temp tables: insert level 1, then repeatedly insert children by joining the temp table to the source, incrementing the level until no new rows are produced."
 
 > **Tip 3:** "Explain the execution model of a recursive CTE" — "Anchor produces the initial set. The recursive step runs repeatedly, each time processing only the NEW rows from the previous iteration. Results accumulate. It stops when an iteration produces zero new rows. It's conceptually like a BFS traversal."
+
+## ⚡ Cheat Sheet
+
+**Materialization Behavior by Platform**
+- PostgreSQL < 12: CTEs always materialized (optimization barrier) — predicates can't push in
+- PostgreSQL 12+: use `MATERIALIZED` / `NOT MATERIALIZED` hints explicitly
+- SQL Server / Snowflake / BigQuery / Spark: always inline; CTE referenced N times may execute N times
+- MySQL 8+: always materialized — use temp tables for multi-reference CTEs
+
+**Recursive CTE Execution Model**
+- Anchor → Working Table (current iteration rows only) → Recursive step → Accumulator
+- Terminates when iteration produces zero new rows
+- Always BFS traversal; Working Table ≠ Accumulator (recursive step only sees latest rows)
+- PostgreSQL 14+: `CYCLE id SET is_cycle USING path` for built-in cycle detection
+
+**Performance Rules**
+- If CTE referenced multiple times in SQL Server / Spark: materialize into temp table
+- Prune early INSIDE recursive step, not in outer WHERE (recursive CTEs are always materialized)
+- Add index on parent/child join column before recursing on large hierarchies
+- Depth guard: always include `WHERE level < N` or `WHERE NOT is_cycle` to prevent infinite loops
+
+**dbt / ETL CTE Pattern**
+- `source` → `cleaned` → `deduplicated` → `final` — one transformation per CTE
+- ROW_NUMBER() OVER (PARTITION BY id ORDER BY ts DESC) = 1 for dedup inside CTE
+- INSERT INTO target SELECT * FROM final; — single-statement ELT pattern
+
+**Common Interview Pitfalls**
+- NULL in recursive path array: use `NOT n.id = ANY(path_array)` not `<>`
+- Skipping COALESCE for NULL effective_to in SCD2 joins causes missed matches
+- Redshift: supports `WITH RECURSIVE` since April 2021; deep trees → temp table iteration fallback
+- MySQL: CTEs are optimization barriers — rewrite as temp table if called multiple times

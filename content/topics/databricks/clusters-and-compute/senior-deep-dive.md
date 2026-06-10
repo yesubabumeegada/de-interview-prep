@@ -294,3 +294,39 @@ ORDER BY total_dbu_cost DESC;
 > **Tip 2:** "How do you troubleshoot OOM in a Databricks job?" — Check Spark UI: Executors tab (GC time, memory usage), Stages tab (shuffle read size, spill). Common fixes: more workers (distribute data), larger instances (more RAM), more shuffle partitions (smaller tasks), avoid collect_list on large groups, broadcast small tables in joins.
 
 > **Tip 3:** "How do you handle compute governance for 100+ users?" — Cluster policies (restrict instance types, enforce spot, limit max workers, require tags), instance pools (standardize available resources), auto-termination policies (prevent forgotten clusters), system table monitoring (detect over-provisioning and idle clusters), and monthly cost chargebacks per team (accountability drives optimization).
+
+## ⚡ Cheat Sheet
+
+**Cluster types**
+| Type | Use case | Auto-terminate |
+|---|---|---|
+| All-purpose | Interactive dev/notebooks | Yes (configurable) |
+| Job cluster | Single job run | Always (on completion) |
+| SQL warehouse | Databricks SQL queries | Yes |
+
+**Sizing rules**
+- Driver = 1 node; bottleneck for `collect()`, large XComs, UDFs — size ≥ largest executor
+- Workers: start with 4–8, use autoscale min=2 max=8 × expected peak
+- Memory per core: 4–8 GB for standard ETL; 16+ GB for ML
+- Delta cache: SSD-backed; use `cache=true` nodes for repeated scans
+
+**Runtimes**
+- DBR (Databricks Runtime): optimized Spark + Delta
+- ML Runtime: includes MLflow, sklearn, TF, PyTorch pre-installed
+- Photon: vectorized C++ engine; best for SQL/scan-heavy; not for Python UDFs
+- GPU runtime: required for deep learning; use spot for training, on-demand for serving
+
+**Autoscaling**
+- Scale-up: triggered when all executors busy for 2 scheduler backlogs
+- Scale-down: executor idle > `spark.databricks.aggressiveWindowDownS` (default 600s)
+- Enhanced autoscaling (SQL warehouses): scales in ~30s vs ~4min for job clusters
+
+**Cost optimization**
+- Spot/preemptible: 60–80% cheaper; use for non-SLA batch jobs; avoid for streaming
+- Instance pools: pre-warmed instances → reduce cluster start from 5min to 30s
+- Photon: same price as DBR, 2–3× faster for SQL → lower cost per query
+
+**Common gotchas**
+- Single-node cluster: driver IS executor; no parallelism; only for small datasets
+- `spark.executor.cores` default = all vCPUs; reduce to 4–5 to avoid memory pressure
+- High shuffle partitions (>5000) = small task overhead; use AQE coalescing

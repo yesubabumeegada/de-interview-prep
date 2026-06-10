@@ -317,3 +317,52 @@ def migrate_state_safely():
 > **Tip 2:** "How do you achieve exactly-once in streaming?" — "Three requirements: a replayable source (Kafka with offset tracking), checkpointed processing (Spark stores offsets and state), and an idempotent sink (Delta Lake with transactional writes). If any component fails, the batch is replayed from the last committed checkpoint. Delta Lake's transaction log ensures that replayed writes don't create duplicates. File sinks use atomic rename for similar guarantees."
 
 > **Tip 3:** "When would you use flatMapGroupsWithState?" — "When built-in aggregations and window functions aren't expressive enough. Examples: custom session detection with complex timeout logic, pattern matching across events (fraud detection), or maintaining per-key state machines. The tradeoff is complexity — you manage state explicitly, handle timeouts, and lose some optimizer benefits. Always try built-in operations first; drop to flatMapGroupsWithState only when necessary."
+
+## ⚡ Cheat Sheet
+
+**Trigger Types**
+```python
+.trigger(processingTime="30 seconds")   # fixed interval micro-batch
+.trigger(once=True)                     # one batch then stop (backfill pattern)
+.trigger(availableNow=True)             # process all available, then stop (Spark 3.3+)
+.trigger(continuous="1 second")         # experimental low-latency mode
+```
+
+**Output Modes**
+| Mode | When to Use | Requires |
+|------|-------------|---------|
+| append | New rows only, no updates | No aggregation, or windowed agg after watermark |
+| update | Changed rows only | Aggregation |
+| complete | Full result table every batch | Aggregation (careful with large state) |
+
+**Watermarking & Late Data**
+```python
+df.withWatermark("event_time", "10 minutes") \
+  .groupBy(F.window("event_time", "5 minutes")).count()
+# Data > 10 min late is dropped; state older than watermark is evicted
+```
+
+**State Store**
+- Default: HDFS-backed RocksDB state store (Spark 3.2+: `spark.sql.streaming.stateStore.providerClass`)
+- RocksDB: much lower memory footprint than in-memory default for large state
+- State size = largest operational concern; always set watermark to bound state growth
+
+**Checkpointing (Required for Production)**
+```python
+query = df.writeStream \
+    .option("checkpointLocation", "s3://bucket/checkpoints/query_name") \
+    .start()
+# Checkpoint stores: offsets, commit log, state store snapshots
+# Never reuse checkpoint location for different queries
+```
+
+**Exactly-Once Guarantee**
+- Source: must be replayable (Kafka, Auto Loader) with tracked offsets
+- Sink: must be idempotent (Delta MERGE) or transactional (Delta append with txn log)
+- Checkpoint = source of truth for offset tracking
+
+**Interview Traps**
+- `foreachBatch` runs in driver — keep it lightweight; heavy logic belongs in the batch transform
+- Changing query schema requires new checkpoint location (schema evolution breaks checkpoint)
+- `availableNow` vs `once`: `once` deprecated in favor of `availableNow` in Spark 3.3+
+- Watermark only applies to event time; processing time windows have no late data concept

@@ -254,3 +254,40 @@ cloudwatch.put_dashboard(
 > **Tip 2:** "How do you architect observability across multiple AWS accounts?" — "CloudWatch Observability Access Manager (OAM). Create a sink in the central monitoring account. Each source account creates a link sharing metrics, logs, and traces. The monitoring account sees all data in a single dashboard. Combine with cross-account Log Insights for unified troubleshooting. For cost: each account pays for their own log ingestion, the monitoring account pays for cross-account queries."
 
 > **Tip 3:** "How do you optimize CloudWatch costs for a data platform?" — "Three levers: (1) Log retention — set 14-30 days instead of infinite, archive to S3 via subscription filters for long-term. (2) Use INFREQUENT_ACCESS log class for historical logs (50% cheaper). (3) Replace PutMetricData with EMF for high-volume metrics. Typical savings: 60-80% reduction from default settings. Monitor with Cost Explorer filtering on CloudWatch service."
+
+## ⚡ Cheat Sheet
+
+**Cost Hot Spots & Fixes**
+- Default log retention = never expire → set 14–30 days; archive to S3 via subscription filter
+- `INFREQUENT_ACCESS` log class = 50% cheaper ingestion ($0.25/GB vs $0.50/GB)
+- High-cardinality PutMetricData (user_id as dimension) → explosion of metric streams at $0.30/each → use EMF instead
+- Unused alarms cost $0.10/alarm/month — audit quarterly
+
+**EMF (Embedded Metric Format) Rules**
+- Print structured JSON with `_aws.CloudWatchMetrics` key to stdout → metrics extracted automatically
+- No PutMetricData API calls, no throttle limit, no extra cost beyond log ingestion
+- Can use high-cardinality dimensions (table, partition) without metric count explosion
+
+**Subscription Filter Targets**
+- Kinesis Data Stream → real-time processing (Lambda, Flink)
+- Kinesis Firehose → S3 archival (Parquet, partitioned by date)
+- Lambda → real-time alerting; max 2 subscription filters per log group
+
+**Cross-Account Observability (OAM)**
+- Monitoring account: create OAM Sink
+- Each source account: create OAM Link sharing metrics/logs/traces
+- Query Log Insights and dashboards across accounts from monitoring account
+- Each account pays its own log ingestion; monitoring account pays for cross-account queries
+
+**Alarm Best Practices**
+- Composite alarms reduce alert noise (AND/OR multiple conditions)
+- `INSUFFICIENT_DATA` state ≠ OK — treat it as a potential problem
+- `IteratorAgeMilliseconds > 300000` (5 min) on Kinesis = consumer lag SLA alert
+
+**Observability Tool Selection**
+| | CloudWatch | Datadog | Prometheus+Grafana |
+|---|---|---|---|
+| AWS integration | Native | Agent | Exporters |
+| Multi-cloud | No | Yes | Yes |
+| Medium scale cost | $500–2K/mo | $3K–10K/mo | Infra only |
+- AWS-only + cost-sensitive → CloudWatch; Multi-cloud/enterprise → Datadog; Full control/K8s → Prometheus

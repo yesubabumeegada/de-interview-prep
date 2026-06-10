@@ -477,3 +477,40 @@ async def get_pipeline_status(
 3. **Discriminated unions** enable type-safe handling of polymorphic event schemas — the `Literal` discriminator tells Pydantic which model to instantiate.
 4. **Custom annotated types** (`S3Uri`, `PartitionDate`) are reusable validators that self-document your domain conventions.
 5. **Schema-based data quality validation** turns Pydantic from a convenience tool into a data reliability mechanism — a Pydantic DQ gate that rejects > 5% of records and writes to a DLQ is a lightweight alternative to Great Expectations for many use cases.
+
+## ⚡ Cheat Sheet
+
+**BaseSettings Production Pattern**
+- `env_prefix="DB_"` → reads `DB_HOST`, `DB_PORT`, etc. automatically
+- `SettingsConfigDict(env_file=".env")` → local dev convenience
+- `@lru_cache(maxsize=1)` on `get_settings()` → load once, cache forever; `cache_clear()` in tests
+- `SecretStr` → `repr()` shows `**********`; use `.get_secret_value()` for actual string
+- Nested settings: `db: DatabaseSettings = Field(default_factory=DatabaseSettings)`
+
+**Discriminated Unions**
+- `event_type: Literal["purchase"]` on each subclass enables fast dispatch
+- `Field(discriminator="event_type")` on the `Union[...]` type → Pydantic picks correct model
+- O(1) dispatch vs isinstance chain — scales with number of event types
+- Add new event type: create new class with new `Literal`, add to `Union` — zero other changes
+
+**Custom Annotated Types**
+- `Annotated[str, AfterValidator(fn)]` → reusable domain types (`S3Uri`, `PartitionDate`)
+- Compose: `Annotated[str, AfterValidator(fn1), AfterValidator(fn2)]`
+- Self-documents intent: `S3Uri` in a model is clearer than `str` with a comment
+
+**Data Quality Gate**
+- `model_validator(mode="after")` for cross-field business rules (revenue > 0, status in allowed set)
+- `field_validator` runs before `model_validator` — validate individual fields first
+- DQ gate pattern: validate batch → write errors to DLQ → fail pipeline if quality < threshold
+- `e.errors()` on `ValidationError` → structured list with field, type, message per error
+
+**FastAPI Integration**
+- Pydantic models auto-generate OpenAPI docs — no separate schema file needed
+- Invalid request body → FastAPI returns `422 Unprocessable Entity` with error detail
+- `Depends()` with Pydantic model for complex query params (vs individual `Query()` args)
+- `response_model=` strips extra fields and validates output — catches bugs in return values
+
+**Key Numbers / Rules**
+- Pydantic v2 (Rust core) is 5–50× faster than v1 for validation
+- `model_dump()` replaces `.dict()` (v2); `model_validate()` replaces `.parse_obj()` (v2)
+- Use `model_config = SettingsConfigDict(case_sensitive=False)` for env var matching

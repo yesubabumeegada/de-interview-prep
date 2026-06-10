@@ -231,3 +231,46 @@ spark.conf.set("spark.executor.extraJavaOptions",
 > **Tip 2:** "How do you debug an executor OOM?" — "Step 1: Check Spark UI for which stage/task fails. Step 2: Look at shuffle spill (if spilling then OOM, partition is too large). Step 3: Check if broadcast variables are consuming storage memory. Step 4: Look for collect_list/collect_set (unbounded memory per group). Step 5: Check GC time (if >30%, memory is thrashing). Fix: increase partitions (smaller data per task), increase memory, or cap unbounded operations."
 
 > **Tip 3:** "What's the relationship between executor cores and memory?" — "Each core runs one task concurrently. Memory is shared across all concurrent tasks. With 5 cores and 20 GB: each task gets ~4 GB on average. But if one task needs 15 GB (large partition): it steals from others. Reducing cores gives each task more memory but reduces parallelism. The sweet spot: 4-5 cores with 4-6 GB per core."
+
+## ⚡ Cheat Sheet
+
+**Memory Regions (Unified Memory Model)**
+- Total executor memory = `spark.executor.memory` + `spark.executor.memoryOverhead`
+- `spark.memory.fraction` (default 0.6) = fraction of heap for Spark managed memory
+- Spark managed memory split: `spark.memory.storageFraction` (default 0.5) storage vs execution
+- Reserved memory: 300MB fixed for internal Spark objects
+- Formula: usable heap = (executor_memory − 300MB) × 0.6; execution can borrow from storage
+
+**Tungsten Off-Heap**
+```python
+spark.conf.set("spark.memory.offHeap.enabled", "true")
+spark.conf.set("spark.memory.offHeap.size", "2g")  # per executor
+# Bypasses JVM GC; critical for GC-heavy workloads (long GC pauses in Spark UI = signal)
+```
+
+**GC Tuning Signals**
+- GC time > 10% of task time in Spark UI → memory pressure
+- G1GC recommended: `-XX:+UseG1GC -XX:InitiatingHeapOccupancyPercent=35`
+- Reduce `spark.memory.fraction` to 0.5 to give more to user memory (caching, UDFs)
+
+**OOM Taxonomy**
+| OOM Type | Location | Common Cause | Fix |
+|----------|----------|--------------|-----|
+| Executor heap OOM | Executor | Large shuffle, big broadcasts | Increase executor memory or reduce parallelism |
+| Driver OOM | Driver | collect(), broadcast large table | Increase driver memory; avoid collect |
+| memoryOverhead OOM | Executor | Python UDFs, off-heap native libs | Increase `spark.executor.memoryOverhead` |
+| Container OOM (K8s) | Container kill | overhead not accounted | Set overhead = 10-20% of executor memory |
+
+**Cache Storage Levels**
+```python
+from pyspark import StorageLevel
+df.persist(StorageLevel.MEMORY_AND_DISK)  # spills to disk if memory full
+df.persist(StorageLevel.MEMORY_ONLY_SER)  # serialized in memory (less space, more CPU)
+df.persist(StorageLevel.DISK_ONLY)        # for large DFs used multiple times
+df.unpersist()  # always clean up
+```
+
+**Interview Traps**
+- `spark.executor.memory` ≠ total container memory; add `memoryOverhead` for container limit
+- Caching a DF does NOT prevent re-computation if cache is evicted (LRU eviction)
+- Python UDFs run in separate Python process — memory is outside executor JVM heap

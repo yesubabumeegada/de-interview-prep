@@ -222,3 +222,116 @@ flowchart LR
 > **Tip 3:** "What is DIAGNOSTIC HELPSTATS?" — "A session-level setting that makes Teradata recommend which statistics to collect based on the queries you run. After enabling it, run your slow queries, then check the recommendations — it tells you exactly which column/index statistics would help the optimizer most."
 
 > **Tip 4:** "Why does applying a function to a PPI column break partition elimination?" — "Partition elimination works at the storage level — the optimizer maps date range predicates to partition numbers at plan time. When you wrap the column in a function (like YEAR() or CAST()), the optimizer can't statically map the predicate to partition numbers, so it falls back to scanning all partitions."
+
+## ⚡ Cheat Sheet
+
+**Teradata architecture**
+```
+AMPs (Access Module Processors): parallel processing units; each owns a data slice
+PE (Parsing Engine):             parses SQL, optimizes, dispatches to AMPs
+BYNET:                           high-speed interconnect between PEs and AMPs
+Vproc (Virtual Processor):       logical unit (AMP or PE) within a node
+```
+
+**Primary Index (PI) — critical concept**
+```sql
+-- Unique Primary Index (UPI): distribute rows by hashing PI column(s)
+CREATE TABLE orders (
+    order_id INTEGER NOT NULL,
+    amount DECIMAL(15,2),
+    PRIMARY INDEX (order_id)  -- UPI by default if unique
+);
+
+-- Non-Unique Primary Index (NUPI): all rows with same PI hash to same AMP
+-- Good for join performance; bad if low cardinality → hot AMP (data skew)
+
+-- NOPI (No Primary Index): load-balanced by row number — best for staging
+CREATE SET TABLE staging_orders ... NO PRIMARY INDEX;
+```
+
+**Skew and performance**
+```sql
+-- Check for data skew
+SELECT hashamp(hashbucket(hashrow(order_id))) AS amp_no, COUNT(*) AS row_count
+FROM orders GROUP BY 1 ORDER BY 2 DESC;
+-- Even distribution = good PI; skewed = bad PI choice
+
+-- Skew factor: (max_amp_rows / avg_amp_rows - 1) * 100
+-- >10% skew = investigate PI selection
+```
+
+**BTEQ essentials**
+```bteq
+.LOGON server/username,password;
+.SET SESSIONS 4;
+.SET SEPARATOR '|';
+
+SELECT TOP 10 * FROM orders;
+
+.EXPORT REPORT FILE = /data/output.txt
+SELECT * FROM orders WHERE order_date = '2024-01-15';
+.EXPORT RESET
+
+.QUIT;
+```
+
+**FastLoad / MultiLoad**
+```
+FastLoad:   empty table only; bypass transient journal; fastest for initial loads
+MultiLoad:  supports INSERT/UPDATE/DELETE on existing table; uses work tables
+TPT (Teradata Parallel Transporter): modern replacement; stream-based; supports both
+FastExport: parallel export to flat files; most efficient for large exports
+```
+
+**Statistics**
+```sql
+-- Collect statistics for optimizer (like ANALYZE TABLE in other DBs)
+COLLECT STATISTICS ON orders COLUMN (order_date);
+COLLECT STATISTICS ON orders INDEX (order_id);
+-- View statistics
+HELP STATISTICS orders;
+-- Check if stale (>24h old or >10% row count change)
+SELECT * FROM dbc.columnstatsv WHERE tablename='orders';
+```
+
+**Workload Management (TASM/TWM)**
+```
+TASM: Teradata Active System Management — rule-based WLM
+Priority: use workload definitions to assign CPU priority per user/query type
+Throttling: limit concurrent queries per user or workload class
+AMP usage limits: cap AMPs for low-priority queries to protect prod workloads
+```
+
+**Temporal tables (ANSI SQL time-period)**
+```sql
+-- Bi-temporal: valid time (business period) + transaction time (DB period)
+CREATE TABLE price_history (
+    product_id INTEGER,
+    price DECIMAL(10,2),
+    valid_period PERIOD(DATE) NOT NULL AS VALIDTIME,
+    trans_period PERIOD(TIMESTAMP(6) WITH TIME ZONE) NOT NULL AS TRANSACTIONTIME,
+    PRIMARY INDEX (product_id)
+);
+-- Query as of a specific business date
+VALIDTIME AS OF DATE '2024-01-15' SELECT * FROM price_history WHERE product_id = 100;
+```
+
+**Query optimization tips**
+```sql
+-- Use EXPLAIN to see query plan
+EXPLAIN SELECT * FROM orders WHERE order_date = '2024-01-15';
+-- Look for: full AMP scans, product joins (bad), merge joins (good)
+
+-- Join hints
+-- Prefer hash join (default for large tables); avoid nested join (one-row-at-a-time)
+-- Force partition elimination with PARTITION BY RANGE + filter on partition column
+
+-- PI match for joins: if join key = PI of both tables → row hash match → no redistribution
+```
+
+**Key interview points**
+- PI = hash-based distribution; UPI vs NUPI vs NOPI vs PI with partitioning
+- Data skew on NUPI = hot AMP = performance bottleneck
+- Teradata's optimizer is cost-based; fresh statistics are critical
+- TPT replaces FastLoad/MultiLoad/FastExport for modern pipelines
+- Teradata still dominant in large financial/telco data warehouses (often alongside cloud DW)

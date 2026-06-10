@@ -179,3 +179,45 @@ Tiered storage alternative:
 > **Tip 4:** Producer ID expiration (`producer.id.expiration.ms`) is a subtle correctness concern for long-running pipelines with infrequent production. After expiration, the broker forgets the producer's sequence state — a restarted producer gets a new PID but no dedup guarantee for in-flight records.
 
 > **Tip 5:** Segment file naming is based on the base offset, not timestamp. This is why the `.timeindex` file exists — to enable offset lookup by timestamp without scanning the entire log. `kafka-dump-log.sh` is the debugging tool to inspect segment contents directly.
+
+## ⚡ Cheat Sheet
+
+**Retention vs Compaction Decision**
+| Use Case | Policy | Config |
+|---|---|---|
+| Event log (time-bounded) | `delete` | `retention.ms=604800000` (7d) |
+| CDC / changelog | `compact` | `min.cleanable.dirty.ratio=0.5` |
+| CDC + time limit | `compact,delete` | Both `retention.ms` AND `min.compaction.lag.ms` |
+- `compact,delete` = compaction applies within window; segments beyond `retention.ms` are deleted
+
+**Log Cleaner Key Numbers**
+- Default dedup buffer: 128MB → covers 128M/entry_size keys in one pass
+- Buffer too small for partition → multi-pass (slower, partition stays dirty longer)
+- Tune: `log.cleaner.dedupe.buffer.size` (per cleaner thread, not per partition)
+- Cleaners: `log.cleaner.threads=1` default → increase for high-compaction workloads
+
+**Tombstone Lifecycle Rule**
+- Producer sends value=null with key K → tombstone written
+- Broker retains tombstone for `delete.retention.ms` (default 86400000ms = 24h) after segment compaction
+- All consumers must read past tombstone within that window or they'll never see the delete
+- Consumer receives null value → delete the key from its state store
+
+**Transaction Marker / Producer ID Expiry**
+- `producer.id.expiration.ms=86400000` (24h): broker purges PID metadata after this idle time
+- After expiry, same PID re-used → broker resets sequence → potential duplicate if old messages still present
+- Increase for long-pause batch producers to prevent PID recycling
+
+**Tiered Storage Cost Decision**
+| Scenario | Decision |
+|---|---|
+| < 30TB retention | Local disks — no tiered storage overhead |
+| 30TB–500TB, cold reads rare | Tiered storage (S3/GCS) saves 80-90% cost |
+| Frequent random access to old data | Local SSD — tiered has download latency |
+- Tiered storage: hot segments on broker, cold offloaded; transparent to consumers
+
+**Compaction Lag Tuning**
+```properties
+min.compaction.lag.ms=3600000    # 1h: don't compact records newer than 1h (producers still updating)
+max.compaction.lag.ms=86400000   # 1d: must compact records older than 1d (SLA for freshness)
+min.cleanable.dirty.ratio=0.1    # Compact when 10% dirty (lower = more frequent, fresher)
+```

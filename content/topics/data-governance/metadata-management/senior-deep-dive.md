@@ -299,3 +299,43 @@ def compute_metadata_quality_score(engine) -> dict:
 > **Tip 2:** "How do you measure metadata quality?" — Coverage metrics: % of tables with descriptions >50 chars, % with owner, % classified, % of columns documented. Freshness: % of metadata ingested in last 24 hours. Column doc rate: % of columns with descriptions. Track trends week-over-week — metadata quality degrades without active maintenance.
 
 > **Tip 3:** "What is the relationship between schema registry and metadata management?" — Schema registry manages schema versions for streaming (Avro/Protobuf). Metadata management covers all data assets including batch tables. They should be integrated: schema registry changes should flow to the catalog as metadata events. The schema is technical metadata; the catalog adds business and operational metadata on top.
+
+## ⚡ Cheat Sheet
+
+**Metadata types**
+- Technical: schema, types, row counts, partitions
+- Operational: freshness, SLA, pipeline runs, quality scores
+- Business: descriptions, glossary terms, owners, sensitivity
+- Social: most-queried tables, starred assets
+
+**Glossary term vs tag**
+- Tag: free-form label for filtering (pii, deprecated, finance)
+- Glossary term: defined concept with owner + definition linked to columns
+
+**Metadata quality score**
+```python
+weights = {"has_description": 0.30, "has_owner": 0.25,
+           "has_sensitivity": 0.25, "has_glossary_term": 0.20}
+score = sum(w for k, w in weights.items() if metadata.get(k))
+```
+
+**LLM-assisted descriptions**
+```python
+prompt = f"Table: {name}\nColumns: {cols}\nSample: {sample}\nWrite a 2-sentence description."
+draft = llm.generate(prompt)
+catalog.update(name, {"description": draft, "description_source": "llm_draft"})
+# Human reviews before marking 'verified'
+```
+
+**DataHub CLI**
+```bash
+datahub ingest -c recipe.yaml
+datahub get --urn "urn:li:dataset:..."
+datahub put --aspect ownership ...
+```
+
+**Key points**
+- Without owners, nobody fixes quality issues — ownership = accountability
+- Schema registry (Confluent): technical metadata for Kafka topics
+- dbt docs: auto-catalog from schema.yml + model descriptions
+- Catalog as data product registry: each entry has SLA + owner + access request link

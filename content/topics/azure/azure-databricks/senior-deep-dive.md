@@ -205,3 +205,46 @@ orders_df = spark.table("silver.orders").cache()
 > **Tip 2:** "What is Secure Cluster Connectivity and when is it required?" — SCC (also called "No Public IP") configures Databricks workers with no public IP. All traffic between the Databricks control plane and worker nodes goes through a secure relay (Azure Private Link). Why needed: without SCC, each worker has a public IP, which means if an attacker gets onto the worker node, they can reach the public internet. With SCC: workers are fully isolated — no inbound/outbound public internet. Required for: financial services, government, healthcare environments where network isolation is mandatory. Also simplifies NSG configuration (no inbound rules needed for worker traffic).
 
 > **Tip 3:** "How do you estimate and control Databricks costs in production?" — Cost = VM cost (Azure) + DBU license (Databricks). Monitor via: Databricks Account Console → Usage → filter by workspace/cluster/user. Key controls: (1) Spot VMs for workers (70% VM cost reduction, use SPOT_WITH_FALLBACK_AZURE to use on-demand if spot unavailable), (2) cluster auto-termination on All-Purpose clusters (30 min idle = off), (3) cluster pools to reduce cold start (avoid cluster bloat), (4) Databricks budget alerts in Account Console, (5) Unity Catalog usage monitoring to identify high-consumption notebooks. Cost benchmark: $2–5/hour for a 5-node DS4_v2 production job cluster on Jobs tier.
+
+## ⚡ Cheat Sheet
+
+**Azure Databricks workspace tiers**
+| Tier | Features |
+|---|---|
+| Standard | Notebooks, jobs, basic clusters |
+| Premium | Unity Catalog, RBAC, SSO, audit logs |
+| Trial | 14-day premium features |
+
+**Unity Catalog on Azure**
+- One metastore per region per tenant (Entra ID tenant)
+- External location: backed by ADLS Gen2 + Azure Managed Identity
+- Access connector: `dbxAccessConnector` resource → assigns managed identity to workspace
+- RBAC: Entra ID groups synced via SCIM; mapped to UC groups
+
+**Networking modes**
+| Mode | Description |
+|---|---|
+| No isolation | Clusters on Databricks-managed VNet; simple but less secure |
+| VNet injection | Clusters in customer VNet; enables private endpoints |
+| Private Link | Control plane + data plane traffic through private endpoints |
+
+**ADLS Gen2 access patterns**
+```python
+# Service principal (legacy, avoid)
+spark.conf.set("fs.azure.account.auth.type", "OAuth")
+spark.conf.set("fs.azure.account.oauth2.client.id", client_id)
+# Managed identity (recommended with Unity Catalog)
+# No code needed — Unity Catalog handles credential via Access Connector
+spark.read.parquet("abfss://container@account.dfs.core.windows.net/path")
+```
+
+**Cost optimization**
+- Spot VMs (preemptible): 60–80% cheaper; enable `spot` in cluster policy for batch
+- Cluster policies: enforce instance types, autoscale limits, spot usage
+- Instance pools: reduce cluster start time; reduce DBU billing for frequently-created clusters
+- Serverless SQL warehouses: auto-pause; per-second billing; no idle cost
+
+**Azure Monitor integration**
+- Diagnostic settings: send workspace logs to Log Analytics
+- Key log tables: `DatabricksJobs`, `DatabricksClusters`, `DatabricksNotebook`
+- Alert: `DatabricksJobs | where ActionName == "runFailed"` → Logic App action

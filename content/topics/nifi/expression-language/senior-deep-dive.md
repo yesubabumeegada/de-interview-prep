@@ -192,3 +192,78 @@ UpdateAttribute:
 > **Tip 2:** "How do you implement complex routing logic?" — Break into steps: (1) Compute derived attributes in UpdateAttribute using EL (one attribute per business rule). (2) Route in RouteOnAttribute referencing those pre-computed attributes. This is cleaner and more debuggable than complex nested EL in a single routing condition. Each rule is independently testable.
 
 > **Tip 3:** "EL vs Record Path — when to use which?" — EL for FlowFile-level decisions: routing, file naming, processor config. Record Path for record-level operations: field transformations within UpdateRecord, lookup keys in LookupRecord. You can't use EL to access record fields (content), and you can't use Record Path to access FlowFile attributes. They complement each other.
+
+## ⚡ Cheat Sheet
+
+**Core NiFi concepts**
+```
+FlowFile:    unit of data (content + attributes map)
+Processor:   transforms/routes FlowFiles (GetFile, PutS3Object, RouteOnAttribute, etc.)
+Connection:  queue between processors with back-pressure settings
+Process Group: logical grouping of processors (like a subflow)
+Controller Service: shared resource (DBCPConnectionPool, SSLContextService, etc.)
+```
+
+**Back-pressure settings**
+```
+Back Pressure Object Threshold: max FlowFiles in queue before upstream pauses
+Back Pressure Data Size Threshold: max bytes in queue before upstream pauses
+Typical: 10,000 objects / 1 GB — tune based on downstream throughput
+When both thresholds hit → upstream processor stops scheduling
+```
+
+**Expression Language (attribute-based routing)**
+```
+${filename}                    — attribute value
+${filename:toUpper()}          — uppercase
+${fileSize:gt(1000000)}        — > 1 MB (returns true/false)
+${filename:startsWith('order')} — prefix check
+${now():format('yyyy-MM-dd')}  — current date
+${uuid()}                      — generate UUID
+${field.value:trim():toLower()} — chain functions
+```
+
+**Key processors**
+```
+GetFile / ListFile + FetchFile  — ingest from filesystem
+GetSFTP / PutSFTP               — SFTP in/out
+GetKafka / PublishKafka         — Kafka consumer/producer
+ExecuteSQL / QueryDatabaseTable — SQL source
+PutDatabaseRecord               — write to RDBMS
+MergeContent                    — batch small files into larger ones
+SplitRecord / SplitText         — split large FlowFiles
+RouteOnAttribute / RouteOnContent — conditional routing
+ConvertRecord                   — CSV ↔ JSON ↔ Avro ↔ Parquet
+```
+
+**Record-based processing**
+```
+Record Reader + Record Writer → schema-aware processing
+Avoids row-by-row FlowFile per record — bulk processing in one FlowFile
+Readers: CSVReader, JsonTreeReader, AvroReader, ParquetReader
+Writers: CSVRecordSetWriter, JsonRecordSetWriter, ParquetRecordSetWriter
+Schema: from Schema Registry (Confluent), from attribute, or inferred
+```
+
+**Clustering (NiFi cluster)**
+```
+Zero-Master: all nodes are peers; one elected Coordinator via ZooKeeper
+Primary Node: handles scheduled processors once per cluster (GetFile, etc.)
+Load balancing: connections can load-balance FlowFiles across nodes
+State Provider: ZooKeeper stores distributed state (watermarks, offsets)
+```
+
+**Provenance (lineage)**
+```
+Every FlowFile event recorded: RECEIVE, SEND, FETCH, DROP, FORK, JOIN, CONTENT_MODIFIED
+Searchable by: filename, UUID, attribute, component, time range
+Replay: any FlowFile can be replayed from any point in provenance chain
+Retention: configurable (default 24h); archive to external storage for longer
+```
+
+**Key interview points**
+- NiFi is best for: heterogeneous data ingestion, protocol translation, low-code ETL
+- Not ideal for: complex transformations (use Spark/dbt), high-throughput ML pipelines
+- Site-to-Site (S2S): secure data transfer between NiFi instances (no Kafka needed)
+- MiNiFi: lightweight NiFi agent for edge devices (IoT, network equipment)
+- NiFi vs Kafka: NiFi = data routing/transformation; Kafka = durable messaging queue

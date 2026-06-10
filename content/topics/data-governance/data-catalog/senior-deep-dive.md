@@ -300,3 +300,38 @@ class CatalogRecommendationEngine:
 > **Tip 2:** "How would you design catalog lineage for a complex org?" — OpenLineage emitters in Spark, Airflow, dbt, and Flink push runtime lineage events to a central broker (Marquez or DataHub Kafka). The catalog assembles these into a graph. Key design choices: granularity (table-level vs column-level), handling failed runs (lineage for partial runs?), cross-system lineage stitching.
 
 > **Tip 3:** "How do you handle catalog scale with 10,000+ tables?" — Paginated GraphQL queries, Elasticsearch-backed search index, precomputed lineage graph snapshots for fast traversal. Catalog freshness tiers: tier-1 tables (core, daily ingestion), tier-2 (weekly), tier-3 (on-demand). Don't profile every table daily — profile based on usage and criticality.
+
+## ⚡ Cheat Sheet
+
+**Metadata layers**
+| Layer | Examples | Source |
+|---|---|---|
+| Technical | Schema, types, row counts | Auto-ingested connector |
+| Operational | Freshness, SLA, pipeline runs | Observability tooling |
+| Business | Descriptions, owners, glossary terms | Human or LLM-assisted |
+| Social | Most-queried tables, search rank | Usage analytics |
+
+**DataHub URN**: `urn:li:dataset:(urn:li:dataPlatform:snowflake,db.schema.table,PROD)`
+
+**Metadata gate**
+```python
+def metadata_gate(table_name, catalog):
+    meta = catalog.get(table_name)
+    issues = [k for k in ["description","owner","sensitivity"] if not meta.get(k)]
+    if issues: raise ValueError(f"{table_name}: missing {', '.join(issues)}")
+```
+
+**DataHub recipe (auto-ingest)**
+```yaml
+source:
+  type: snowflake
+  config: {account_id: xy12345, database: PROD}
+sink:
+  type: datahub-rest
+  config: {server: "http://datahub:8080"}
+```
+
+**Key points**
+- Catalog = discovery; governance tools = policy enforcement (different concerns)
+- Column-level lineage is 10x harder to capture, 10x more useful for impact analysis
+- Data products: catalog entries with SLA + owner + access request link

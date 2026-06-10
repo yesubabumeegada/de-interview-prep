@@ -213,3 +213,98 @@ Decision framework:
 > **Tip 2:** "What is the role of Kafka topic compaction in CDC pipelines, and should you enable it?" — Log compaction keeps only the latest message per key (same as the latest state of each row). For CDC topics: enables downstream consumers to rebuild the full table state by replaying only the compacted topic (one message per primary key = current state). Enables: restore a new downstream system from a compacted topic (no need for full snapshot). Trade-offs: compacted topics don't preserve history (only latest state), so point-in-time analysis of "all changes to order 123" won't work. Recommendation: maintain two topics: (a) change-log topic (no compaction, 7-day retention): for streaming consumers that need all changes; (b) snapshot topic (compacted, indefinite retention): for bootstrapping new consumers. Debezium's Outbox Router can write to both.
 
 > **Tip 3:** "How do you ensure CDC events are processed in order when there are multiple consumers and multiple partitions?" — Within a single Kafka partition: order is guaranteed (Debezium publishes changes for the same row to the same partition via primary key as partition key). Across partitions: no ordering guarantee. For ordering per row: ensure all changes to the same row go to the same partition (Debezium uses the row's primary key as the Kafka message key → same key always → same partition via consistent hashing). Consumer side: process partitions independently (each partition's consumer handles one shard of rows). For global ordering across all rows: not feasible at scale without a single-partition topic (throughput bottleneck). In practice: ordering per row is sufficient for UPSERT patterns — each message has the full after-state, so processing order within a row doesn't matter as long as you use `WHERE updated_at > target.updated_at`.
+
+## ⚡ Cheat Sheet
+
+**Streaming fundamentals**
+```
+Event time:    when the event actually occurred (on the device)
+Processing time: when the system processes it (can be much later)
+Ingestion time: when it arrives at the message broker
+Watermark:     max expected event time lag — defines when a window closes
+Late data:     events arriving after the watermark → handled by allowedLateness or drop
+```
+
+**Apache Flink key concepts**
+```java
+// Keyed stream + window + aggregate
+stream.keyBy(event -> event.userId)
+      .window(TumblingEventTimeWindows.of(Time.minutes(5)))
+      .aggregate(new RevenueAggregator());
+
+// Watermark strategy
+WatermarkStrategy.<OrderEvent>forBoundedOutOfOrderness(Duration.ofSeconds(30))
+    .withTimestampAssigner((event, ts) -> event.eventTimeMs);
+```
+
+**Spark Structured Streaming**
+```python
+# Read from Kafka
+stream = spark.readStream.format("kafka") \
+    .option("kafka.bootstrap.servers", "broker:9092") \
+    .option("subscribe", "orders") \
+    .load()
+
+# Window aggregation
+from pyspark.sql.functions import window, col
+agg = stream \
+    .withWatermark("event_time", "30 seconds") \
+    .groupBy(window("event_time", "5 minutes"), "region") \
+    .sum("amount")
+
+# Write to Delta (trigger: every 1 min or micro-batch)
+agg.writeStream.format("delta").trigger(processingTime="1 minute") \
+    .outputMode("append").option("checkpointLocation", "/chk/orders").start()
+```
+
+**Window types**
+| Window | Description | Use case |
+|---|---|---|
+| Tumbling | Fixed non-overlapping | Hourly totals |
+| Sliding | Fixed size, moves by slide interval | 5-min avg, every 1 min |
+| Session | Gap-based (closes after inactivity) | User sessions |
+| Global | Accumulates all events | Running total |
+
+**Exactly-once semantics**
+```
+Source: idempotent read (Kafka offset tracking)
+Processing: checkpointing (Flink) or write-ahead log (Spark)
+Sink: idempotent write (Delta MERGE, upsert) or transactional sink
+Kafka → Flink/Spark → Delta = exactly-once end-to-end (with checkpointing)
+```
+
+**CDC streaming (Debezium → Kafka → Lakehouse)**
+```
+1. Debezium captures MySQL/Postgres binlog → Kafka topic (op: c/u/d/r)
+2. Flink/Spark reads Kafka topic
+3. MERGE INTO Delta/Iceberg table:
+   INSERT on c, UPDATE on u, DELETE on d
+4. Result: real-time replicated lakehouse table
+```
+
+**Kinesis key operations**
+```python
+import boto3
+kinesis = boto3.client('kinesis', region_name='us-east-1')
+# Put record
+kinesis.put_record(StreamName='orders', Data=json.dumps(event).encode(), PartitionKey=order_id)
+# Get shard iterator
+it = kinesis.get_shard_iterator(StreamName='orders', ShardId='shardId-000000000000',
+                                 ShardIteratorType='LATEST')['ShardIterator']
+# Read records
+records = kinesis.get_records(ShardIterator=it, Limit=100)['Records']
+```
+
+**Stateful processing patterns**
+```
+Running total:    keyed state (ValueState[Double])
+Sessionization:   keyed + timer-based (clear state after N seconds inactivity)
+Pattern detection: CEP (Flink Complex Event Processing) — detect A then B within 5 min
+Deduplication:    keyed state stores seen event IDs (with TTL for cleanup)
+```
+
+**Key interview points**
+- Checkpointing: Flink snapshots operator state to S3/HDFS for fault tolerance
+- Backpressure: slow downstream = upstream stops reading Kafka = natural flow control
+- Parallelism = Kafka partitions: each Flink/Spark task reads one partition
+- Streaming vs micro-batch: Flink = true streaming (event-by-event); Spark = micro-batch (more latency, simpler)

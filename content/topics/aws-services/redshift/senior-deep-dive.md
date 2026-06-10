@@ -259,3 +259,52 @@ ORDER BY event_time DESC;
 > **Tip 2:** "What's the most impactful Redshift optimization?" — "Aligning DISTKEYs between fact and dimension tables on their join column. This eliminates the most expensive operation in distributed SQL: cross-node data movement. A query with DS_DIST_BOTH doing a 100B-row shuffle becomes DS_DIST_NONE with zero shuffle — often 10-50x faster."
 
 > **Tip 3:** "How does Redshift differ from Snowflake architecturally?" — "Redshift: you manage distribution (DISTKEY) and sort (SORTKEY) manually for optimal performance. Snowflake: automatic (micro-partitions, clustering keys are optional hints). Redshift: compute and storage are coupled per node (except RA3). Snowflake: fully separated. Redshift requires VACUUM. Snowflake doesn't. Trade-off: Redshift gives more control but more operational burden."
+
+## ⚡ Cheat Sheet
+
+**Cluster vs Serverless**
+| Feature | Provisioned | Serverless |
+|---|---|---|
+| Scaling | Manual resize or elastic | Automatic (RPU-based) |
+| Cost model | Per node-hour | Per RPU-second |
+| Concurrency scaling | Add/remove nodes | Auto |
+| Best for | Steady predictable workload | Spiky/variable workload |
+
+**Distribution styles**
+| Style | When to use |
+|---|---|
+| `EVEN` | Default; balanced rows; no obvious join key |
+| `KEY(col)` | Large fact table joining on col; co-locates matching rows |
+| `ALL` | Small dimension tables (<1M rows); broadcast to all nodes |
+| `AUTO` | Let Redshift decide; good starting point |
+
+**Sort keys**
+- Compound: efficient range scans on first N columns; bad for single later columns
+- Interleaved: equal weight to all columns; better for multi-column filters; higher vacuum cost
+- Choose 1–3 columns most used in WHERE/JOIN; date/timestamp almost always first
+
+**Key table properties**
+```sql
+CREATE TABLE fact_orders (
+    order_id BIGINT NOT NULL ENCODE az64,
+    order_date DATE ENCODE az64,
+    amount NUMERIC(12,2) ENCODE az64,
+    customer_id INT ENCODE az64
+)
+DISTSTYLE KEY DISTKEY(customer_id)
+SORTKEY(order_date)
+;
+```
+
+**Performance commands**
+```sql
+VACUUM DELETE ONLY tablename;        -- reclaim deleted rows
+VACUUM SORT ONLY tablename;          -- re-sort unsorted rows
+ANALYZE tablename;                   -- update statistics
+SELECT * FROM SVV_TABLE_INFO WHERE table = 'fact_orders'; -- table health
+```
+
+**Concurrency scaling**
+- Enabled per workload management (WLM) queue; billed per second
+- Auto-pause: serverless pauses after 3min idle; provisioned needs manual scheduling
+- Spectrum: query S3 directly via external tables; charged per TB scanned

@@ -349,3 +349,44 @@ def assess_eu_ai_act_compliance(model_use_case: str) -> dict:
 > **Tip 3:** "How would you implement GDPR Article 22 compliance for an automated credit decision system?" — "Three components: (1) Human review path — any automated denial must be flaggable for human review within 30 days; (2) Meaningful explanation — use SHAP to identify the top 3-5 features driving the decision, translate to plain language ('Your debt-to-income ratio was 45%, above our threshold of 35%'); (3) Contest mechanism — allow users to provide additional information and trigger re-evaluation. Document all of this in the model card."
 
 > **Tip 4:** "What's the difference between fairness through unawareness and counterfactual fairness?" — "FTU removes protected attributes from input: 'race isn't in my model.' Counterfactual fairness asks: if this individual had been of a different race (ceteris paribus), would the decision change? A model can be unfair by counterfactual definition even without using race, if correlated proxies carry the same information. Counterfactual fairness is stronger but requires a causal model of how attributes relate to outcomes."
+
+## ⚡ Cheat Sheet
+
+**Fairness Metrics — When to Use Which**
+- **Equalized Odds** (equal TPR + FPR): credit/loan decisions; ECOA basis
+- **Demographic Parity**: hiring (EEOC 80% rule); selection rate reflects applicant pool
+- **Calibration/Predictive Parity**: recidivism (COMPAS); a score of 7 = 70% risk for all groups
+- **Equal Opportunity** (equal TPR only): medical diagnosis; false negatives are highest harm
+- You **cannot** simultaneously have calibration + equalized odds when base rates differ (Chouldechova 2017)
+
+**Key Numbers**
+- EEOC Adverse Impact Rule: selection rate < 80% of the highest group → disparate impact
+- Adverse Impact Ratio (AIR) < 0.8 → flagged
+- EU AI Act high-risk penalty: up to 30M EUR or 6% global annual turnover
+- Minimum subgroup size for statistical significance: typically 50+ samples
+
+**Intersectionality**
+- Check single-attribute AND pairwise intersections (gender × race × age)
+- `combinations(sensitive_df.columns, 2)` for all pairs
+- Flag groups with AIR < 0.8 vs overall positive rate
+- Intersectional groups often have small N → use bootstrap CIs, not p-values alone
+
+**Regulatory Cheat Sheet**
+| Regulation | Key Obligation | Applies To |
+|---|---|---|
+| GDPR Art. 22 | Right to human review of automated decisions | EU data subjects |
+| GDPR Art. 13-14 | Explain logic of automated decisions | EU data subjects |
+| EU AI Act High-Risk | Risk mgmt, data governance, conformity assessment | Hiring, credit, medical, law enforcement |
+| ECOA | Equal credit opportunity | US credit decisions |
+| EEOC 80% rule | Adverse impact threshold in hiring | US employment |
+
+**Fairness Mitigation Strategies**
+- **Pre-processing**: Reweigh training samples; oversample minority groups
+- **In-processing**: Fairness constraints in loss function (e.g., Fairlearn `ExponentiatedGradient`)
+- **Post-processing**: Adjust decision thresholds per group (Platt scaling per group)
+- Counterfactual fairness > fairness-through-unawareness: proxies (zip code, name) carry protected-attribute signal even without the attribute itself
+
+**COMPAS Case — The Three-Sentence Answer**
+- ProPublica: Black defendants had 2× false positive rate (labeled high-risk but didn't reoffend)
+- Northpointe: Scores were equally calibrated (7/10 = 70% recidivism for both races)
+- Both correct; impossible theorem proves they can't both hold when base rates differ → societal choice, not math

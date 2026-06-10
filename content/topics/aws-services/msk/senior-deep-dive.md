@@ -224,3 +224,41 @@ for message in consumer:
 > **Tip 2:** "How do you achieve exactly-once on MSK?" — "Kafka transactions: transactional producer wraps read+process+write in a single atomic transaction. Consumer reads with `isolation.level=read_committed` to only see committed messages. Combined with idempotent producer (prevents duplicates on retry). This gives end-to-end exactly-once for Kafka-to-Kafka processing."
 
 > **Tip 3:** "MSK cost is growing — how do you optimize?" — "Five levers: (1) Tiered storage (80% storage savings — hot data on EBS, cold on S3). (2) Graviton instances (15-20% cheaper, same performance). (3) Right-size brokers (monitor CPU/network — if <30% utilized, downsize). (4) Reduce replication factor for non-critical topics (RF=2 for logs). (5) Shorter local retention + MSK Connect to S3 for long-term access."
+
+## ⚡ Cheat Sheet
+
+**Cluster Sizing Formula**
+- Brokers = CEIL((write_MB_s × RF) / per_broker_throughput) × 1.3 headroom
+- Always round to multiple of 3 (AZ balance: 3 brokers, one per AZ)
+- Partitions ≥ max concurrent consumers; typical: 1–2 partitions per MB/s throughput
+- Example: 100 MB/s write, RF=3 → 300 MB/s cluster → 4 m5.2xlarge × 1.3 → 6 brokers
+
+**Cost Comparison at Scale**
+| Throughput | MSK Provisioned | MSK Serverless | Kinesis |
+|---|---|---|---|
+| 5 MB/s | $380/mo | ~$340/mo | ~$580/mo |
+| 50 MB/s | $770/mo | ~$1,800/mo | ~$2,370/mo |
+| 500 MB/s | $5,500/mo | N/A (cap) | ~$23,700/mo |
+- Provisioned cheapest for steady high throughput; Serverless for variable/dev; Kinesis most expensive at scale
+
+**Cost Reduction Levers**
+- Graviton (m7g vs m5): 15–20% cheaper, same performance
+- Tiered storage: hot data on EBS, cold on S3 → 60–80% storage savings
+- RF=2 for non-critical topics (logs): 33% less storage + replication network cost
+- Shorter local retention + MSK Connect to S3 for long-term access
+
+**Exactly-Once (Kafka Transactions)**
+- Producer: `transactional_id=unique_per_instance`, `enable_idempotence=true`, `acks=all`
+- `init_transactions()` → `begin_transaction()` → produce → `send_offsets_to_transaction()` → `commit_transaction()`
+- Consumer: `isolation.level=read_committed` — only sees committed messages
+
+**Producer Tuning**
+- `compression.type=lz4` (best throughput/ratio); `batch.size=65536` (64 KB); `linger.ms=10`
+- `max.in.flight.requests.per.connection=5` safe with idempotence enabled
+
+**Operational Runbook**
+- Disk > 85%: enable tiered storage or reduce retention
+- Consumer lag growing: add consumers (up to partition count) or optimize processing
+- Under-replicated partitions: check broker CPU/disk I/O
+- Never decrease partition count (Kafka doesn't support it)
+- Cross-AZ data transfer cost: keep producer/consumer in same AZ as partition leader

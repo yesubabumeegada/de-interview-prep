@@ -399,3 +399,44 @@ SELECT COUNT(*) FROM org;
 > **Tip 2:** "What's the performance difference between a recursive CTE and a closure table for hierarchy queries?" — "For read-heavy workloads with frequent subtree queries, a closure table is O(1) per query using a simple JOIN, versus O(n × depth) for recursive CTEs. The trade-off is write complexity: every insert into the hierarchy requires O(depth) rows added to the closure table. I'd choose closure table for reporting databases with mostly reads, and adjacency list with recursive CTEs for OLTP systems with frequent writes."
 
 > **Tip 3:** "Our recursive CTE is causing timeouts on a 500,000-row hierarchy table. How would you fix it?" — "First, I'd check if the join column (`parent_id`) is indexed — this is the most common cause. Second, I'd add early pruning in the recursive step to limit the working table size. Third, if the hierarchy is queried frequently and doesn't change often, I'd pre-compute it into a closure table or materialized path and refresh on a schedule rather than recursing on every query."
+
+## ⚡ Cheat Sheet
+
+**Recursive CTE Internals**
+- Working Table = only latest iteration rows; Accumulator = all rows ever produced
+- Recursive step reads Working Table ONLY — enables BFS; DFS is not natively possible
+- PostgreSQL: recursive CTEs always materialized (NOT MATERIALIZED hint has NO effect)
+- Filter inside recursive step — outer WHERE cannot push into recursive CTE
+
+**Hierarchy Model Trade-offs**
+| Model | Read (subtree) | Write (insert/move) | Use When |
+|---|---|---|---|
+| Adjacency list | O(depth) recursive | O(1) | Frequent writes, any depth |
+| Materialized path | O(1) LIKE prefix scan | O(depth) path update | Read-heavy, moderate depth |
+| Nested sets | O(1) range scan | O(N) update all rgt/lft | Read-heavy analytics, rare moves |
+| Closure table | O(1) simple JOIN | O(depth) rows per insert | Best read performance, OK with storage cost |
+
+**Cycle Detection Patterns**
+```sql
+-- Manual path array (all PG versions)
+WHERE NOT n.id = ANY(path_array)
+-- PG 14+ native
+CYCLE id SET is_cycle USING path
+SELECT * FROM cte WHERE NOT is_cycle
+```
+
+**Performance Checklist for Deep Hierarchies**
+- Index on parent_id column (most common missed optimization)
+- Add depth guard: `WHERE depth < 50` to prevent runaway recursion
+- For 500K+ node trees: consider closure table (pre-materialized) over per-query recursion
+- For graphs with 10K+ nodes: use Spark GraphX / Neo4j / Neptune instead of SQL recursion
+
+**Graph Algorithm Limits in SQL**
+- SQL recursion = BFS only; true Dijkstra (priority queue) not natively supported
+- Approximate shortest path: run BFS, keep min cost per destination with `DISTINCT ON`
+- Transitive closure: use path array for visited tracking (accumulator subquery not allowed)
+
+**ETL / Data Engineering Applications**
+- Data lineage impact analysis: recursive CTE from broken source → all downstream tables
+- DAG dependency resolution: anchor = jobs with no deps; recursive = jobs whose deps are in path
+- Both patterns require `NOT job_id = ANY(path)` to prevent cycles in DAGs

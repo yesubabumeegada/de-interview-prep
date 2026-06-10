@@ -340,3 +340,44 @@ packed = struct.pack(fmt, 1, b"John", 95000.0)
 > 2. "For membership testing at scale, a Bloom filter gives O(1) lookup with ~1% false positives using 1/10th the memory of a set"
 > 3. "I use `__slots__` when creating millions of similar objects — it eliminates the per-instance `__dict__` saving ~64 bytes per object"
 > 4. Mention the `sys.getsizeof()` → `tracemalloc` pipeline for profiling memory
+
+## ⚡ Cheat Sheet
+
+**Memory Sizes (CPython 3.11+)**
+| Object | Size |
+|--------|------|
+| `int` | 28 bytes |
+| `str` (empty) | 49 bytes |
+| `list` (empty) | 56 bytes |
+| `dict` (empty) | 64 bytes |
+| `set` (empty) | 216 bytes |
+| Regular class instance | ~200 bytes (with `__dict__`) |
+| `__slots__` instance | ~56–72 bytes |
+| NumPy int64 element | 8 bytes (no boxing) |
+
+**Dict Internals**
+- Hash table resize threshold: 2/3 capacity (load factor)
+- Growth pattern: 8 → 16 → 32 → 64 (doubles)
+- Insertion order preserved since Python 3.7 (compact dict layout)
+- `sys.intern(string)` — force string reuse; saves memory for repeated column names
+
+**`__slots__` Rules**
+- Use when creating millions of similar objects (3–4× memory reduction)
+- Cannot add dynamic attributes; complicates multiple inheritance
+- Use for: parsed records, value objects — NOT for config or service classes
+
+**Custom Structures for DE**
+- **Bloom filter**: `might_contain()` → False = definitely absent, True = maybe present; ~1.2 MB for 10M bits
+- **Trie**: O(k) prefix lookup; route S3 paths, resolve table names — O(1) vs O(n) dict scan
+- **RingBuffer**: fixed-size circular buffer; last-N events with constant memory; `deque(maxlen=N)` for simple case
+
+**Memory Optimization Decision Tree**
+1. 10M+ objects? → `__slots__` (saves ~64 bytes per instance)
+2. Membership test at scale? → Bloom filter (vs set: 1/10 memory, ~1% false positive)
+3. Large file > RAM? → generator pipeline (O(1) memory) or `mmap`
+4. Profiling? → `sys.getsizeof()` for single object; `tracemalloc` for allocation traces
+
+**Generator vs List (10M items)**
+- List: ~400 MB peak
+- Generator: ~0.1 MB peak (just the frame)
+- Frame overhead: ~112 bytes per suspended generator

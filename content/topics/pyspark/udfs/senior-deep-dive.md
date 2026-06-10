@@ -285,3 +285,65 @@ df.withColumn("udf_result", my_udf(F.col("x"))).explain(mode="codegen")
 > **Tip 2:** "When would you write a Scala UDF instead of Python?" — "When the UDF is called billions of times and serialization dominates the cost. Scala UDFs run natively in the JVM with zero serialization overhead. I'd write in Scala for: string parsing UDFs on very large datasets, UDFs in hot paths called per-row on terabyte-scale data, or UDFs that need to interact with Java libraries. The tradeoff is deployment complexity — you need to compile, package a JAR, and distribute it."
 
 > **Tip 3:** "How would you eliminate a UDF?" — "First, check if the logic can be expressed with built-in functions: regexp_extract for regex, split + array indexing for parsing, when/otherwise for conditionals, transform/filter/aggregate for array operations. Second, check higher-order functions (Spark 2.4+). Third, try SQL expressions with F.expr(). If none work, use a Pandas UDF for vectorization. The row-at-a-time Python UDF should be the absolute last resort."
+
+## ⚡ Cheat Sheet
+
+**UDF types and performance**
+| Type | Performance | Serialization | When to use |
+|---|---|---|---|
+| Python UDF | Slowest (row-by-row, Python GIL) | Pickle | Last resort |
+| Pandas UDF (scalar) | 10–100× faster | Apache Arrow | Vectorized transforms |
+| Pandas UDF (grouped) | Good | Arrow | Grouped aggregations |
+| Pandas UDF (iterator) | Best for large datasets | Arrow (batched) | Stateful transforms |
+| Scala UDF | Fastest | JVM native | Performance-critical |
+
+**Registration and usage**
+```python
+from pyspark.sql.functions import udf, pandas_udf
+from pyspark.sql.types import StringType, DoubleType
+import pandas as pd
+
+# Python UDF (avoid in production)
+@udf(returnType=StringType())
+def clean_name(name: str) -> str:
+    return name.strip().upper() if name else None
+
+# Pandas scalar UDF (preferred)
+@pandas_udf(DoubleType())
+def parse_amount(s: pd.Series) -> pd.Series:
+    return pd.to_numeric(s.str.replace("[,$]", "", regex=True), errors='coerce')
+
+df.withColumn("clean", clean_name("name"))
+df.withColumn("amount", parse_amount("raw_amount"))
+```
+
+**Iterator UDF (for large batches)**
+```python
+from typing import Iterator
+@pandas_udf(DoubleType())
+def score_batch(iterator: Iterator[pd.Series]) -> Iterator[pd.Series]:
+    model = load_model()  # loaded ONCE per task, not per row
+    for batch in iterator:
+        yield model.predict(batch)
+```
+
+**Avoiding UDFs**
+```python
+# Replace Python UDF logic with native Spark functions
+from pyspark.sql.functions import regexp_replace, when, col, translate
+# Bad: UDF for null coalesce
+# Good: coalesce(col("a"), col("b"), lit("default"))
+# Bad: UDF for string cleaning
+# Good: regexp_replace + upper + trim
+```
+
+**Type mapping**
+| Python | PySpark SQL type |
+|---|---|
+| `str` | `StringType()` |
+| `int` | `LongType()` |
+| `float` | `DoubleType()` |
+| `bool` | `BooleanType()` |
+| `datetime` | `TimestampType()` |
+| `list[int]` | `ArrayType(LongType())` |
+| `dict[str, float]` | `MapType(StringType(), DoubleType())` |

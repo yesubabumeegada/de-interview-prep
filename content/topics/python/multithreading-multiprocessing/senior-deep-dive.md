@@ -224,3 +224,42 @@ def benchmark(work_fn, data, workers: int = 4) -> dict:
 > **Tip 2:** For deadlock questions, explain the four conditions (mutual exclusion, hold-and-wait, no preemption, circular wait) and your prevention: "I enforce global lock ordering and always use timeouts. Better yet, I design lock-free systems using queues."
 
 > **Tip 3:** Don't just say "use cProfile." Explain that cProfile doesn't capture thread wait time well. Instead measure wall-clock time, calculate speedup ratio, and verify you're getting actual parallelism, not just concurrency.
+
+## ⚡ Cheat Sheet
+
+**Concurrency Model Decision Table**
+| Criterion | asyncio | threading | multiprocessing |
+|-----------|---------|-----------|-----------------|
+| Work type | I/O-bound | I/O-bound | CPU-bound |
+| Tasks | 1000s | 10s–100s | CPU core count |
+| Memory/task | ~1 KB | ~8 MB | ~50+ MB |
+| Shared state | Easy (single thread) | Needs locks | Needs IPC/queues |
+| CPU cores used | 1 | 1 (GIL) | All |
+
+**Producer-Consumer Rules**
+- `Queue(maxsize=N)` — producer blocks on `put()` when full = automatic backpressure
+- Poison pill: put `SENTINEL` once per consumer thread to signal shutdown
+- `queue.get(timeout=10.0)` — always use timeout to detect stalled producers
+- Result aggregation: use `threading.Lock()` when appending to shared list
+
+**Deadlock Prevention**
+- Four conditions: mutual exclusion + hold-and-wait + no preemption + circular wait
+- Prevention: acquire locks in consistent global priority order — breaks circular wait
+- Always use `acquire(timeout=T)` — raises `TimeoutError` instead of hanging forever
+- Prefer lock-free design: queues + immutable data; minimize lock scope duration
+
+**Memory-Mapped IPC**
+- `mmap` shares data between processes without pickle overhead
+- `struct.pack_into` / `unpack_from` — binary layout for numeric arrays
+- Use for: large float arrays, sorted lookup tables, shared configuration
+- `ACCESS_READ` for read-only consumers; `ACCESS_WRITE` for shared write (add lock)
+
+**BackpressureQueue Pattern**
+- `high_watermark = 0.8 * maxsize` — log warning when queue reaches 80% full
+- Track `_pressure_events` count — metric for consumer-is-slow diagnosis
+- `put(item, timeout=30.0)` — return `False` instead of raising on timeout in non-critical paths
+
+**Benchmarking Concurrency**
+- If `process_time < single_time / 2`: CPU-bound → use multiprocessing
+- If `thread_time < single_time / 2`: I/O-bound → use threads or async
+- Neither improves: profile further with `py-spy` — likely a bottleneck inside a C extension

@@ -305,3 +305,51 @@ spark.sql("DESCRIBE EXTENDED orders").show(truncate=False)
 > **Tip 2:** "When would you use join hints?" — "When the optimizer's statistics are stale or unavailable and it picks the wrong join strategy. Common case: the optimizer doesn't know a table is small enough to broadcast because statistics haven't been computed. I'd add a BROADCAST hint for tables under ~100MB. For very large joins where both sides are big, MERGE hint ensures a scalable sort-merge join. I always verify with EXPLAIN and only hint when necessary — hints override the optimizer's intelligence."
 
 > **Tip 3:** "Is there a performance difference between SQL and DataFrame API?" — "No measurable difference. Both compile to the same Catalyst logical plan, go through the same optimizer rules, and produce identical physical plans. I've verified this by comparing executedPlan().toString() output. The choice is purely about readability, team skills, and composability. SQL reads better for analytics queries; DataFrame API is better for programmatic pipelines with dynamic logic."
+
+## ⚡ Cheat Sheet
+
+**SQL Optimization Hints**
+```sql
+-- Join hints
+SELECT /*+ BROADCAST(t2) */ * FROM t1 JOIN t2 ON t1.id = t2.id
+SELECT /*+ MERGE(t1, t2) */ * FROM t1 JOIN t2 ON t1.id = t2.id
+SELECT /*+ SHUFFLE_HASH(t2) */ * FROM t1 JOIN t2 ON t1.id = t2.id
+
+-- Partition hints
+SELECT /*+ REPARTITION(10, t.dept) */ * FROM t
+SELECT /*+ COALESCE(5) */ * FROM t
+```
+
+**Partition Pruning**
+- Static pruning: filter on partition column with literal value (`WHERE date = '2024-01-01'`)
+- Dynamic pruning: filter derived from join with small table (AQE 3.0+)
+- `EXPLAIN` plan shows `PartitionFilters` for pruned reads
+
+**Temp Views vs Global Temp Views**
+```python
+df.createOrReplaceTempView("local_view")          # session-scoped
+df.createOrReplaceGlobalTempView("global_view")   # cluster-scoped, access as global_temp.global_view
+spark.catalog.dropTempView("local_view")
+```
+
+**Statistics & CBO**
+```sql
+ANALYZE TABLE t COMPUTE STATISTICS;                    -- row count only
+ANALYZE TABLE t COMPUTE STATISTICS FOR ALL COLUMNS;    -- full histograms for CBO
+DESCRIBE EXTENDED t;                                   -- view stats
+```
+
+**Common SQL Performance Patterns**
+| Anti-Pattern | Fix |
+|-------------|-----|
+| `SELECT *` on wide table | Explicitly list needed columns |
+| Multiple self-joins | Use window functions instead |
+| `DISTINCT` on large result | Check if `GROUP BY` with same columns is faster |
+| Subquery in WHERE per row | Convert to JOIN or window function |
+| `ORDER BY` without `LIMIT` | Forces total sort across all partitions |
+
+**Interview Traps**
+- `spark.sql()` and DataFrame API produce identical plans — Catalyst normalizes both
+- `CACHE TABLE t` materializes immediately (unlike `df.cache()` which is lazy)
+- SQL CTEs are inlined by Catalyst — not materialized unless used multiple times (with workaround)
+- `EXPLAIN FORMATTED` provides JSON-structured plan (Spark 3.0+); easier to parse programmatically

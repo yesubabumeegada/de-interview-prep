@@ -264,3 +264,98 @@ Monitoring:
 > **Tip 2:** "What is the difference between `ValueState` and `ReducingState` / `AggregatingState`?" — `ValueState`: stores a single value per key (completely replaced on each update). Use when you need the full current value. `ReducingState`: stores a single value per key, but uses a `ReduceFunction` to combine new elements with existing state (commutative + associative). Efficient for running sums, counts. `AggregatingState`: similar to ReducingState but allows input and output types to differ (e.g., add individual values, return average). The advantage of Reducing/Aggregating state: each new element is merged immediately (O(1) state size per key regardless of how many elements). ValueState can grow if you store a collection — use ListState or MapState for that case.
 
 > **Tip 3:** "How would you handle a stateful job where the key space grows unboundedly (e.g., all possible transaction IDs)?" — Unbounded key space means state grows forever (one entry per unique key, never cleaned up). Solutions: (a) TTL on state: `StateTtlConfig` expires keys not seen in N time; (b) Don't use the unique ID as the partition key — use a higher-level key (user_id, card_id) that has bounded cardinality, and aggregate at that level; (c) Windowed processing: key by (transaction_id + window_start) → state only lasts for window duration, then purged; (d) For deduplication specifically: use a time-bounded Bloom filter (accept ~0.01% false negatives for duplicate detection, reset filter every N minutes). Never use unbounded unique IDs as state keys without a TTL.
+
+## ⚡ Cheat Sheet
+
+**Streaming fundamentals**
+```
+Event time:    when the event actually occurred (on the device)
+Processing time: when the system processes it (can be much later)
+Ingestion time: when it arrives at the message broker
+Watermark:     max expected event time lag — defines when a window closes
+Late data:     events arriving after the watermark → handled by allowedLateness or drop
+```
+
+**Apache Flink key concepts**
+```java
+// Keyed stream + window + aggregate
+stream.keyBy(event -> event.userId)
+      .window(TumblingEventTimeWindows.of(Time.minutes(5)))
+      .aggregate(new RevenueAggregator());
+
+// Watermark strategy
+WatermarkStrategy.<OrderEvent>forBoundedOutOfOrderness(Duration.ofSeconds(30))
+    .withTimestampAssigner((event, ts) -> event.eventTimeMs);
+```
+
+**Spark Structured Streaming**
+```python
+# Read from Kafka
+stream = spark.readStream.format("kafka") \
+    .option("kafka.bootstrap.servers", "broker:9092") \
+    .option("subscribe", "orders") \
+    .load()
+
+# Window aggregation
+from pyspark.sql.functions import window, col
+agg = stream \
+    .withWatermark("event_time", "30 seconds") \
+    .groupBy(window("event_time", "5 minutes"), "region") \
+    .sum("amount")
+
+# Write to Delta (trigger: every 1 min or micro-batch)
+agg.writeStream.format("delta").trigger(processingTime="1 minute") \
+    .outputMode("append").option("checkpointLocation", "/chk/orders").start()
+```
+
+**Window types**
+| Window | Description | Use case |
+|---|---|---|
+| Tumbling | Fixed non-overlapping | Hourly totals |
+| Sliding | Fixed size, moves by slide interval | 5-min avg, every 1 min |
+| Session | Gap-based (closes after inactivity) | User sessions |
+| Global | Accumulates all events | Running total |
+
+**Exactly-once semantics**
+```
+Source: idempotent read (Kafka offset tracking)
+Processing: checkpointing (Flink) or write-ahead log (Spark)
+Sink: idempotent write (Delta MERGE, upsert) or transactional sink
+Kafka → Flink/Spark → Delta = exactly-once end-to-end (with checkpointing)
+```
+
+**CDC streaming (Debezium → Kafka → Lakehouse)**
+```
+1. Debezium captures MySQL/Postgres binlog → Kafka topic (op: c/u/d/r)
+2. Flink/Spark reads Kafka topic
+3. MERGE INTO Delta/Iceberg table:
+   INSERT on c, UPDATE on u, DELETE on d
+4. Result: real-time replicated lakehouse table
+```
+
+**Kinesis key operations**
+```python
+import boto3
+kinesis = boto3.client('kinesis', region_name='us-east-1')
+# Put record
+kinesis.put_record(StreamName='orders', Data=json.dumps(event).encode(), PartitionKey=order_id)
+# Get shard iterator
+it = kinesis.get_shard_iterator(StreamName='orders', ShardId='shardId-000000000000',
+                                 ShardIteratorType='LATEST')['ShardIterator']
+# Read records
+records = kinesis.get_records(ShardIterator=it, Limit=100)['Records']
+```
+
+**Stateful processing patterns**
+```
+Running total:    keyed state (ValueState[Double])
+Sessionization:   keyed + timer-based (clear state after N seconds inactivity)
+Pattern detection: CEP (Flink Complex Event Processing) — detect A then B within 5 min
+Deduplication:    keyed state stores seen event IDs (with TTL for cleanup)
+```
+
+**Key interview points**
+- Checkpointing: Flink snapshots operator state to S3/HDFS for fault tolerance
+- Backpressure: slow downstream = upstream stops reading Kafka = natural flow control
+- Parallelism = Kafka partitions: each Flink/Spark task reads one partition
+- Streaming vs micro-batch: Flink = true streaming (event-by-event); Spark = micro-batch (more latency, simpler)

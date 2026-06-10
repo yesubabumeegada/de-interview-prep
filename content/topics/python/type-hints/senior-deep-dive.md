@@ -320,3 +320,77 @@ plugins = ["mypy_plugin"]
 > **Tip 2:** "What's the difference between covariant and contravariant?" — "Covariant means a generic type follows the subtype direction: Reader[Dog] is a subtype of Reader[Animal] because you can always read an Animal from a Dog reader. Contravariant is the opposite: Writer[Animal] is a subtype of Writer[Dog] because if you can write any Animal, you can certainly write a Dog. It matters for generic container APIs."
 
 > **Tip 3:** "How do you type pandas code?" — "Standard pandas has weak typing. Use Pandera for schema validation — define DataFrameModel classes with column types and constraints. Pandera validates at runtime via decorators and integrates with mypy for static checks. For pure static typing, pandas-stubs provides basic type information but doesn't validate column schemas."
+
+## ⚡ Cheat Sheet
+
+**Core types**
+```python
+from typing import Optional, Union, Any, Literal
+from collections.abc import Sequence, Mapping, Callable, Iterator, Generator
+
+x: int | None = None          # Python 3.10+ union syntax
+x: Optional[int] = None       # equivalent, pre-3.10
+y: str | int | float          # union of multiple types
+z: Literal["GET", "POST"]     # specific string values
+w: Any                        # opt out of type checking
+```
+
+**Collections**
+```python
+list[int]                     # list of ints (3.9+)
+dict[str, int]                # dict with str keys, int values
+tuple[int, str, float]        # fixed-length tuple
+tuple[int, ...]               # variable-length homogeneous tuple
+set[str]                      # set of strings
+Sequence[int]                 # read-only sequence (list, tuple, etc.)
+Mapping[str, Any]             # read-only dict-like
+```
+
+**Callables and generics**
+```python
+Callable[[int, str], bool]    # function(int, str) → bool
+T = TypeVar('T')
+def first(items: list[T]) -> T: ...  # generic function
+
+# Generic class
+class Stack(Generic[T]):
+    def push(self, item: T) -> None: ...
+    def pop(self) -> T: ...
+```
+
+**TypedDict and dataclasses**
+```python
+class OrderRow(TypedDict):
+    order_id: int
+    amount: float
+    status: str
+
+@dataclass
+class Config:
+    host: str
+    port: int = 5432
+    debug: bool = False
+```
+
+**Protocol (structural subtyping)**
+```python
+class Readable(Protocol):
+    def read(self) -> str: ...
+# Any class with .read() method satisfies Readable — no inheritance needed
+```
+
+**Mypy commands**
+```bash
+mypy src/                     # type-check entire package
+mypy --strict src/            # strictest mode (no implicit Any)
+mypy --ignore-missing-imports  # suppress third-party stub errors
+# pyproject.toml:
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+```
+
+**Inference rules**
+- Always annotate public function signatures; let mypy infer locals
+- Use `cast()` sparingly; prefer type guards (`isinstance`)
+- `TYPE_CHECKING` guard: `if TYPE_CHECKING: from heavy_module import Type`

@@ -164,3 +164,69 @@ sources:
 ```
 
 The `dbt docs generate` site renders Markdown — treat it as your team's data dictionary.
+
+## ⚡ Cheat Sheet
+
+**Source YAML**
+```yaml
+sources:
+  - name: app_db
+    database: prod
+    schema: raw
+    freshness:
+      warn_after: {count: 12, period: hour}
+      error_after: {count: 24, period: hour}
+    loaded_at_field: _loaded_at
+    tables:
+      - name: orders
+        identifier: orders_raw      # actual table name if different
+        columns:
+          - name: order_id
+            tests: [not_null, unique]
+```
+
+**Freshness check**
+```bash
+dbt source freshness               # check all sources
+dbt source freshness --select source:app_db  # single source
+# Returns: pass / warn / error per source table
+```
+
+**Staging model contract**
+```sql
+-- stg_orders.sql: 1:1 with source; light cleaning only
+SELECT
+    order_id::bigint,
+    customer_id::bigint,
+    status::varchar(20),
+    amount_cents / 100.0 as amount_usd,
+    created_at::timestamp
+FROM {{ source('app_db', 'orders') }}
+WHERE order_id IS NOT NULL
+```
+
+**Staging rules**
+- One staging model per source table (1:1 mapping)
+- Rename columns to standard naming here (snake_case, explicit types)
+- No joins in staging — joins belong in intermediate models
+- No business logic — no revenue calculations, no status translations
+- Always reference via `{{ source() }}` not direct table name
+
+**Source vs ref**
+| `{{ source() }}` | `{{ ref() }}` |
+|---|---|
+| Raw source tables | dbt-managed models |
+| Tracked for freshness | Tracked for lineage |
+| Defined in sources.yml | Auto-discovered |
+
+**Column-level contracts (dbt 1.5+)**
+```yaml
+models:
+  - name: stg_orders
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: order_id
+        data_type: bigint
+        constraints: [{type: not_null}]
+```

@@ -375,3 +375,43 @@ FEATURE_CONFIGS = {
 > **Tip 3:** "How do you prevent ML teams from becoming a bottleneck for each other on a shared platform?" — "Self-service: standardized templates for common pipeline patterns so teams don't need platform team involvement. Resource quotas per team prevent one team from starving others. Feature registry with search prevents duplicate feature computation. Shared monitoring dashboards give teams visibility without needing custom tooling. Platform team provides primitives, not custom solutions."
 
 > **Tip 4:** "What's a model card and why is it required?" — "A model card is a structured document that describes a model's intended use, training data characteristics, performance across population subgroups, fairness analysis, and known limitations. It's required because models have downstream impacts on real people, and stakeholders (regulators, ethics boards, product teams) need to understand what the model does and doesn't do. Without model cards, you can't answer 'why did the model make this decision?' in a regulatory audit."
+
+## ⚡ Cheat Sheet
+
+**Model Registry vs Artifact Store**
+- **Artifact store** (S3/GCS): raw binary storage, no governance
+- **Model registry** (MLflow): named models, semantic versions, stage transitions (Staging → Production), audit trails, metadata, discoverability
+- Registry answers "what's in production?"; S3 just stores bytes
+
+**Promotion Gate Checklist**
+- `test_auc >= baseline_auc * 0.95` (max 5% regression)
+- `latency_p99_ms <= sla_ms`
+- `shadow_test_passed = True`
+- `fairness_check_passed = True`
+- Technical approver ✓ + Business approver ✓ + (Compliance approver ✓ if regulated)
+
+**Three Pillars of Regulated ML Governance**
+1. **Model cards**: intended use, out-of-scope uses, performance by subgroup, fairness metrics, known limitations
+2. **Approval workflow**: multi-party sign-off tracked in registry with timestamps
+3. **Audit trail**: immutable prediction logs + model version + promotion decision, stored 7 years (GDPR/CCPA)
+
+**Feature Platform: Compute × Storage Matrix**
+| Compute | Storage | Freshness | Cost |
+|---|---|---|---|
+| Batch (Spark/dbt) | Dual store | 4h+ | $ |
+| Streaming (Flink) | Online only | < 1 min | $$$ |
+| On-demand | Online only | Real-time | $ (per request) |
+
+**Multi-Team MLOps Anti-Bottleneck Rules**
+- Self-service templates: teams shouldn't need platform team for standard pipeline patterns
+- Resource quotas per team: CPU, GPU, memory, concurrent runs
+- Feature registry with search: prevents duplicate computation
+- Platform provides primitives, not custom solutions per team
+
+**Model Card Required Fields**
+- `intended_use` + `out_of_scope_uses`
+- `training_data_description` + `training_date_range` + `known_data_limitations`
+- `performance_by_subgroup` (not just overall accuracy)
+- `fairness_metrics` + `protected_attributes_tested`
+- `potential_harms` + `mitigation_strategies`
+- `review_cycle`: monthly for high-stakes, quarterly for lower-risk

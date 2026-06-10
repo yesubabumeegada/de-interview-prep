@@ -239,3 +239,42 @@ Groups:
     - View docs and lineage only
     - Can run queries in dbt Cloud IDE (read-only)
 ```
+
+## ⚡ Cheat Sheet
+
+**dbt Cloud environments**
+| Environment | Purpose | Credentials |
+|---|---|---|
+| Development | Per-developer schema isolation | Dev credentials (personal) |
+| Staging | CI PR checks | Service account (limited) |
+| Production | Scheduled runs | Service account (full) |
+
+**Slim CI pattern**
+```yaml
+# Only run models changed in PR + their downstream
+dbt build --select state:modified+ --defer --state ./prod-artifacts
+# --defer: uses prod results for unmodified upstream models
+# Requires: production manifest.json as artifact
+```
+
+**Job types in dbt Cloud**
+- Deploy job: scheduled production runs; email/webhook on failure
+- CI job: triggered on PR open/update; runs `--select state:modified+`
+- Merge job: runs after PR merge (e.g., full refresh of snapshots)
+
+**Artifacts**
+- `manifest.json`: compiled DAG + node metadata; input to `--state`
+- `run_results.json`: pass/fail per model per run; used for alerts
+- `catalog.json`: column-level documentation from `dbt docs generate`
+- Store in S3/GCS; reference with `dbt-artifacts` or native dbt Cloud UI
+
+**Critical dbt Cloud settings**
+- `target-path`: where compiled SQL is written
+- `threads`: parallel model execution (default 4; tune up to 32 for large projects)
+- `partial_parse`: caches project parse; speeds up run start by 50–80%
+- Custom scheduler: cron + environment variable override for one-off runs
+
+**Deferral in production**
+- Without defer: CI must build ALL upstream models → slow + costly
+- With defer: CI fetches prod `manifest.json`; skips already-built upstream
+- Setup: store prod artifacts after each prod run; reference in CI job settings

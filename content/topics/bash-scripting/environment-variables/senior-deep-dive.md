@@ -218,3 +218,61 @@ compare_environments "staging" "production"
 > **Tip 2:** "What if a secret rotates during a running pipeline?" — Cache secrets with TTL (1 hour). On connection failure: invalidate cache, re-fetch secret, retry connection. If still fails after fresh fetch: alert (indicates actual auth issue, not rotation). Pattern: cache → use → on error: refresh → retry → alert.
 
 > **Tip 3:** "How do you prevent config drift between environments?" — Compare script: extract var names from each env file, diff them. Check before deployment: "staging has var X that production doesn't" → catch missing config before it causes production failures. Automate in CI: block deployment if environments have structural differences.
+
+## ⚡ Cheat Sheet
+
+**Variable types**
+```bash
+VAR=value           # shell variable (not exported)
+export VAR=value    # environment variable (exported to child processes)
+local VAR=value     # function-local variable
+readonly VAR=value  # immutable variable
+declare -i VAR=0    # integer variable
+declare -a ARR=()   # indexed array
+declare -A MAP=()   # associative array
+```
+
+**Safe variable usage**
+```bash
+${VAR:-default}     # use default if VAR unset or empty
+${VAR:=default}     # set VAR to default if unset, then use it
+${VAR:?error msg}   # error and exit if VAR unset
+${VAR:+alt}         # use alt if VAR is set (test for presence)
+${#VAR}             # length of VAR
+${VAR%suffix}       # remove shortest suffix match
+${VAR%%suffix}      # remove longest suffix match
+${VAR#prefix}       # remove shortest prefix match
+${VAR/old/new}      # replace first occurrence
+${VAR//old/new}     # replace all occurrences
+```
+
+**Secrets and credentials**
+```bash
+# Never hardcode — always load from environment or secrets manager
+DB_PASS=$(aws secretsmanager get-secret-value --secret-id db/prod --query SecretString --output text | jq -r .password)
+# Mask in logs
+set +x  # disable trace before loading secrets
+source .env  # or use direnv / dotenv
+set -x  # re-enable if needed
+# Clear after use
+unset DB_PASS
+```
+
+**`.env` file pattern**
+```bash
+# .env (never commit — add to .gitignore)
+export DB_HOST=prod-db.company.com
+export DB_PASS=secret
+# Load: source .env or use direnv (.envrc)
+```
+
+**Scoping rules**
+- Exported vars are inherited by child processes but changes in children don't propagate up
+- `env -i bash` starts a clean shell with no inherited vars (useful for testing)
+- `printenv` shows all exported vars; `set` shows all shell vars including unexported
+
+**Defensive patterns**
+```bash
+: "${REQUIRED_VAR:?REQUIRED_VAR must be set}"  # fail fast if missing
+[ "${ENV:-}" = "prod" ] && readonly IMMUTABLE=true  # lock prod config
+```

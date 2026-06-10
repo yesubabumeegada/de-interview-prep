@@ -178,3 +178,88 @@ Governance:
 > **Tip 2:** "What is a semantic layer and why does it matter?" — A semantic layer centralizes metric definitions (revenue, MAU, conversion rate) so they're computed consistently across all BI tools and teams. Without it: every dashboard defines metrics differently → trust collapse ("your revenue number doesn't match mine"). With it: one definition → consistent numbers everywhere. Modern tools: dbt Metrics, LookML, Cube.js. Senior DEs own the semantic layer as part of the data contract with business.
 
 > **Tip 3:** "How would you design a DW for a company that acquired 3 other companies, each with different customer ID systems?" — This is an entity resolution / golden record problem. Build a customer identity graph: map all source customer IDs to a single enterprise_customer_id using deterministic (email, phone match) and probabilistic (name + zip match) rules. Store the mapping in an entity_resolution table. Use the enterprise_customer_id as the DW surrogate key. All 3 source customer IDs remain as attributes in dim_customer for reference. This enables cross-acquisition analysis ("revenue from acquired company X's customers post-acquisition").
+
+## ⚡ Cheat Sheet
+
+**System design framework (DE interviews)**
+```
+1. Clarify requirements: batch or streaming? latency SLA? scale (rows/day)?
+2. Define data flow: source → ingest → transform → serve → consume
+3. Choose storage: DW (structured), Data Lake (raw), Lakehouse (both)
+4. Choose compute: Spark/Flink for scale; dbt for SQL transforms; Airflow for orchestration
+5. Define SLAs: freshness (15 min? 1 hr?), uptime (99.9%?), cost budget
+6. Address failure modes: what breaks? how do you detect and recover?
+```
+
+**Lambda vs Kappa architecture**
+```
+Lambda:
+  Batch layer:  reprocesses all historical data on a schedule (accurate)
+  Speed layer:  processes recent data in real-time (approximate)
+  Serving:      merges batch + speed views for queries
+  Problem:      two codebases for same logic; complex to maintain
+
+Kappa:
+  Streaming only:  one pipeline handles both real-time and reprocessing
+  Reprocessing:    replay Kafka from beginning with new consumer group
+  Advantage:       single codebase; simpler ops
+  Requirement:     Kafka retention must cover reprocessing window
+```
+
+**Scalability patterns**
+```
+Horizontal partitioning:  Kafka partitions, HDFS blocks, table partitions
+Data skipping:            Z-ordering, bloom filters, min/max statistics
+Push down:                predicates + projections to storage layer
+Caching:                  result cache (Snowflake, Databricks SQL), Redis for lookups
+Async processing:         decouple ingestion from transformation via message queue
+```
+
+**Fault tolerance patterns**
+```
+Idempotency:     safe to re-run; same output for same input
+Checkpointing:   Flink/Spark saves progress; restart from last checkpoint
+Dead letter:     failed records go to DLQ for inspection and replay
+Circuit breaker: stop pipeline on repeated failures; alert before resuming
+Retry with backoff: exponential backoff + jitter for transient failures
+Exactly-once:    Kafka + Flink + Delta = end-to-end exactly-once
+```
+
+**Cost optimization levers**
+```
+Compute:
+  - Spot/preemptible instances (60-80% cheaper; need checkpointing)
+  - Auto-suspend warehouses (pay only when active)
+  - Right-size: XL warehouse for batch; S for ad hoc
+Storage:
+  - Partition + vacuum old snapshots
+  - Lifecycle policies: S3 IA after 30 days, Glacier after 1 year
+  - Compression: ZSTD > Snappy (better ratio, acceptable CPU cost)
+Query:
+  - Columnar reads (never SELECT *)
+  - Materialized views for expensive repeated aggregations
+  - Result cache (Snowflake caches identical queries for 24h)
+```
+
+**Data warehouse design checklist**
+```
+□ Star schema with conformed dimensions
+□ Surrogate keys on all dimensions
+□ Fact table: numeric measures + FK references only
+□ SCD2 on slowly changing dimensions
+□ Partition on query predicate (date, region)
+□ Cluster/Z-order on high-cardinality filter columns
+□ Row counts + DQ checks at each medallion layer boundary
+□ Freshness SLA defined and monitored for each gold table
+□ Data lineage captured (dbt docs, OpenLineage)
+□ Access control: role-based + column masking for PII
+```
+
+**Trade-off framework**
+```
+Latency vs throughput:    streaming (low latency, lower throughput) vs batch (high throughput, higher latency)
+Consistency vs availability: strong consistency (slower, single writer) vs eventual (faster, multi-write)
+Cost vs freshness:        real-time = expensive compute; hourly batch = cheap; choose based on business SLA
+Simplicity vs flexibility: managed service (easy ops) vs self-managed (full control, higher ops burden)
+Storage vs compute:       pre-aggregate (storage cost, fast queries) vs compute on demand (fresh data, slower)
+```

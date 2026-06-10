@@ -454,3 +454,40 @@ Is your bottleneck I/O (network, disk, external API)?
 3. **Multi-stage async pipelines** process each stage at its own concurrency limit — a slow enrichment API doesn't block the fast validation stage.
 4. **CPU-bound work kills async** — use `loop.run_in_executor(ProcessPoolExecutor(...))` to run CPU work in parallel from an async context.
 5. **asyncpg + connection pool** is the right stack for async PostgreSQL writes; use `max_size` matching your semaphore limit.
+
+## ⚡ Cheat Sheet
+
+**When to Use What**
+- I/O-bound (network, disk, DB) → `asyncio` (single thread, thousands of tasks)
+- I/O-bound + shared state → `threading.ThreadPoolExecutor`
+- CPU-bound (pandas, JSON parsing) → `ProcessPoolExecutor`
+- CPU in async context → `loop.run_in_executor(ProcessPoolExecutor(), fn, arg)`
+
+**asyncio Primitives**
+- `asyncio.gather(*tasks, return_exceptions=True)` — run concurrently, collect results
+- `asyncio.Semaphore(N)` — cap concurrency without blocking the event loop
+- `asyncio.Queue(maxsize=N)` — `put()` blocks when full = automatic backpressure
+- `asyncio.Event()` — lightweight signal for graceful shutdown (`_shutdown.set()`)
+- `asyncio.create_task()` — schedules coroutine; keep reference or it may be GC'd
+
+**Kafka / Exactly-Once**
+- `enable_auto_commit=False` — commit only after successful writes, not on receive
+- `max_poll_records=100` — controls batch size per poll cycle
+- Commit after `asyncio.wait(pending_tasks, return_when=ALL_COMPLETED)` — not before
+
+**asyncpg Pool**
+- `asyncpg.create_pool(dsn, min_size=5, max_size=20, command_timeout=60)`
+- Use `async with pool.acquire() as conn` — returns connection to pool on exit
+- `async with conn.transaction()` — rollback on exception automatically
+- `conn.executemany(sql, rows)` — batch insert in one round-trip
+
+**Backpressure Pattern**
+- `asyncio.Queue(maxsize=N)`: producer blocks on `await queue.put()` when full
+- Sentinel `None` value signals consumer to stop (producer puts it last)
+- `await queue.join()` — wait until all `task_done()` calls match puts
+
+**Gotchas**
+- CPU work inside `async def` blocks the event loop — no other tasks run
+- `asyncio.gather` on CPU functions provides zero speedup (still sequential)
+- Missing `await` on a coroutine creates a coroutine object, never runs it
+- Never `time.sleep()` in async code — use `await asyncio.sleep()`

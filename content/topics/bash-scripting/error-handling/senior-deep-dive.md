@@ -216,3 +216,69 @@ esac
 > **Tip 2:** "How do you get detailed error context in bash?" — ERR trap with `$LINENO` (line number), `$BASH_COMMAND` (exact command), `${FUNCNAME[@]}` (call stack), plus custom context variables. Log all of these on error. Result: instant identification of WHAT failed, WHERE, and WHY — no more hunting through logs.
 
 > **Tip 3:** "How do you prevent cascading failures?" — Health check before each dependency call. If dependency is down: use fallback (replica DB, cached data, degraded mode) instead of failing entirely. Pattern: check → call if healthy → fallback if unhealthy. Each component's failure is isolated — doesn't propagate to crash the whole pipeline.
+
+## ⚡ Cheat Sheet
+
+**Safe defaults**
+```bash
+set -e           # exit immediately on error
+set -u           # treat unset variables as errors
+set -o pipefail  # pipe fails if any command fails (not just last)
+set -E           # ERR trap inherited by functions and subshells
+# Combined: set -euo pipefail (always use this)
+```
+
+**ERR and EXIT traps**
+```bash
+on_error() {
+    echo "ERROR at line ${BASH_LINENO[0]}: command '${BASH_COMMAND}' failed" >&2
+    exit 1
+}
+cleanup() { rm -rf "$TMPDIR" 2>/dev/null; }
+trap on_error ERR
+trap cleanup EXIT   # always runs, even on error
+```
+
+**Error codes**
+```bash
+command || { echo "command failed with $?"; exit 1; }
+if ! command; then handle_error; fi
+# Ignore specific errors
+command || true          # ignore any error
+command || [ $? -eq 1 ]  # only allow exit code 1
+```
+
+**Logging with levels**
+```bash
+log()  { echo "[$(date +%H:%M:%S)] INFO  $*"; }
+warn() { echo "[$(date +%H:%M:%S)] WARN  $*" >&2; }
+error(){ echo "[$(date +%H:%M:%S)] ERROR $*" >&2; }
+die()  { error "$*"; exit 1; }
+```
+
+**Subshell error propagation**
+```bash
+# Problem: errors in $() don't exit script by default
+result=$(failing_command)  # might silently fail
+# Solution: check immediately
+result=$(failing_command) || die "failing_command failed"
+```
+
+**Validation pattern**
+```bash
+validate_inputs() {
+    [[ -f "$1" ]] || die "Input file not found: $1"
+    [[ "$2" =~ ^[0-9]+$ ]] || die "Second arg must be integer: $2"
+    [[ -n "${DB_HOST:-}" ]] || die "DB_HOST not set"
+}
+```
+
+**Testing errors**
+```bash
+# Use bats-core for bash unit testing
+@test "fails on missing file" {
+    run my_script /nonexistent
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"not found"* ]]
+}
+```

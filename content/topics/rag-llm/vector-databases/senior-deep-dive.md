@@ -308,3 +308,96 @@ Background optimizer:
 > **Tip 2:** "What's the trade-off between recall and latency?" — Higher ef_search and larger M values improve recall but increase latency and memory. Profile your specific workload: plot recall@10 vs p99 latency at different ef values. Find the knee of the curve (usually 95-98% recall at 3-5ms).
 
 > **Tip 3:** "How do you handle zero-downtime model upgrades?" — Build a new collection with the new model's embeddings in parallel. Once complete, swap the collection alias atomically. Keep the old collection warm for rollback. This avoids any period where the index mixes embeddings from different models.
+
+## ⚡ Cheat Sheet
+
+**RAG pipeline architecture**
+```
+Document → Chunk → Embed → Store in Vector DB
+Query → Embed query → ANN search → Retrieve top-k chunks → Augment prompt → LLM → Answer
+```
+
+**Chunking strategies**
+```python
+# Fixed-size with overlap
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=50)
+chunks = text_splitter.split_text(document)
+
+# Semantic chunking (split on topic boundaries)
+from langchain.text_splitter import SemanticChunker
+chunker = SemanticChunker(embedding_model)
+
+# Hierarchical: large chunks for context, small for retrieval
+# Parent-child: store parent chunk, retrieve child, return parent to LLM
+```
+
+**Embedding models**
+| Model | Dims | Use case |
+|---|---|---|
+| text-embedding-3-small | 1536 | General purpose, OpenAI |
+| text-embedding-3-large | 3072 | Higher accuracy, OpenAI |
+| all-MiniLM-L6-v2 | 384 | Fast, local, free |
+| BAAI/bge-large-en | 1024 | Strong retrieval, local |
+| Cohere embed-v3 | 1024 | Multilingual |
+
+**Vector databases**
+| DB | Type | Strengths |
+|---|---|---|
+| Pinecone | Managed | Easy ops, fully managed |
+| Weaviate | OSS/managed | Hybrid search (vector + BM25) |
+| Qdrant | OSS/managed | Fast, Rust-based, payload filtering |
+| pgvector | PostgreSQL extension | Existing Postgres infrastructure |
+| Chroma | OSS | Local dev, lightweight |
+| FAISS | Library | Fastest local, no persistence |
+
+**Retrieval optimization**
+```python
+# Hybrid search (vector + keyword)
+results = vector_db.hybrid_search(
+    query=query, vector=embed(query), alpha=0.7  # 0=pure BM25, 1=pure vector
+)
+# Re-ranking with cross-encoder
+from sentence_transformers import CrossEncoder
+ranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+scores = ranker.predict([(query, doc.text) for doc in results])
+reranked = sorted(zip(results, scores), key=lambda x: x[1], reverse=True)
+```
+
+**Evaluation metrics**
+```
+Faithfulness:    LLM answer only uses facts from retrieved context (anti-hallucination)
+Answer Relevance: answer addresses the question
+Context Precision: retrieved chunks actually contain the answer
+Context Recall:   all relevant chunks were retrieved
+RAGAS framework: automated evaluation of all four metrics
+```
+
+**Prompt engineering patterns**
+```python
+# System prompt with RAG context
+system_prompt = """You are a data engineering assistant.
+Answer only based on the provided context. If the answer is not in the context, say 'I don't know.'
+Context:
+{context}"""
+
+# Few-shot prompting
+few_shot_examples = [
+    {"question": "What is Delta Lake?", "answer": "Delta Lake is an open-source..."},
+]
+
+# Chain-of-thought (CoT): "Let's think step by step"
+# React pattern: Reason + Act (tool use) + Observe → loop until answer
+```
+
+**Fine-tuning vs RAG**
+```
+RAG:         best for dynamic/proprietary knowledge; no training needed; updatable
+Fine-tuning: best for domain tone/style; specialized tasks; fixed knowledge cutoff
+Combine:     fine-tune for domain adaptation + RAG for factual grounding
+```
+
+**Key interview points**
+- Chunk size tradeoff: small chunks = precise retrieval; large chunks = more context
+- Cosine similarity vs dot product: cosine for variable-length texts; dot for normalized
+- Metadata filtering: filter by document_type, date, or source before ANN search
+- Guardrails: LLM output validation (Guardrails AI, Nemo Guardrails, Instructor)

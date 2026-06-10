@@ -181,3 +181,61 @@ rm -rf "$TEMP"
 > **Tip 2:** "Fan-out/fan-in in bash pipelines?" — Split: awk routes rows to different files by key. Process: each subset processed in parallel (background &, then wait). Combine: cat all outputs together (head from first for header, tail +2 from rest for data). Pattern: partition → parallel process → merge. Scales linearly with CPU cores.
 
 > **Tip 3:** "How do you monitor pipeline throughput?" — Insert `tee >(wc -l > /tmp/stage_N)` between stages to count rows without interfering with data flow. Calculate: rows_per_second = total_rows / duration. Track drop rates per stage (filter_drop_pct, dedup_drop_pct). Emit as JSON metrics for dashboards.
+
+## ⚡ Cheat Sheet
+
+**Pipeline failure detection**
+```bash
+set -o pipefail  # CRITICAL: pipe fails if any stage fails
+cmd1 | cmd2 | cmd3  # fails if cmd1 or cmd2 fails
+# Check individual pipe status
+cmd1 | cmd2; echo "${PIPESTATUS[@]}"  # e.g. "0 1" = cmd1 ok, cmd2 failed
+```
+
+**Text processing pipeline patterns**
+```bash
+# CSV aggregation without Python
+awk -F, 'NR>1 {sum[$3]+=$4; count[$3]++}
+         END {for (k in sum) print k, sum[k]/count[k]}' data.csv | sort
+
+# Log analysis: top 10 IPs
+awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -10
+
+# Filter + transform + load
+grep ERROR app.log | cut -d'|' -f3 | sort | uniq -c | sort -rn > errors_summary.txt
+```
+
+**Named pipes (FIFOs)**
+```bash
+# Process two streams simultaneously
+mkfifo /tmp/pipe1
+producer > /tmp/pipe1 &
+consumer < /tmp/pipe1
+rm /tmp/pipe1
+# Use for: avoid temp files, stream large datasets through transform
+```
+
+**`tee` for branching**
+```bash
+# Write to file AND continue pipeline
+curl https://api.example.com/data | tee raw_output.json | jq '.records[]' | ...
+# Multiple outputs
+cat file | tee >(gzip > out.gz) >(wc -l) > /dev/null
+```
+
+**Process substitution**
+```bash
+# Diff two commands without temp files
+diff <(sort file1.csv) <(sort file2.csv)
+# Join on sorted streams
+join <(sort -k1 a.csv) <(sort -k1 b.csv)
+```
+
+**Streaming large files**
+```bash
+# Never load full file; use streaming
+pv large_file.csv | awk -F, 'NR>1{sum+=$4} END{print sum}'  # pv shows progress
+zcat compressed.csv.gz | process_stream  # decompress on the fly
+# Split large file for parallel processing
+split -l 100000 large.csv chunk_  # 100K lines per chunk
+```

@@ -354,3 +354,63 @@ with DAG('robust_downstream', ...) as dag:
 > **Tip 2:** "What are Airflow Datasets and when would you use them over ExternalTaskSensor?" — "Datasets (introduced in 2.4) are logical references to data artifacts. A producer task declares `outlets=[my_dataset]`; a consumer DAG declares `schedule=[my_dataset]`. The consumer is automatically triggered when the dataset is updated. I'd use Datasets over ExternalTaskSensor when I want event-driven (not poll-based) cross-DAG dependencies, when I want built-in data lineage tracking, or when producer and consumer teams should agree on data contracts (dataset URIs) rather than internal DAG/task IDs."
 
 > **Tip 3:** "How do you test that your DAG's trigger rules are correct?" — "I test three things: (1) a unit test that reads the task's trigger_rule property from the DagBag and asserts the expected value; (2) an integration test that sets upstream task states manually and verifies that the dependency evaluation produces the correct downstream state; (3) a DAG structure test that verifies no circular dependencies exist and the expected task ordering is enforced. The DagBag will raise import errors for cycles, so that's essentially free."
+
+## ⚡ Cheat Sheet
+
+**Trigger Rule Reference**
+| Rule | Condition to Run |
+|---|---|
+| `all_success` (default) | All upstream succeeded |
+| `all_failed` | All upstream failed |
+| `all_done` | All upstream in terminal state (any) |
+| `one_success` | At least one upstream succeeded |
+| `one_failed` | At least one upstream failed |
+| `none_failed` | No upstream failed (skipped is OK) |
+| `none_failed_min_one_success` | No failures AND at least one success |
+| `always` | Unconditional |
+
+**Trigger Rule Selection Guide**
+- Post-branch convergence task: `none_failed_min_one_success` (skipped branches are OK)
+- Cleanup/teardown task: `all_done` (must run even if upstream fails)
+- Notification on failure: `one_failed` or `all_failed`
+- Default most tasks: `all_success`
+
+**Scheduler Evaluation Cadence**
+- Re-evaluates trigger rules on every heartbeat (~5s) — not event-driven
+- Task becomes eligible as soon as conditions met, not at a fixed time
+- If scheduler is slow (DB load), tasks sit in `none` state longer than expected
+- `upstream_failed`: propagated immediately when a task can never be eligible
+
+**`depends_on_past` Gotchas**
+- Bootstrap: first-ever run has no "previous" run → skips the check (runs normally)
+- Adding mid-lifecycle: "previous" run may have run before the parameter existed
+- Backfill ordering: use `--max-active-runs 1 --run-backwards False`
+- Deadlock risk: `depends_on_past=True` + `max_active_runs=1` + retry → clear old run before retrying
+
+**Datasets vs ExternalTaskSensor**
+| | Dataset Scheduling | ExternalTaskSensor |
+|---|---|---|
+| Mechanism | Event-driven | Polling |
+| Coupling | Shared URI (data contract) | Internal DAG/task IDs |
+| Worker slots | None while waiting | Brief poke per interval |
+| Lineage | Built-in via inlets/outlets | None |
+| Requires | Airflow 2.4+ | All versions |
+
+**Dataset Pattern**
+```python
+my_dataset = Dataset('s3://bucket/path/')
+# Producer
+PythonOperator(..., outlets=[my_dataset])
+# Consumer DAG — triggered automatically
+DAG(..., schedule=[my_dataset])
+```
+
+**Testing Dependency Logic**
+```python
+# 1. Assert trigger rule value
+assert cleanup_task.trigger_rule == TriggerRule.ALL_DONE
+# 2. Assert dependency chain
+assert 'transform' in [t.task_id for t in extract_task.downstream_list]
+# 3. Assert no cycles — DagBag raises on import if cycles exist
+assert len(dagbag.import_errors) == 0
+```

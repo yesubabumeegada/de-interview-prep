@@ -294,3 +294,45 @@ pivot = indexed.unstack(level="product")  # Products become columns
 > **Tip 2:** The `apply()` vs vectorized question comes up constantly. Have the mental model ready: "apply() runs a Python loop — 100-1000× slower than vectorized NumPy operations. I always look for `.map()`, `.where()`, or `np.select()` first. apply() is a last resort for complex logic."
 
 > **Tip 3:** For merge performance, mention the lookup-dict pattern: "For simple left-join-to-get-a-value, converting the right table to a dict and using `.map()` is 5-10× faster than `pd.merge()`. I use merge only when I need multiple columns or complex join types."
+
+## ⚡ Cheat Sheet
+
+**When to Leave Pandas**
+| Data Size | Tool | Trigger |
+|-----------|------|---------|
+| Fits in RAM | Pandas | Default choice |
+| >50% of RAM | Polars | Lazy eval, same machine, 5–50× faster |
+| >10 GB multi-file | Dask | Pandas API, lazy + parallel |
+| >100 GB / distributed | PySpark | Cluster-scale |
+
+**Memory Optimization Checklist**
+- Downcast `int64` → `int32`/`int16`/`int8` based on value range
+- Downcast `float64` → `float32` (saves 50% for most numeric columns)
+- Low-cardinality strings → `.astype("category")` (90%+ savings if <5% unique values)
+- Use `dtype=` arg in `pd.read_csv()` — avoids inferring then converting
+- `memory_usage(deep=True).sum()` — true memory including string objects
+
+**Vectorized Operations — Speed Order**
+1. Native NumPy (`np.where`, `np.select`) — fastest
+2. `.map(dict)` for simple lookups — 3–10× faster than merge
+3. Built-in Pandas vectorized ops (`.str.`, `.dt.`, arithmetic) — fast
+4. `pd.merge()` — O(n+m) but slower than map
+5. `apply(axis=1)` — Python loop, 100–1000× slower — avoid
+
+**Method Chaining Best Practices**
+- Use `.pipe(fn)` to inject logging / debugging mid-chain
+- `.assign()` for new columns; `.query()` for filtering (both chainable)
+- `lambda df:` inside `.assign()` — access other new columns in same call
+- Chain reads lazily: no actual computation until an action (`.collect()`, `.to_csv()`)
+
+**Merge / Join Performance**
+- Simple lookup: `right.set_index("key")["val"].to_dict()` → `left["key"].map(dict)` — 5–10× faster than merge
+- Before `pd.merge()`: drop unneeded columns from right side first
+- Sort both sides on join key before large merges (better hash table construction)
+- `merge_asof()` for time-series nearest-match: O(n log m)
+
+**Key Numbers**
+- `apply(axis=1)` on 1M rows: ~8 s; vectorized equivalent: ~0.01–0.02 s
+- Category dtype vs object: 90%+ memory reduction for low-cardinality columns
+- Parquet single-column read vs CSV full read: 10–40× faster
+- `pd.read_csv(chunksize=100_000)` — process without loading full file into memory

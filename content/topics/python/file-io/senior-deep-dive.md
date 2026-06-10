@@ -366,3 +366,46 @@ with file_lock("output/metrics.json"):
 > **Tip 2:** Memory-mapped files are a power answer for "random access on huge files." Explain: "mmap lets the OS manage paging — only the accessed pages are loaded into memory. This enables binary search on a 100GB sorted file with O(log n) I/O operations, using only a few KB of actual memory."
 
 > **Tip 3:** Know the file format decision tree: "For analytics queries — Parquet (columnar, compressed, fast column reads). For streaming/append workloads — JSONL (append-friendly, human-readable). For interchange — CSV with explicit schema documentation. For archival — Parquet with zstd compression for best size."
+
+## ⚡ Cheat Sheet
+
+**File Format Decision Tree**
+| Use Case | Format | Why |
+|----------|--------|-----|
+| Analytics / column reads | Parquet (snappy/zstd) | Columnar, compressed, 10–40× faster column scan |
+| Streaming / append logs | JSONL | Append-friendly, human-readable, one record per line |
+| Interchange / external | CSV | Universal, human-readable, needs explicit schema |
+| Archival / cold storage | Parquet zstd | Best compression ratio |
+| Machine-to-machine binary | Protocol Buffers / Avro | Schema-enforced, compact |
+
+**Parquet Key Numbers**
+- 1 column read from 20-column table: 0.1 s vs 3.8 s for CSV (38× faster)
+- snappy: faster compress/decompress; zstd: better ratio (preferred for archival)
+- S3 Select works on Parquet and CSV — filter server-side before transfer
+
+**S3 I/O Patterns**
+- Stream read: `response["Body"].iter_lines()` — O(1) memory, no temp file
+- Multipart upload threshold: `100 MB`; chunk size: `50 MB`; concurrency: `10`
+- Min part size: `5 MB` (S3 hard limit per part)
+- `s3.abort_multipart_upload()` in `except` block — prevents orphaned uploads billing
+
+**Memory-Mapped Files**
+- `mmap.mmap(f.fileno(), 0, access=ACCESS_READ)` — OS pages data in/out on demand
+- Binary search on 100 GB sorted file: O(log n) I/O, constant Python memory
+- `mm.find(pattern, start)` — fast byte-level search without loading file
+- Not useful for write-heavy workloads on large files (copy-on-write overhead)
+
+**S3 Select**
+- Filter 10 GB CSV: only matching rows transferred — saves bandwidth + Athena cost
+- `ExpressionType="SQL"`, `InputSerialization={"CSV": {"FileHeaderInfo": "USE"}}`
+- Output as JSON lines for easy parsing; limited SQL (no JOINs, subqueries)
+
+**Async File I/O**
+- `aiofiles.open()` — non-blocking; other coroutines run during disk I/O wait
+- Use when processing many files concurrently (100+ files in parallel)
+- `asyncio.gather(*[read_json_async(fp) for fp in files], return_exceptions=True)` — collect all
+
+**File Locking**
+- `fcntl.flock(LOCK_EX | LOCK_NB)` — advisory exclusive lock, non-blocking attempt
+- Retry loop with timeout; release in `finally` block
+- Only works on same host (NFS locks are unreliable — use DB-based locks for distributed)

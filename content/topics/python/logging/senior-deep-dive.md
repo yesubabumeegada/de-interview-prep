@@ -370,3 +370,46 @@ class AdaptiveSamplingFilter(logging.Filter):
 > **Tip 2:** "How would you design observability for a 10TB/day data pipeline?" — "Three pillars: (1) Structured logs with correlation IDs flowing to Elasticsearch or CloudWatch for debugging. (2) Metrics (row counts, latencies, error rates) emitted to DataDog/Prometheus for dashboards and alerting. (3) Distributed tracing with OpenTelemetry linking stages across services. For high volume, sample DEBUG/INFO logs but always keep ERROR+."
 
 > **Tip 3:** "What sampling strategies work for high-volume logging?" — "Three approaches: (1) Rate-based sampling — keep N% of INFO logs, always keep ERROR+. (2) Deterministic sampling by key — same user_id always logged or not (useful for debugging specific accounts). (3) Adaptive sampling — increase rate when error rate spikes, so you capture more context around failures. The goal is cost control without losing signal."
+
+## ⚡ Cheat Sheet
+
+**Log Levels and When to Use**
+| Level | Use For |
+|-------|---------|
+| DEBUG | Detailed trace (disable in prod) |
+| INFO | Normal operations, record counts, durations |
+| WARNING | Unexpected but recoverable (backpressure, retry) |
+| ERROR | Failed operation, partial data loss |
+| CRITICAL | System cannot continue, pipeline halted |
+
+**Structured Logging Must-Haves**
+- Always include: `pipeline`, `step`, `run_id`, `timestamp`, `level`
+- Use `structlog` or `python-json-logger` — not `logging.Formatter` with `%s`
+- Correlation ID: generate `run_id = uuid4()[:8]` at job start; pass everywhere
+- In Spark: broadcast `run_id` to executors; configure logging inside `mapPartitions`
+
+**PySpark Logging Rules**
+- Driver: standard `logging.getLogger()` works normally
+- Executor: must configure logging INSIDE `mapPartitions` / UDF functions (not module-level)
+- Executor logs go to YARN/K8s stdout — aggregate via CloudWatch/Datadog agent
+- Pass `run_id` via `spark.sparkContext.broadcast(run_id)`
+
+**Custom Handler Patterns**
+- `CloudWatchHandler`: buffer 50 events → `put_log_events()` in batches; track `sequenceToken`
+- `MetricsExtractionHandler`: read structured fields from `LogRecord` → emit to statsd/DataDog
+- `AlertingHandler`: sliding window per rule; average value > threshold → fire alert
+
+**ELK Stack Components**
+| Component | Role | Scale Strategy |
+|-----------|------|----------------|
+| Filebeat | Ship logs | One per node/container |
+| Logstash | Parse + enrich + route | Horizontal (stateless) |
+| Elasticsearch | Index + store | Sharding + replicas |
+| Kibana | Query + visualize | Single instance |
+
+**Sampling Strategies (High Volume)**
+- Always keep `ERROR` and above — never sample errors
+- Random sampling: keep `rate=0.01` (1%) of INFO in steady state
+- Deterministic: `hash(user_id) % 100 < rate*100` — same user always in/out sample
+- Adaptive: boost rate when error rate spikes — more context during failures
+- OpenTelemetry: inject `trace_id` + `span_id` into every log automatically

@@ -266,3 +266,39 @@ VACUUM delta.`s3://lake/tables/fact_orders` RETAIN 168 HOURS;
 > **Tip 2:** "When would you use MERGE vs INSERT OVERWRITE?" — "MERGE for surgical updates (few rows changed, many unchanged). INSERT OVERWRITE with replaceWhere for full partition replacement (idempotent, faster when replacing entire partitions). Rule of thumb: if changing >30% of a partition's rows, partition overwrite is faster."
 
 > **Tip 3:** "How does time travel work under the hood?" — "Delta keeps old Parquet files even after UPDATE/DELETE (they're just removed from the active file list in the log). Time travel reads an old version of the log to find which files were active at that point. VACUUM eventually cleans up old files — after that, those versions are gone forever."
+
+## ⚡ Cheat Sheet
+
+**ACID guarantees**
+- Atomicity: write produces single `_delta_log` JSON entry; readers never see partial write
+- Isolation: optimistic concurrency; conflict = retry or fail (no write-write conflicts on disjoint partitions)
+- `SERIALIZABLE` default for DML; `WRITE_SERIALIZABLE` default for streaming (weaker but more concurrent)
+
+**Key operations**
+```sql
+OPTIMIZE delta.`/path` ZORDER BY (col1, col2)  -- compaction + data skipping
+VACUUM delta.`/path` RETAIN 168 HOURS           -- default 7-day retention
+RESTORE TABLE t TO VERSION AS OF 10             -- time travel rollback
+ALTER TABLE t SET TBLPROPERTIES ('delta.targetFileSize'='128mb')
+```
+
+**Time travel limits**
+- Default retention: 7 days (168 hours); set `delta.logRetentionDuration`
+- `VACUUM` enforces retention; run weekly or after large deletes
+- `AS OF VERSION` / `AS OF TIMESTAMP` for point-in-time reads
+
+**Write patterns**
+- `replaceWhere`: partition-scoped overwrite; much faster than full overwrite
+- `mergeSchema`: add new columns without rewrite; `overwriteSchema`: full schema replace
+- `MERGE INTO`: upsert; CDC pattern; must include `ON` key + `WHEN MATCHED/NOT MATCHED`
+
+**Performance tuning**
+- Target file size: 128 MB–1 GB (default 128 MB); tune with `delta.targetFileSize`
+- ZORDER: reorders data within files; best for 1–3 high-cardinality filter columns
+- Data skipping: min/max stats stored in `_delta_log` JSON; skips files not matching predicates
+- Bloom filters: `delta.bloomFilter.enabled=true` on high-cardinality equality columns
+
+**Streaming**
+- `readStream` on Delta: tracks `_delta_log` for new commits; no Kafka needed
+- `trigger(availableNow=True)` → process batch of changes and stop
+- `ignoreChanges` / `ignoreDeletes`: handle updates/deletes in streaming source

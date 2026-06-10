@@ -222,3 +222,43 @@ class CommandExecutor:
 > **Tip 2:** Circuit Breaker shows production maturity. Explain the three states (closed/open/half-open) and how it prevents one failing API from crashing your entire pipeline. Reference `tenacity` or `pybreaker` for real implementations.
 
 > **Tip 3:** Know when NOT to use patterns. If asked "would you use Event Sourcing here?", it's valid to say "only if we need audit history and replay — otherwise it's over-engineering." Senior engineers know the cost of abstraction.
+
+## ⚡ Cheat Sheet
+
+**Pattern Selection Guide**
+| Pattern | When to Use | DE Example |
+|---------|-------------|------------|
+| Dependency Injection | Need testability without real infra | Inject `InMemoryRepository` in tests |
+| Circuit Breaker | External service calls that can fail | DB writes, enrichment API |
+| Event Sourcing | Need full audit trail + replay | Pipeline state history |
+| Command + Idempotency | Safe retries, deduplication | `LoadPartitionCommand` with SHA hash key |
+| Strategy | Swappable algorithms | `HashPartition` vs `RangePartition` |
+| Observer/Event Bus | Decoupled notifications | Slack alert, dashboard update on pipeline end |
+
+**Dependency Injection Rules**
+- Define abstract base class (`DataRepository(ABC)`) — interface contract
+- Real implementation (`PostgresRepository`) and test double (`InMemoryRepository`)
+- Inject via constructor: `ETLPipeline(source=..., sink=...)` — never create deps internally
+- Test double in tests: no DB required, tests run in milliseconds
+
+**Circuit Breaker Numbers**
+- `failure_threshold=5, recovery_timeout=30` for APIs; `failure_threshold=3, recovery_timeout=60` for DB
+- Three states: CLOSED → (N failures) → OPEN → (timeout) → HALF_OPEN → (1 success) → CLOSED
+- Use `threading.Lock` on state updates for thread safety
+
+**Anti-Patterns to Name in Interviews**
+- **God Class**: one class does E+T+L+alerts → single responsibility instead
+- **Hardcoded Config**: conn strings in code → inject via env vars / Pydantic BaseSettings
+- **Silent Failures**: `except: pass` → explicit error + DLQ
+- **Premature Abstraction**: abstract before 2nd concrete use → wait for duplication
+
+**Event Sourcing Trade-offs**
+- Pros: full audit trail, replay from any point, time-travel debugging
+- Cons: complex queries (must replay events), storage grows unboundedly, learning curve
+- Use only if: audit is a hard requirement OR replay/undo is a core feature
+- For most pipelines: structured logging + DQ gate is sufficient — don't over-engineer
+
+**Command Pattern Key Properties**
+- `idempotency_key()` = hash of (table + partition + source path) → same command = same key
+- `CommandExecutor._executed: set[str]` prevents duplicate execution
+- Safe to retry: running the same command twice is a no-op

@@ -385,3 +385,42 @@ bus.publish(PipelineEvent("pipeline_failed", "daily_etl", metadata={"error": "ti
 > **Tip 2:** For MRO questions, remember `super()` follows the MRO, not the class hierarchy. This means `super()` in a mixin calls the NEXT class in MRO, which might not be its direct parent. Always check `ClassName.__mro__` when debugging mixin behavior in production code.
 
 > **Tip 3:** `__slots__` is a memory optimization lever that interviewers love asking about. Know the tradeoff: saves 30-50% memory per instance but prevents dynamic attribute addition and slightly complicates inheritance. Use it for value objects with millions of instances (like parsed records), not for configuration or service objects.
+
+## ⚡ Cheat Sheet
+
+**Metaclass Rules**
+- `type` is the default metaclass; custom metaclass inherits from `type`
+- `__new__(mcs, name, bases, namespace)` → called when the CLASS is defined (not instantiated)
+- `__init_subclass__` is cleaner alternative for most registry use cases
+- Use metaclass for: auto-registration, enforcing class-level invariants, ORM column mapping
+
+**Descriptor Protocol**
+- `__set_name__(owner, name)` → called when class is defined; save `self.name` here
+- `__get__(obj, objtype)` → if `obj is None`: accessed on class, return `self`
+- `__set__(obj, value)` → called on attribute assignment; validate + store in `obj.__dict__` (or `_name`)
+- `property` is a descriptor — `@property` is syntactic sugar for `Descriptor.__get__`
+
+**`__slots__` Quick Facts**
+- Eliminates per-instance `__dict__`: ~200 bytes → ~72 bytes per object
+- 10M regular objects: ~2 GB; 10M slotted: ~720 MB
+- Cannot add attributes not in `__slots__`; `__weakref__` must be explicit
+- Inheritance: subclass must also define `__slots__` or parent savings are lost
+
+**MRO (C3 Linearization)**
+- `ClassName.__mro__` shows the full resolution order
+- `super()` calls the NEXT class in MRO, not the direct parent
+- Mixin's `super()` calls next-in-MRO — enables cooperative multiple inheritance
+- `object` is always last in MRO
+
+**Design Pattern Summary**
+| Pattern | Key Mechanism | DE Use Case |
+|---------|---------------|-------------|
+| Factory | `_handlers[ext]()` dispatch | `FileHandlerFactory.create("data.parquet")` |
+| Strategy | Inject interchangeable algorithm | `HashPartition` vs `RangePartition` |
+| Observer | Event bus with `subscribe(type, cb)` | Pipeline event → Slack/dashboard/audit log |
+| Registry Metaclass | `__new__` auto-registers subclasses | Connector plugins (postgres, s3, kafka) |
+
+**`super()` in Mixins**
+- `super()` in `LoggingMixin.validate()` → calls `Extractor.validate()` (next in MRO)
+- Add `LoggingMixin` first in bases to intercept calls before the real implementation
+- Always call `super().__init__()` in `__init__` for proper MRO initialization

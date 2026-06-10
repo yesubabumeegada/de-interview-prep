@@ -208,3 +208,48 @@ Enable in jobs: `--conf spark.eventLog.enabled=true --conf spark.eventLog.dir=s3
 > **Tip 2:** "How do Spot instances work with Spark on K8s?" — "Executors on Spot (70% savings), driver on On-Demand. Handle interruptions with maxFailures=8, speculation=true, and shuffleTracking. Executor loss is recoverable; driver loss is fatal."
 
 > **Tip 3:** "Explain Cluster Autoscaler and dynamic allocation interaction." — "Spark requests executor pods → pending pods trigger Autoscaler to add nodes (60-180s) → pods schedule. On scale-down: Spark removes idle executors → pods terminate → empty nodes removed. Tune batch.size and schedulerBacklogTimeout to avoid thrashing."
+
+## ⚡ Cheat Sheet
+
+**K8s Spark Submit Essentials**
+```bash
+spark-submit \
+  --master k8s://https://<k8s-api>:6443 \
+  --deploy-mode cluster \
+  --conf spark.kubernetes.container.image=my-spark:3.5 \
+  --conf spark.executor.instances=10 \
+  --conf spark.kubernetes.namespace=spark-jobs \
+  app.py
+```
+
+**Shuffle Storage Decision**
+| Option | IOPS | Survives Pod Death | Use When |
+|--------|------|--------------------|----------|
+| Local NVMe (hostPath) | 500K+ | No | Large shuffles, cost-sensitive |
+| emptyDir | 50–100K | No | General workloads |
+| PVC (EBS/EFS) | 16K–100K | Yes | Speculative or long jobs |
+| Remote shuffle (Magnet/Uniffle) | Network-bound | Yes | Multi-tenant, shuffle reuse |
+
+**Resource Configuration**
+```yaml
+# executor pod template
+resources:
+  requests: { cpu: "2", memory: "4Gi" }
+  limits:   { cpu: "4", memory: "6Gi" }  # memory limit > request for overhead
+# spark.executor.memoryOverheadFactor=0.1 (min 384Mi)
+```
+
+**Autoscaling**
+- `spark.dynamicAllocation.enabled=true` with shuffle service or external shuffle (required on K8s)
+- K8s KEDA scaler: scale on Spark queue depth metric
+- Node autoscaling: Cluster Autoscaler or Karpenter (faster, bin-packing aware)
+
+**Cost Optimization**
+- Spot/Preemptible instances for executors (not driver); enable speculative execution
+- `spark.kubernetes.allocation.batch.size=25` — limits pod burst rate
+- Use Volcano scheduler for gang scheduling (all executors start together or not at all)
+
+**Interview Traps**
+- Spark on K8s does NOT use YARN — no ResourceManager; K8s API server IS the cluster manager
+- Driver must be reachable from executors — use headless service or pod IP with `spark.driver.bindAddress`
+- Default K8s scheduler can cause partial allocation (some executors pending) — use Volcano for gang scheduling

@@ -374,3 +374,48 @@ with mlflow.start_run(run_name="reproducible-training"):
 > **Tip 3:** "How do you make an ML experiment perfectly reproducible?" — "Five layers: (1) code — git commit hash, (2) environment — pinned requirements.txt, Docker image hash, (3) data — DVC SHA or S3 version ID, (4) seeds — set all random seeds (Python, NumPy, PyTorch, CUDA), (5) hardware — note GPU model because floating point operations are hardware-specific. Even with all this, GPU training has non-deterministic operations by default — set cudnn.deterministic=True."
 
 > **Tip 4:** "What's the difference between Optuna's TPE and random search?" — "Random search samples hyperparameter combinations uniformly at random. TPE (Tree-structured Parzen Estimator) builds a probabilistic model of which hyperparameter regions produced good results, and samples more from those regions in subsequent trials — it's Bayesian optimization. With 50+ trials, TPE finds better configurations than random search with the same budget. For fewer than 20 trials, the overhead of TPE's modeling isn't worth it."
+
+## ⚡ Cheat Sheet
+
+**Distributed Training — Key Rule**
+- Only **rank 0** logs to MLflow; all others call no-ops
+- Aggregate metrics across GPUs with `dist.all_reduce(tensor, op=dist.ReduceOp.SUM)` before logging
+- Save model only on `is_main_process()` — `model.module.state_dict()` (unwrap DDP)
+- Backend: `nccl` for GPU-GPU; `gloo` for CPU or mixed
+
+**HPO Tool Decision Matrix**
+| Tool | Best For | Key Feature |
+|---|---|---|
+| Optuna (TPE) | Mid-scale (< 1000 trials), easy setup | Bayesian + pruning, MLflow native |
+| Ray Tune + ASHA | Large-scale, many concurrent trials | Distributed, early stopping |
+| Ax (Facebook) | Multi-objective, strict budget | Bayesian multi-objective |
+| Grid search | ≤ 3 hyperparameters, small search space | Exhaustive |
+
+**TPE vs Random Search**
+- Random: uniform sampling regardless of history
+- TPE (Tree-structured Parzen Estimator): builds probabilistic model of good regions, samples more there
+- Break-even: ~50 trials — below that, random is competitive; above, TPE wins
+
+**Reproducing an ML Experiment — 5 Layers**
+1. Code: git commit SHA
+2. Environment: pinned `requirements.txt` + Docker image hash
+3. Data: DVC SHA or S3 version ID / Delta version
+4. Seeds: Python, NumPy, PyTorch, CUDA (`cudnn.deterministic=True`)
+5. Hardware: GPU model (floating point ops are hardware-specific)
+
+**Key Optuna Patterns**
+```python
+study = optuna.create_study(
+    direction="maximize",
+    sampler=optuna.samplers.TPESampler(seed=42),
+    pruner=optuna.pruners.HyperbandPruner(min_resource=50, max_resource=1000),
+    storage="sqlite:///optuna.db",  # persists across sessions
+    load_if_exists=True,
+)
+study.optimize(objective, n_trials=100, n_jobs=4)  # parallel
+```
+
+**MLflow Nested Runs Pattern**
+- Parent run: search metadata (n_trials, search_type)
+- Child runs: `mlflow.start_run(nested=True)` — one per trial
+- Best result logged to parent after study completes

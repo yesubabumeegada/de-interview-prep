@@ -292,3 +292,49 @@ new_key = Fernet.generate_key()
 > **Tip 2:** Multi-tenancy is a common question at large companies. Know the two main patterns: separate Airflow instances per team (strong isolation, higher cost) vs. shared instance with RBAC (lower cost, shared blast radius). The right answer depends on team maturity, regulatory requirements, and the cost of incidents.
 
 > **Tip 3:** Fernet key management is often overlooked but critical. If you lose the Fernet key, all encrypted connections and variables are permanently unrecoverable. Key rotation should be part of your security posture, and keys should be stored in a secrets manager (not in airflow.cfg on disk).
+
+## ⚡ Cheat Sheet
+
+**HA Scheduler — How Multiple Schedulers Avoid Conflicts**
+- Uses `SELECT FOR UPDATE SKIP LOCKED` on `dag_run` and `task_instance` tables
+- Scheduler 1 locks a row; Scheduler 2 skips locked rows → no double-scheduling
+- Requires PostgreSQL or MySQL (not SQLite — no row-level locking)
+- Typical HA: 2-3 scheduler pods + 2 triggerer pods
+
+**Multi-Tenancy Decision Matrix**
+| Approach | Isolation | Cost | Blast Radius |
+|---|---|---|---|
+| Separate Airflow per team | Strong | High | Per team |
+| Shared instance + RBAC | Weak | Low | All teams |
+- Choose separate instances for regulated teams; shared for cost-conscious orgs
+
+**Zero-Downtime DAG Deployment Patterns**
+1. **Feature flag**: `Variable.get('use_new_logic')` → toggle without redeploy
+2. **Parallel DAGs**: `v1` still running; `v2` running in shadow; compare results
+3. **Blue-green**: deploy v2 paused → test → `unpause v2 + pause v1` atomically
+
+**Observability — Key Grafana Panels**
+- `scheduler_heartbeat` — latency and regularity
+- `dag_processing.total_parse_time` — parsing throughput
+- `task_instance` state breakdown — success/failed/running/queued counts
+- `executor.open_slots` — available capacity
+- `pool.open_slots` per pool — pool utilization
+- `critical_section_duration` — scheduler DB lock time
+
+**Critical Prometheus Alerts**
+```yaml
+- alert: SchedulerHeartbeatMissed  expr: time() - airflow_scheduler_heartbeat > 30
+- alert: HighTaskFailureRate       expr: rate(failed[5m]) / rate(success[5m]) > 0.1
+- alert: ExecutorSaturated         expr: airflow_executor_open_slots < 5
+```
+
+**Version Upgrade Steps**
+1. `pg_dump` metadata DB → backup
+2. `airflow db migrate` on new image (idempotent, safe to re-run)
+3. `airflow db check` to verify
+4. Rolling restart: `kubectl rollout restart deployment/airflow-scheduler`
+
+**Fernet Key Rotation (2-Step)**
+1. Set `fernet_key = new_key,old_key` — Airflow decrypts with old, re-encrypts with new on read
+2. After all secrets migrated: set `fernet_key = new_key` — remove old key
+- Keys must live in secrets manager, not on disk in `airflow.cfg`

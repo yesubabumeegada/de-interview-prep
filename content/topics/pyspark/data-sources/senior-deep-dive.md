@@ -173,3 +173,41 @@ class MyReader(DataSourceReader):
 > **Tip 2:** "How do you optimize S3 reads?" — "Three levers: right-size files to 128MB-1GB, tune fs.s3a.connection.maximum and threads, use partition/column pruning to minimize bytes read. The small-file problem is the #1 performance killer."
 
 > **Tip 3:** "What is DataSource V2?" — "A modern API replacing Hadoop InputFormat with columnar reads, aggregate pushdown, dynamic partition overwrite, and streaming/batch unification. Sources like Delta and Iceberg use it to report partitioning, avoiding unnecessary shuffles."
+
+## ⚡ Cheat Sheet
+
+**Pushdown Support by Format**
+| Source | Filter Pushdown | Column Pruning | Partition Pruning | Notes |
+|--------|----------------|----------------|-------------------|-------|
+| Parquet | Row group stats | Yes | Yes | Best for analytics |
+| Delta | + data skipping | Yes | Yes | Z-ORDER amplifies skipping |
+| ORC | Yes | Yes | Yes | Good for Hive workloads |
+| CSV/JSON | No | No | No | Always full scan |
+| JDBC | Yes (translated to SQL) | Yes | Limited | Push filters at source |
+
+**Critical Read Options**
+- Parquet: `mergeSchema=true` slow on large tables — disable unless needed
+- JDBC: always set `partitionColumn`, `lowerBound`, `upperBound`, `numPartitions` for parallel reads
+- S3: use `s3a://` not `s3://`; set `fs.s3a.committer.name=magic` for atomic writes
+
+**S3 Performance**
+- List operations = slow; use Delta/Auto Loader instead of globbing thousands of files
+- Avoid many small files: merge to 128–256MB target with `OPTIMIZE` or coalesce at write
+- S3 eventual consistency (pre-2020 issue) fixed with S3A with strong consistency — no longer need `_SUCCESS` hacks
+
+**Write Patterns**
+```python
+df.write.mode("overwrite").option("overwriteSchema", "true").parquet(path)  # full overwrite
+df.write.partitionBy("date").mode("append").parquet(path)                   # partition append
+df.coalesce(1).write.csv(path)                                              # single file (careful with large data)
+```
+
+**JDBC Gotchas**
+- Single-partition read = driver bottleneck; always parallelize with `numPartitions`
+- `fetchsize` default is tiny (10 rows for some drivers); set to 10000+
+- Push `WHERE` filters via `.option("dbtable", "(SELECT ...) t")` subquery trick
+
+**Interview Traps**
+- `df.write.partitionBy()` ≠ `repartition()` — partitionBy is for file layout, repartition is in-memory
+- Parquet predicate pushdown only works on row-group stats, not individual rows within a group
+- Delta data skipping requires `ANALYZE TABLE` or `OPTIMIZE` to populate column stats

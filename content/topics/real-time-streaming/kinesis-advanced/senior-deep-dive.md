@@ -257,3 +257,98 @@ Kinesis vs MSK for this architecture:
 > **Tip 2:** "What happens to Kinesis records if a consumer Lambda function is throttled?" — Lambda function concurrency is limited (account limit: 1000 concurrent Lambdas by default). For Kinesis event source mapping: each shard maps to 1 concurrent Lambda (or up to 10 with parallelization factor). If Lambda is throttled: the Kinesis iterator blocks — records accumulate in the shard (up to retention period). Lambda retries with exponential backoff. Iterator age grows → CloudWatch alarm fires. Fix: request Lambda concurrency limit increase, or use parallelization factor to process multiple batches per shard concurrently. Long-term: if throughput exceeds Lambda limits, migrate consumer to KCL on EC2/ECS or KDA.
 
 > **Tip 3:** "What is KPL aggregation and when does it cause problems?" — KPL packs multiple small user records into one Kinesis record (up to 1 MB) to reduce API calls. The aggregated record is Base64+Protobuf encoded with a magic number prefix. KCL and Lambda automatically detect the magic number and de-aggregate transparently. Problems: (a) consumers that DON'T use KCL/Lambda (custom GetRecords consumers) receive opaque blob and must implement de-aggregation manually (use Kinesis Aggregation/Deaggregation library); (b) low-latency requirement: KPL may buffer records up to 100ms waiting to fill the 1 MB batch — set `RecordMaxBufferedTime=100` lower for latency-sensitive use cases.
+
+## ⚡ Cheat Sheet
+
+**Streaming fundamentals**
+```
+Event time:    when the event actually occurred (on the device)
+Processing time: when the system processes it (can be much later)
+Ingestion time: when it arrives at the message broker
+Watermark:     max expected event time lag — defines when a window closes
+Late data:     events arriving after the watermark → handled by allowedLateness or drop
+```
+
+**Apache Flink key concepts**
+```java
+// Keyed stream + window + aggregate
+stream.keyBy(event -> event.userId)
+      .window(TumblingEventTimeWindows.of(Time.minutes(5)))
+      .aggregate(new RevenueAggregator());
+
+// Watermark strategy
+WatermarkStrategy.<OrderEvent>forBoundedOutOfOrderness(Duration.ofSeconds(30))
+    .withTimestampAssigner((event, ts) -> event.eventTimeMs);
+```
+
+**Spark Structured Streaming**
+```python
+# Read from Kafka
+stream = spark.readStream.format("kafka") \
+    .option("kafka.bootstrap.servers", "broker:9092") \
+    .option("subscribe", "orders") \
+    .load()
+
+# Window aggregation
+from pyspark.sql.functions import window, col
+agg = stream \
+    .withWatermark("event_time", "30 seconds") \
+    .groupBy(window("event_time", "5 minutes"), "region") \
+    .sum("amount")
+
+# Write to Delta (trigger: every 1 min or micro-batch)
+agg.writeStream.format("delta").trigger(processingTime="1 minute") \
+    .outputMode("append").option("checkpointLocation", "/chk/orders").start()
+```
+
+**Window types**
+| Window | Description | Use case |
+|---|---|---|
+| Tumbling | Fixed non-overlapping | Hourly totals |
+| Sliding | Fixed size, moves by slide interval | 5-min avg, every 1 min |
+| Session | Gap-based (closes after inactivity) | User sessions |
+| Global | Accumulates all events | Running total |
+
+**Exactly-once semantics**
+```
+Source: idempotent read (Kafka offset tracking)
+Processing: checkpointing (Flink) or write-ahead log (Spark)
+Sink: idempotent write (Delta MERGE, upsert) or transactional sink
+Kafka → Flink/Spark → Delta = exactly-once end-to-end (with checkpointing)
+```
+
+**CDC streaming (Debezium → Kafka → Lakehouse)**
+```
+1. Debezium captures MySQL/Postgres binlog → Kafka topic (op: c/u/d/r)
+2. Flink/Spark reads Kafka topic
+3. MERGE INTO Delta/Iceberg table:
+   INSERT on c, UPDATE on u, DELETE on d
+4. Result: real-time replicated lakehouse table
+```
+
+**Kinesis key operations**
+```python
+import boto3
+kinesis = boto3.client('kinesis', region_name='us-east-1')
+# Put record
+kinesis.put_record(StreamName='orders', Data=json.dumps(event).encode(), PartitionKey=order_id)
+# Get shard iterator
+it = kinesis.get_shard_iterator(StreamName='orders', ShardId='shardId-000000000000',
+                                 ShardIteratorType='LATEST')['ShardIterator']
+# Read records
+records = kinesis.get_records(ShardIterator=it, Limit=100)['Records']
+```
+
+**Stateful processing patterns**
+```
+Running total:    keyed state (ValueState[Double])
+Sessionization:   keyed + timer-based (clear state after N seconds inactivity)
+Pattern detection: CEP (Flink Complex Event Processing) — detect A then B within 5 min
+Deduplication:    keyed state stores seen event IDs (with TTL for cleanup)
+```
+
+**Key interview points**
+- Checkpointing: Flink snapshots operator state to S3/HDFS for fault tolerance
+- Backpressure: slow downstream = upstream stops reading Kafka = natural flow control
+- Parallelism = Kafka partitions: each Flink/Spark task reads one partition
+- Streaming vs micro-batch: Flink = true streaming (event-by-event); Spark = micro-batch (more latency, simpler)

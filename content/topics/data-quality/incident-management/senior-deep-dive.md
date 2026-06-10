@@ -242,3 +242,91 @@ ORDER BY 1;
 > **Tip 2:** "What is chaos engineering for data systems?" — Intentionally inject failures (stop ingestion, corrupt records, rename columns) in a controlled way to test that monitoring detects them and runbooks work. Improves confidence in your incident response before real incidents happen.
 
 > **Tip 3:** "What metrics do you track for incident management maturity?" — MTTD (detection speed), MTTA (response speed), MTTR (resolution speed), recurring incident rate (preventable issues), after-hours incident count (on-call burden), postmortem action completion rate (follow-through). Track month-over-month improvement.
+
+## ⚡ Cheat Sheet
+
+**Great Expectations core objects**
+```python
+import great_expectations as gx
+context = gx.get_context()
+
+# Expectation suite
+suite = context.add_expectation_suite("orders_suite")
+validator = context.get_validator(batch_request=batch_req, expectation_suite_name="orders_suite")
+
+# Common expectations
+validator.expect_column_values_to_not_be_null("order_id")
+validator.expect_column_values_to_be_unique("order_id")
+validator.expect_column_values_to_be_between("amount", 0, 100000)
+validator.expect_column_pair_values_a_to_be_greater_than_b("ship_date", "order_date")
+validator.expect_column_values_to_match_regex("email", r"^[\w._%+-]+@[\w.-]+\.[a-z]{2,}$")
+
+# Run checkpoint
+result = context.run_checkpoint("orders_checkpoint")
+assert result["success"], f"DQ failure: {result}"
+```
+
+**Anomaly detection patterns**
+```python
+# Z-score for numeric columns
+def zscore_anomaly(series, threshold=3.0):
+    z = (series - series.mean()) / series.std()
+    return z.abs() > threshold
+
+# Rolling mean comparison (for time series)
+df["rolling_avg"] = df["revenue"].rolling(7).mean()
+df["anomaly"] = abs(df["revenue"] - df["rolling_avg"]) > 2 * df["revenue"].rolling(7).std()
+```
+
+**Data contract (dbt schema.yml)**
+```yaml
+models:
+  - name: orders
+    description: "Gold orders table — SLA: updated within 1 hour of source"
+    config: {contract: {enforced: true}}
+    columns:
+      - name: order_id
+        data_type: bigint
+        constraints: [{type: not_null}, {type: unique}]
+      - name: amount
+        data_type: double
+        constraints: [{type: not_null}]
+    tests:
+      - dbt_utils.recency:
+          datepart: hour
+          field: updated_at
+          interval: 2
+```
+
+**SLA monitoring**
+```sql
+-- Alert if table hasn't been updated within SLA window
+SELECT table_name,
+       MAX(updated_at) AS last_updated,
+       DATEDIFF('hour', MAX(updated_at), NOW()) AS hours_since_update,
+       CASE WHEN DATEDIFF('hour', MAX(updated_at), NOW()) > sla_hours THEN 'BREACHED' ELSE 'OK' END AS status
+FROM table_sla_registry
+JOIN gold_tables USING (table_name)
+GROUP BY table_name, sla_hours;
+```
+
+**DQ dimensions**
+```
+Completeness:  % non-null values
+Accuracy:      matches source of truth
+Consistency:   same value across systems
+Timeliness:    data arrives within SLA
+Uniqueness:    no duplicates on PK
+Validity:      conforms to expected format/range
+```
+
+**Incident response flow**
+```
+1. Alert fires (DQ check fails, SLA breached)
+2. Triage: severity — who's impacted? (BI dashboard, ML model, external SLA?)
+3. Notify: page on-call DE + inform data consumers
+4. Contain: quarantine bad data (move to _quarantine schema; don't serve bad data)
+5. Fix: patch pipeline or source data
+6. Backfill: reprocess affected time range
+7. Post-mortem: root cause + prevention (add check that would have caught this earlier)
+```

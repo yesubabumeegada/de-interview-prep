@@ -316,3 +316,41 @@ ORDER BY li.txn_age DESC;
 > **Tip 2:** "How do you handle serialization failures (ERROR: could not serialize access) in application code?" — "Serialization failures under SERIALIZABLE isolation must be retried at the application level — they're not bugs, they're the database telling you that the transaction conflicted with another concurrent transaction. The application should catch the serialization failure error code (SQLSTATE 40001), wait a random back-off period, and retry the entire transaction from the beginning. The retry should be bounded (e.g., 3-5 attempts) with exponential backoff to prevent thundering herds."
 
 > **Tip 3:** "When would you choose SAGA over distributed 2PC for a cross-service transaction?" — "Almost always in microservices architectures. 2PC requires all participants to be available simultaneously for both phases and holds locks across the network during the prepare phase — this violates availability (CAP theorem). SAGA allows each service to commit independently and provides compensation (undo) operations for failures. The trade-off is eventual consistency rather than immediate atomicity. I'd use 2PC only for critical operations on a small number of databases that are all within the same availability zone and reliability tier."
+
+## ⚡ Cheat Sheet
+
+**Isolation Level Anomalies**
+| Level | Dirty Read | Non-Repeatable Read | Phantom Read |
+|---|---|---|---|
+| READ UNCOMMITTED | Yes | Yes | Yes |
+| READ COMMITTED | No | Yes | Yes |
+| REPEATABLE READ | No | No | Yes |
+| SERIALIZABLE | No | No | No |
+
+**SERIALIZABLE (SSI) in PostgreSQL**
+- Uses SIREAD locks (track predicates read); detects rw-dependency cycles → aborts one txn
+- Applications MUST retry on `SQLSTATE 40001` with exponential backoff (3–5 attempts)
+- Overhead: memory for SIREAD locks; tune `max_pred_locks_per_transaction`
+- For most OLTP: `READ COMMITTED` + explicit `SELECT FOR UPDATE` achieves same safety with less overhead
+
+**Long-Running Transaction Risks (PostgreSQL)**
+- Blocks VACUUM → dead tuple accumulation → table bloat → transaction ID wraparound
+- Lock queue cascade: DDL waiting on light SELECT blocks ALL subsequent queries
+- `idle_in_transaction_session_timeout = '5min'` → kill idle open transactions automatically
+- `lock_timeout = '5s'` → fail fast rather than queue indefinitely
+- `statement_timeout = '30s'` → prevent runaway queries
+
+**Transaction ID Wraparound**
+- 32-bit XIDs; after ~2B transactions without VACUUM FREEZE → "in the future" confusion
+- Prevention: `VACUUM FREEZE` periodically marks old rows with frozen XID (always visible)
+- Emergency symptom: PG refuses writes, forces manual VACUUM FREEZE
+
+**2PC vs SAGA**
+- 2PC: holds locks across network during prepare phase → violates availability (CAP)
+- SAGA: each step commits independently; compensating transactions for rollback
+- Rule: use SAGA for microservices; 2PC only for tightly-coupled same-AZ databases
+
+**Snowflake / Redshift Specifics**
+- Snowflake: MVCC snapshot isolation; writers never block readers; writers may conflict on same micro-partitions
+- Redshift: serializable by default but table-level locks (not row-level); concurrent UPDATE on same table queues
+- Snowflake: `UNDROP TABLE orders;` recovers within time-travel window

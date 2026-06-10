@@ -209,3 +209,50 @@ Private endpoint approval automation:
 > **Tip 2:** "How do you handle secrets in ADF at enterprise scale?" — All credentials (connection strings, passwords, keys) go in Azure Key Vault, never hardcoded in Linked Service definitions. ADF Linked Services reference Key Vault secrets via `@Microsoft.KeyVault(SecretUri=...)` syntax. ADF managed identity (System Assigned) is granted "Key Vault Secrets User" RBAC role — no client secret needed. For multiple environments (dev/staging/prod), use separate Key Vaults per environment and parameterize the Key Vault URL in the Linked Service configuration using ADF global parameters.
 
 > **Tip 3:** "When would you use ADF Mapping Data Flows vs Azure Databricks?" — Use Mapping Data Flows when: (a) team has limited Spark/Python skills (visual code-free development), (b) transformations are straightforward (join, filter, aggregate), (c) you need built-in connectors without writing code. Use Databricks when: (a) complex transformations requiring custom Python/Scala logic, (b) ML feature engineering, (c) data volumes > 100GB/run (Databricks has better cluster tuning), (d) already have Databricks for other workloads. Many production architectures use both: ADF for orchestration + Databricks for heavy compute.
+
+## ⚡ Cheat Sheet
+
+**ADF components**
+- Pipeline: logical grouping of activities
+- Activity: unit of work (Copy, Data Flow, Execute Pipeline, Web, etc.)
+- Dataset: typed pointer to data source/sink
+- Linked Service: connection definition (credentials, endpoint)
+- Integration Runtime (IR): compute engine for activity execution
+
+**Integration Runtime types**
+| IR Type | Location | Use case |
+|---|---|---|
+| Azure (shared) | Azure region | Cloud-to-cloud copy, Data Flows |
+| Self-hosted | On-prem / private VNet | On-prem source/sink, private endpoints |
+| Azure-SSIS | Azure | Run SSIS packages natively |
+
+**Copy Activity performance**
+- DIU (Data Integration Units): 2–256; higher = more parallel workers
+- `parallelCopies`: how many parallel reader/writer threads
+- Staged copy: auto-routes through Azure Blob for large on-prem transfers
+- Set `enableStaging=true` for PolyBase/COPY INTO Synapse loads
+
+**Data Flow (Spark-based transforms)**
+- Runs on managed Spark cluster; ~3–4 min cold start (use TTL to warm)
+- Cluster TTL: keep cluster alive between runs (`timeToLive` property)
+- Debug mode: interactive development; uses small cluster (4 cores)
+- Pushdown: source/sink transformations push SQL to the warehouse where possible
+
+**Triggers**
+| Trigger type | When |
+|---|---|
+| Schedule | Cron expression |
+| Storage event | Blob created/deleted in ADLS |
+| Custom event | EventGrid topic |
+| Tumbling window | Fixed-window with backfill support |
+
+**Monitoring**
+- Monitor tab: per-run status, duration, bytes read/written
+- Diagnostic logs → Log Analytics: `ADFPipelineRun`, `ADFActivityRun`, `ADFTriggerRun`
+- Alert rule: pipeline failure rate > threshold → Action Group (email/SMS/webhook)
+
+**Cost levers**
+- Copy activity: charged per DIU-hour
+- Data Flows: charged per vCore-hour (Spark cluster)
+- Triggers + orchestration: charged per execution
+- Use `executeUntil` loops carefully — each iteration = separate activity charge

@@ -332,3 +332,42 @@ def extract_users(date):
 > **Tip 2:** "How would you implement a rate limiter decorator?" — Use a sliding window approach: track call timestamps in a deque, remove entries older than the window, sleep if at capacity. Show awareness of thread safety (use a lock for multi-threaded code).
 
 > **Tip 3:** "Explain the circuit breaker pattern" — "Three states: Closed (normal), Open (failing fast), Half-Open (testing recovery). After N consecutive failures, the circuit opens — all calls fail immediately without hitting the service. After a timeout, one test call is allowed. If it succeeds, circuit closes. This prevents cascading failures when a dependency is down."
+
+## ⚡ Cheat Sheet
+
+**Decorator Fundamentals**
+- Always use `@functools.wraps(func)` — preserves `__name__`, `__doc__`, `__wrapped__`
+- `func.__wrapped__` → access original unwrapped function in tests
+- Class-based decorator needs `__get__(self, obj, objtype)` to work as instance method
+- Decorator overhead: ~0.04 µs per call — irrelevant for DE batch workloads
+
+**Circuit Breaker States**
+| State | Behavior | Transition |
+|-------|----------|------------|
+| CLOSED | All calls pass through | → OPEN after N failures |
+| OPEN | Fail immediately (no call) | → HALF_OPEN after timeout |
+| HALF_OPEN | Allow one test call | → CLOSED on success, → OPEN on failure |
+
+- `failure_threshold=5, reset_timeout=60` typical defaults
+- Expose `.circuit_state()` and `.reset()` on wrapper for monitoring/testing
+
+**Decorator Registry Pattern**
+- `_registry = {}` on a class; `__new__` or `__init_subclass__` auto-registers subclasses
+- Powers: Airflow `@task`, Flask `@route`, pytest `@fixture`
+- `wrapper._task_name = name` — attach metadata to wrapped function
+
+**Retry Decorator Rules**
+- Exponential backoff: `delay * (2 ** attempt)` with random jitter `+= random.uniform(0, delay)`
+- Jitter prevents thundering herd (all retries hitting at the same second)
+- Catch specific exceptions; re-raise on final failure with original traceback
+- `max_attempts=3, base_delay=1` → delays: 1 s, 2 s (total wait ~3 s before giving up)
+
+**Memory Leak Prevention**
+- Unbounded `results = {}` inside decorator → grows forever; use `@lru_cache(maxsize=N)`
+- `lru_cache` evicts LRU entries after `maxsize`; thread-safe; `cache_clear()` for tests
+- Never store mutable state in decorator closure if the function is called concurrently
+
+**Testing Decorators**
+- Bypass: call `func.__wrapped__(*args)` to test logic without retry/timing overhead
+- Test behavior: `delay=0` for fast tests; use `nonlocal call_count` to assert retry count
+- Disable in CI: `if os.getenv("TESTING"): return func` inside decorator

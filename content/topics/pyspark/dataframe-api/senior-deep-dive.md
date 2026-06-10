@@ -267,3 +267,44 @@ late_records.write.mode("append") \
 ## Interview Tip 💡
 
 > Senior-level PySpark questions almost always involve performance. Structure your answer around: (1) "How many shuffles does this require?" (2) "Can we reduce shuffles by repartitioning, broadcasting, or combining aggregations?" (3) "What's the data skew risk?" If you can read `explain()` output and identify optimization opportunities, you'll stand out. Practice reading physical plans until the patterns are automatic.
+
+## ⚡ Cheat Sheet
+
+**Lazy vs Eager Evaluation**
+- Transformations (lazy): `select`, `filter`, `join`, `groupBy`, `withColumn` — build DAG only
+- Actions (eager): `count`, `collect`, `show`, `write`, `toPandas` — trigger execution
+- Every `show()` or `count()` in a loop = N full job submissions — cache() intermediate results
+
+**Common Performance Traps**
+- `withColumn` in a loop: each call adds a projection node; replace with single `select([...])`
+- `df.count()` after transformation = full scan; use `df.isEmpty` or check plan cardinality instead
+- `collect()` on large DF = OOM on driver; use `take(n)` or write to storage
+- `toPandas()` = serializes all data to driver; only safe for aggregated/small results
+
+**Shuffle Control**
+```python
+spark.conf.set("spark.sql.shuffle.partitions", 200)  # default, often too high for small data
+# Rule: ~128MB per partition; 10GB data → ~80 partitions
+df.repartition(n, "col")      # hash partition by col (causes shuffle)
+df.coalesce(n)                # reduce partitions, no shuffle (but uneven)
+df.repartitionByRange(n, "col")  # range partition, good for sorted writes
+```
+
+**Key Operations Cheatsheet**
+| Operation | Notes |
+|-----------|-------|
+| `dropDuplicates(["col"])` | Dedup on subset; full row dedup without args |
+| `df.cache()` / `df.persist(StorageLevel.DISK_ONLY)` | Cache to memory/disk |
+| `df.unpersist()` | Always unpersist after done; Spark does NOT auto-clean eagerly |
+| `F.col("a") == F.col("b")` | Correct cross-column comparison |
+| `df.schema` | Returns StructType; check before complex transformations |
+
+**Schema & Type Safety**
+- Define schema explicitly at read time: avoid schema inference on large data (triggers extra scan)
+- `df.printSchema()` free; `df.dtypes` returns list of (name, dtype) tuples
+- Cast: `df.withColumn("x", F.col("x").cast("double"))` — returns null on failure (not error)
+
+**Interview Traps**
+- `df1.union(df2)` = UNION ALL (no dedup); use `df1.unionByName(df2)` to match by column name
+- `join` with duplicate column names creates ambiguity — use `.drop()` or alias before join
+- `groupBy().agg()` vs `groupBy().apply()` (pandas UDF): agg uses JVM, apply serializes to Python

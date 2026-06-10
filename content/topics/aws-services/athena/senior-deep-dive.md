@@ -211,3 +211,37 @@ Tested on 1 TB of order data (same content, different formats):
 > **Tip 2:** "Athena vs Spark/Glue for ETL?" — "Athena for: SQL-only transforms, small-medium data, one-time migrations, ad-hoc data quality checks. Spark/Glue for: complex Python logic, UDFs, large-scale (100+ GB per run), streaming, machine learning. Athena is simpler and cheaper for SQL-expressible work."
 
 > **Tip 3:** "How do you handle Athena query failures at scale?" — "Three layers: (1) Workgroup scan limits prevent runaway queries, (2) Step Functions with retry + error handling orchestrate multi-step SQL jobs, (3) CloudWatch alarms on failed query count and bytes scanned. For idempotency: use INSERT OVERWRITE (Iceberg) or CTAS with IF NOT EXISTS + DROP if re-running."
+
+## ⚡ Cheat Sheet
+
+**Pricing & Limits**
+- $5/TB scanned, minimum 10 MB per query, failed queries = no charge, cancelled = charged for scanned
+- DDL (CREATE/ALTER/DROP) is free; CTAS charged on data written
+- Athena v3 (Trino) required for Iceberg MERGE/UPDATE/DELETE and partition evolution
+
+**Cost Reduction Rules**
+- CSV → Parquet + partitioning + column pruning = up to 99.8% cost reduction
+- Parquet (snappy) ~150 GB vs CSV 1 TB; ORC (zstd) slightly smaller still
+- Workgroup per-query scan limit: fail queries that exceed N bytes before they run
+- Cancelled queries still charged for data already scanned — use workgroup limits
+
+**Partition & Format Decision**
+- Hive-style partitioning: `WHERE year=2024 AND month=01` prunes at planning time
+- Partition projection: eliminates Glue Catalog lookups for millions of partitions (set table property `projection.enabled=true`)
+- Optimal file size for Athena: 128 MB–1 GB Parquet; avoid thousands of tiny files
+
+**Performance Tips**
+- `approx_distinct()` (HyperLogLog) ~3× faster than `COUNT(DISTINCT)`, ~2% error
+- `approx_percentile(col, 0.95)` for P95 without full sort
+- UNNEST + CROSS JOIN for querying nested arrays/structs in JSON
+- CTAS to materialize repeated expensive queries; refresh daily or on-demand
+
+**Athena v3 Key Additions**
+- MERGE INTO, UPDATE, DELETE on Iceberg tables
+- Better predicate pushdown and optimizer (2–5× faster than v2)
+- Spark notebook mode for Python-based analytics
+
+**Operational Patterns**
+- Step Functions + `athena:startQueryExecution.sync` = SQL-only ETL with no Spark/Glue
+- Cross-account: share Glue database via RAM → query without data copy; query cost paid by consumer account
+- Idempotent reruns: use Iceberg INSERT OVERWRITE or CTAS + DROP IF EXISTS pattern

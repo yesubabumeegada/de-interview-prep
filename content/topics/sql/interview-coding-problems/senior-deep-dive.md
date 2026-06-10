@@ -418,3 +418,46 @@ Senior interviewers want to see:
 3. Scale awareness — you mention partition pruning / join strategy implications without being asked
 4. Production instincts — you notice the division by zero risk and handle it proactively
 5. Ability to extend: "How would you add multi-touch attribution?" demonstrates design thinking
+
+## ⚡ Cheat Sheet
+
+**SCD2 Point-in-Time Join (canonical senior problem)**
+```sql
+JOIN dim_customer_scd2 d
+  ON f.customer_id = d.customer_id
+ AND f.order_date BETWEEN d.effective_from
+                      AND COALESCE(d.effective_to, '9999-12-31')
+```
+- `COALESCE(effective_to, '9999-12-31')`: NULL means current record; BETWEEN NULL = FALSE
+- Wrong pattern: `WHERE effective_to IS NULL` gives only current tier, not historical
+
+**Funnel Analysis Decision Rule**
+- Loose funnel (reach): `COUNT(DISTINCT CASE WHEN event_type='step' THEN user_id END)`
+- Strict funnel (ordered): compare timestamps `carted_at > viewed_at AND purchased_at > carted_at`
+- Use strict when analyzing checkout flows; use loose for marketing reach measurement
+
+**Attribution Models → SQL Pattern**
+| Model | SQL |
+|---|---|
+| Last touch | `ROW_NUMBER() OVER (PARTITION BY user_id, purchase_id ORDER BY touch_time DESC)` = 1 |
+| First touch | same but `ASC` |
+| Linear | `1.0 / COUNT(*) OVER (PARTITION BY user_id, purchase_id)` as weight |
+
+**Date Spine Gap Fill**
+- PostgreSQL: `GENERATE_SERIES('2024-01-01'::date, '2024-01-31'::date, '1 day')`
+- BigQuery: `UNNEST(GENERATE_DATE_ARRAY(...))`
+- Snowflake: `GENERATOR(ROWCOUNT=>31)` + `DATEADD(day, SEQ4(), start_date)`
+- Always `LEFT JOIN` date spine to fact; `COALESCE(SUM(rev), 0)`
+
+**Gaps and Islands — Consecutive Streak**
+```sql
+activity_date - INTERVAL '1 day' * ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY activity_date)
+  AS island_group
+-- constant island_group = consecutive dates belong to same streak
+```
+
+**Senior-Level Instincts to Demonstrate**
+- Spot `/ 0` risk → always wrap with `NULLIF(denominator, 0)`
+- Range joins → mention index on `(customer_id, effective_from, effective_to)` and partition co-location
+- Strict vs loose funnel → clarify with interviewer before coding
+- After writing query → mention scale: "for 1B rows I'd ensure partition pruning on order_date"

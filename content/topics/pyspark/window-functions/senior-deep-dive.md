@@ -270,3 +270,60 @@ spark.conf.set("spark.sql.shuffle.partitions", "400")  # Default 200
 > **Tip 2:** "How do you handle skew with window functions?" — "If one partition key has 100x more rows than others, that executor becomes a bottleneck. Options: filter out the skewed key and process it separately, salt the key to split it across multiple partitions (changes semantics), or use AQE to detect and mitigate skew at runtime."
 
 > **Tip 3:** "first() and last() gotcha" — "Without specifying the full frame (unboundedPreceding to unboundedFollowing), last() uses the default frame which only goes up to the current row — effectively returning the current row's value, not the partition's actual last value. Always specify the frame explicitly for first/last."
+
+## ⚡ Cheat Sheet
+
+**Window spec building blocks**
+```python
+from pyspark.sql.window import Window
+from pyspark.sql.functions import row_number, rank, dense_rank, lag, lead,     sum, avg, min, max, first, last, ntile, percent_rank, cume_dist
+
+# Partition + order
+w = Window.partitionBy("dept").orderBy("salary")
+# Partition only (for aggregation without ordering)
+w_agg = Window.partitionBy("dept")
+# Rows between
+w_roll = Window.partitionBy("dept").orderBy("date")     .rowsBetween(-6, 0)   # last 7 rows (6 preceding + current)
+# Range between (value-based, not row-based)
+w_range = Window.partitionBy("dept").orderBy("date")     .rangeBetween(-86400*7, 0)  # last 7 days (seconds)
+```
+
+**Ranking functions**
+```python
+df.withColumn("rn", row_number().over(w))    # unique 1,2,3...
+df.withColumn("rnk", rank().over(w))          # gaps on ties: 1,1,3
+df.withColumn("dr", dense_rank().over(w))     # no gaps: 1,1,2
+df.withColumn("pct", percent_rank().over(w))  # 0.0–1.0
+df.withColumn("tile", ntile(4).over(w))       # quartiles 1–4
+```
+
+**Lag/Lead**
+```python
+df.withColumn("prev_val", lag("value", 1).over(w))
+df.withColumn("next_val", lead("value", 1, 0).over(w))  # default 0 if no next
+# MoM growth
+df.withColumn("mom_growth",
+    (col("revenue") - lag("revenue",1).over(w)) / lag("revenue",1).over(w))
+```
+
+**Running aggregates**
+```python
+# Running total
+df.withColumn("running_sum", sum("amount").over(
+    w.rowsBetween(Window.unboundedPreceding, Window.currentRow)))
+# 7-day rolling average
+df.withColumn("rolling_7d", avg("value").over(
+    w.rowsBetween(-6, 0)))
+```
+
+**Deduplication (top-N per group)**
+```python
+# Keep most recent row per customer
+w_ded = Window.partitionBy("customer_id").orderBy(col("updated_at").desc())
+df.withColumn("rn", row_number().over(w_ded)).filter(col("rn") == 1)
+```
+
+**Performance**
+- `rowsBetween` vs `rangeBetween`: rows = position-based (faster); range = value-based (requires sort)
+- Large partitions = OOM; repartition on window key before window ops
+- Avoid `Window.unboundedFollowing` with aggregations — requires full partition in memory

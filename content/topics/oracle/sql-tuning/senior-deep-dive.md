@@ -257,3 +257,90 @@ FETCH FIRST 20 ROWS ONLY;
 > **Tip 2:** "Explain Adaptive Cursor Sharing." — ACS solves the bind variable peeking problem. Normally Oracle peeks at a bind value at first hard parse and uses that plan forever. ACS marks cursors as "bind sensitive" when histograms show data skew. If multiple executions show different performance characteristics for different bind ranges, Oracle creates additional child cursors with plans optimized for those ranges.
 
 > **Tip 3:** "When would you use parallel query and what are the risks?" — Use parallel query for batch/warehouse workloads: full table scans, large hash joins, aggregations on fact tables. Avoid in OLTP — parallel query consumes many CPU cores and can degrade concurrency. Key risk: degree of parallelism × query CPU × concurrent users can saturate CPUs and kill response time for other sessions. Always set `PARALLEL_MAX_SERVERS` and consider resource manager plans.
+
+## ⚡ Cheat Sheet
+
+**PL/SQL essentials**
+```sql
+-- Stored procedure with exception handling
+CREATE OR REPLACE PROCEDURE load_orders(p_date IN DATE) AS
+    v_count NUMBER;
+BEGIN
+    INSERT INTO orders SELECT * FROM staging WHERE order_date = p_date;
+    v_count := SQL%ROWCOUNT;
+    DBMS_OUTPUT.PUT_LINE('Inserted: ' || v_count);
+    COMMIT;
+EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20001, 'Duplicate order key for ' || p_date);
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END load_orders;
+/
+```
+
+**AWR / performance tuning**
+```sql
+-- Top SQL by elapsed time (from AWR)
+SELECT sql_id, elapsed_time/1000000 AS elapsed_sec, executions,
+       elapsed_time/NULLIF(executions,0)/1000000 AS avg_sec,
+       sql_text
+FROM v$sqlstats
+ORDER BY elapsed_time DESC FETCH FIRST 10 ROWS ONLY;
+
+-- Explain plan
+EXPLAIN PLAN FOR SELECT * FROM orders WHERE customer_id = 123;
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY(format=>'ALL'));
+
+-- Force index hint
+SELECT /*+ INDEX(o IDX_ORDERS_CUST) */ * FROM orders o WHERE customer_id = 123;
+```
+
+**Partitioning**
+```sql
+-- Range partitioning (most common for DE)
+CREATE TABLE orders (order_id NUMBER, order_date DATE, amount NUMBER)
+PARTITION BY RANGE (order_date) INTERVAL (NUMTOYMINTERVAL(1,'MONTH'))
+(PARTITION p_first VALUES LESS THAN (DATE '2024-01-01'));
+
+-- Partition pruning: WHERE order_date = '2024-01-15' reads only one partition
+```
+
+**Oracle RAC key concepts**
+```
+Cache Fusion:  nodes share buffer cache via high-speed interconnect
+GCS:           Global Cache Service — coordinates block ownership
+GES:           Global Enqueue Service — distributed lock management
+Interconnect:  low-latency private network between RAC nodes (mandatory)
+VIP:           Virtual IP — client transparent failover on node failure
+```
+
+**SQL tuning checklist**
+```
+1. Check execution plan: is it using the right index?
+2. Check cardinality estimates: are they close to actual rows?
+3. Statistics stale? Run DBMS_STATS.GATHER_TABLE_STATS
+4. High parse time? Consider bind variables or cursor_sharing=FORCE
+5. Full table scan on large table? Add index or partition pruning
+6. Nested loops on large tables? Consider hash join hint
+7. High I/O? Check if result fits in buffer cache (db_cache_size)
+```
+
+**Materialized view fast refresh**
+```sql
+CREATE MATERIALIZED VIEW LOG ON orders WITH ROWID, SEQUENCE (order_id, amount, region)
+INCLUDING NEW VALUES;
+
+CREATE MATERIALIZED VIEW mv_orders_by_region
+REFRESH FAST ON COMMIT AS
+SELECT region, SUM(amount) AS total FROM orders GROUP BY region;
+```
+
+**Key interview points**
+- Bind variables: prevent hard parse; critical for OLTP performance (cursor reuse)
+- Partition pruning: Oracle auto-prunes when filter on partition key
+- Data Guard: physical standby (redo apply) vs logical standby (SQL apply)
+- Exadata: Smart Scan offloads WHERE/column projection to storage cells (iDB protocol)
+- RAC: active-active; all nodes can read/write; best for OLTP scale-out

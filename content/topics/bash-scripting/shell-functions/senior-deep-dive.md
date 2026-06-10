@@ -221,3 +221,67 @@ validate_config || exit 1
 > **Tip 2:** "Decorator pattern in bash?" — Wrapper functions that add behavior: `with_timing` (logs duration), `with_retry` (retries on failure), `with_logging` (captures output). Compose: `with_timing with_retry 3 my_function`. Each decorator is independent and stackable — clean separation of concerns.
 
 > **Tip 3:** "How do you validate complex configuration?" — Composable validator functions: `validate_not_empty`, `validate_numeric`, `validate_url`, `validate_file_exists`. Each adds to a shared error array. After all checks: if errors exist → print all and fail. Benefits: clear error messages (ALL issues at once, not one-at-a-time), reusable validators, testable.
+
+## ⚡ Cheat Sheet
+
+**Function anatomy**
+```bash
+my_function() {
+    local arg1="$1"  # ALWAYS use local for function vars
+    local arg2="${2:-default_value}"
+    [[ -z "$arg1" ]] && { echo "ERROR: arg1 required" >&2; return 1; }
+    # body
+    echo "result"    # return values via stdout
+    return 0         # return status (0=success, 1-255=error)
+}
+
+# Call and capture output
+result=$(my_function "a" "b") || die "Function failed"
+```
+
+**Return values**
+```bash
+# Status code (0-255): use for success/failure
+validate() { [[ "$1" =~ ^[0-9]+$ ]]; }  # returns 0 or 1 automatically
+# Multiple return values via global variables (last resort)
+get_stats() { STAT_MIN=0; STAT_MAX=100; }
+# Via stdout (most common)
+get_value() { echo "result"; }; val=$(get_value)
+# Via nameref (Bash 4.3+)
+get_result() { local -n _ref=$1; _ref="computed_value"; }
+get_result myvar; echo "$myvar"
+```
+
+**Library pattern**
+```bash
+# lib/common.sh
+die() { echo "FATAL: $*" >&2; exit 1; }
+log() { echo "[$(date -Iseconds)] $*"; }
+require_cmd() { command -v "$1" >/dev/null || die "Required: $1"; }
+# Main script
+source "$(dirname "$0")/lib/common.sh"
+require_cmd aws jq python3
+```
+
+**Recursive functions**
+```bash
+traverse_dir() {
+    local dir="$1"
+    local depth="${2:-0}"
+    for f in "$dir"/*; do
+        [ -d "$f" ] && traverse_dir "$f" $((depth+1))
+        [ -f "$f" ] && process_file "$f"
+    done
+}
+```
+
+**Testing functions**
+```bash
+# With bats-core
+@test "validate accepts integers" {
+    run validate 42; [ "$status" -eq 0 ]
+}
+@test "validate rejects strings" {
+    run validate "abc"; [ "$status" -eq 1 ]
+}
+```

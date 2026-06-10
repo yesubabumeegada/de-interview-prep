@@ -197,3 +197,59 @@ validate_data "$1"
 > **Tip 2:** "How do you handle 50 GB files in bash?" — Stream processing: pipe commands together (`tail | cut | sort | uniq`). Each command processes one line at a time (constant memory). Use `LC_ALL=C` for faster sorting. Use `sort --parallel=N` for multi-core sorting. Use `mawk` instead of `gawk` (2-5x faster). Never use `cat file | command` — use `command < file` or `command file` instead.
 
 > **Tip 3:** "How do you build a data quality check in bash?" — Shell function that validates: column count consistency (awk NF), null primary keys (grep empty fields), duplicates (sort | uniq -d), numeric validation (grep regex), date format validation. Returns exit code based on pass/fail. Run before loading data into the warehouse — cheap gate that catches 80% of issues.
+
+## ⚡ Cheat Sheet
+
+**awk fundamentals**
+```bash
+awk -F',' '{print $1, $3}'     # print cols 1 and 3
+awk 'NR>1 {sum+=$2} END {print sum}'  # skip header, sum col 2
+awk '$3 > 100 {print $1}'      # filter rows where col 3 > 100
+awk 'BEGIN{FS=","; OFS="|"} {print $1,$2,$3}'  # change delimiter
+awk -F',' '{a[$1]+=$2} END {for(k in a) print k, a[k]}'  # group by + sum
+```
+
+**sed patterns**
+```bash
+sed 's/foo/bar/g'              # global replace
+sed 's/^/PREFIX: /'            # prepend to each line
+sed '1d'                        # delete first line (header)
+sed '/pattern/d'                # delete lines matching pattern
+sed -n '5,10p'                  # print lines 5-10
+sed -i.bak 's/old/new/g' file  # in-place edit with backup
+```
+
+**grep patterns**
+```bash
+grep -E 'ERROR|WARN'           # extended regex
+grep -v 'DEBUG'                 # invert match
+grep -c 'pattern'               # count matches
+grep -n 'pattern'               # show line numbers
+grep -r 'pattern' /dir          # recursive
+grep -l 'pattern' *.log         # filenames only
+```
+
+**cut / paste / join**
+```bash
+cut -d',' -f1,3 file.csv       # extract cols 1 and 3
+cut -c1-80 file.txt            # first 80 chars per line
+paste -d',' file1 file2        # side-by-side merge with delimiter
+join -t',' -1 1 -2 1 <(sort a.csv) <(sort b.csv)  # SQL-like join on col 1
+```
+
+**sort / uniq**
+```bash
+sort -t',' -k2,2n -k1,1       # sort by col 2 (numeric), then col 1
+sort -u                         # sort + deduplicate
+uniq -c                         # count consecutive duplicates (must sort first)
+uniq -d                         # only print duplicates
+sort file | uniq -c | sort -rn | head  # frequency count
+```
+
+**jq for JSON**
+```bash
+jq '.records[] | {id, amount}'        # extract fields
+jq '[.[] | select(.status == "active")]'  # filter
+jq -r '.data[] | [.id, .name] | @csv'    # to CSV
+jq -s '.[0] * .[1]'                   # merge two JSON files
+```

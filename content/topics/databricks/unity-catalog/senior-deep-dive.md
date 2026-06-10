@@ -227,3 +227,54 @@ ORDER BY query_count DESC;
 > **Tip 2:** "How do you handle multi-cloud data governance?" — Unity Catalog metastore spans workspaces across clouds. Create storage credentials per cloud (IAM role for AWS, service principal for Azure). External locations point to the respective cloud storage. Same permission grants apply regardless of which workspace/cloud the user is on. For data that lives in different clouds: use Delta Sharing for cross-cloud access.
 
 > **Tip 3:** "How do you implement GDPR deletion in a lakehouse?" — Use UC lineage to find all tables containing user data (column-level lineage traces PII columns). Delete from all tables using Delta DELETE statements. Run VACUUM to physically remove old versions. Audit logs prove compliance (who deleted, when, from which tables). Challenge: Delta time travel retains old data until VACUUM — must VACUUM with 0 retention for true erasure.
+
+## ⚡ Cheat Sheet
+
+**Privilege hierarchy**
+```
+Account admin → Metastore admin → Catalog owner → Schema owner → Table owner
+GRANT <priv> ON <object> TO <principal>
+-- Privileges propagate down: GRANT on catalog → all schemas/tables inherit USE
+```
+
+**Key privileges**
+| Object | Privilege | Effect |
+|---|---|---|
+| Catalog | `USE CATALOG` | Required to use any object in catalog |
+| Schema | `USE SCHEMA` | Required to see objects in schema |
+| Table | `SELECT` | Read data |
+| Table | `MODIFY` | INSERT/UPDATE/DELETE/MERGE |
+| Function | `EXECUTE` | Call UDFs and masking functions |
+
+**Data masking**
+```sql
+CREATE FUNCTION mask_ssn(ssn STRING)
+  RETURNS STRING
+  RETURN CASE WHEN is_account_group_member('pii-approved') THEN ssn ELSE '***-**-' || RIGHT(ssn,4) END;
+ALTER TABLE customers ALTER COLUMN ssn SET MASK mask_ssn;
+```
+
+**Row-level security**
+```sql
+CREATE FUNCTION filter_region(region STRING)
+  RETURNS BOOLEAN
+  RETURN is_account_group_member(region || '-team') OR is_account_group_member('data-admin');
+ALTER TABLE sales SET ROW FILTER filter_region ON (region);
+```
+
+**External locations**
+```sql
+CREATE STORAGE CREDENTIAL s3_cred USING IAM_ROLE 'arn:aws:iam::...';
+CREATE EXTERNAL LOCATION my_lake URL 's3://bucket/prefix' WITH (STORAGE CREDENTIAL s3_cred);
+GRANT READ FILES ON EXTERNAL LOCATION my_lake TO `data-engineers`;
+```
+
+**Lineage**
+- Auto-captured: all Spark SQL, notebooks, DLT pipelines, Databricks SQL queries
+- External tools: require OpenLineage integration (dbt, Airflow)
+- Access: UC Explorer → table → Lineage tab; also via REST API
+
+**Migration from HMS**
+- `SYNC` command: registers existing Delta tables in UC without data movement
+- External tables: keep data in place; add `LOCATION` clause
+- Managed tables: data moves to UC-managed storage on `SYNC`

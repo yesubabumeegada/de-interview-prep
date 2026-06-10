@@ -233,3 +233,61 @@ graph TD
 > **Tip 2:** "How do you handle SCD in snowflake schemas?" — Two approaches: (1) SCD Type 2 only at the leaf level (dim_product), hierarchy tables are Type 1 (overwrite). Simpler but loses hierarchy history. (2) SCD on each hierarchy level independently — requires point-in-time joins through the hierarchy, but preserves full history. Choice depends on whether historical hierarchy matters for your analysis.
 
 > **Tip 3:** "Snowflake schema on modern cloud platforms?" — Storage is cheap now, so the redundancy argument for snowflake is weaker. But maintenance/update arguments remain strong. Best practice: physically store as snowflake (normalized, easy ETL), expose to users as star via materialized views or flattened views. Get the benefits of both.
+
+## ⚡ Cheat Sheet
+
+**Dimensional modeling building blocks**
+```
+Fact table:       measures/metrics (order_amount, quantity, duration)
+Dimension table:  descriptive attributes (customer, product, date, geography)
+Grain:            one row = one business event at lowest detail level
+Surrogate key:    system-generated integer PK (never use natural keys in dim)
+Natural key:      source system business key (stored alongside surrogate key)
+```
+
+**Star schema vs Snowflake schema**
+```
+Star:       fact → dimension (denormalized, faster queries, more storage)
+Snowflake:  fact → dimension → sub-dimension (normalized, saves storage, more joins)
+Rule:       prefer star for BI; snowflake only when storage cost is critical
+```
+
+**SCD (Slowly Changing Dimensions)**
+| Type | Strategy | When |
+|---|---|---|
+| SCD1 | Overwrite old value | History irrelevant |
+| SCD2 | New row (add effective_from, effective_to, is_current) | Need full history |
+| SCD3 | Add prev_value column | Only need one prior value |
+| SCD4 | Separate history table | Large dimension, rare changes |
+| SCD6 | SCD1 + SCD2 + SCD3 hybrid | Best of all worlds |
+
+**SCD2 implementation**
+```sql
+-- Insert new version, expire old
+UPDATE dim_customer SET effective_to = CURRENT_DATE - 1, is_current = FALSE
+WHERE customer_id = 123 AND is_current = TRUE;
+
+INSERT INTO dim_customer (customer_id, name, city, effective_from, effective_to, is_current)
+VALUES (123, 'Jane Doe', 'Chicago', CURRENT_DATE, '9999-12-31', TRUE);
+```
+
+**Data Vault pattern**
+```
+Hub:   business keys (stable identifiers — customer_id, order_id)
+Link:  relationships between hubs (many-to-many)
+Sat:   descriptive attributes + context (with load timestamp — full history)
+```
+
+**Fact table types**
+```
+Transaction:    one row per event (orders, clicks, payments)
+Snapshot:       one row per period per entity (daily account balance)
+Accumulating:   one row per lifecycle, updated as process stages complete
+```
+
+**Key interview points**
+- Grain: define before designing any fact table — drives every design decision
+- Degenerate dimensions: order number on fact table with no corresponding dimension
+- Factless facts: events with no measures (student enrolled in course — just the relationship)
+- Role-playing dimensions: same dimension used multiple times (order_date, ship_date, return_date)
+- Conformed dimensions: shared across multiple fact tables (same dim_date in sales and returns facts)

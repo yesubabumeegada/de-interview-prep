@@ -504,3 +504,55 @@ def configure_mig(gpu_id: int, profile: str = "1g.5gb"):
 > **Tip 3:** "How does Triton's dynamic batching differ from application-level batching?" — "Triton batches at the model server level, transparently to the application. Multiple clients send individual requests; Triton queues them and forms optimal batches before GPU inference. This is more efficient than application-level batching because it eliminates serialization overhead and the server can optimize batch formation across multiple model instances."
 
 > **Tip 4:** "When does a circuit breaker open and what happens?" — "A circuit breaker tracks the error rate in a rolling window. When errors exceed the threshold (e.g., 5 failures in 10 requests), it 'opens' — subsequent requests are rejected immediately without calling the model server. This prevents a struggling model server from becoming overwhelmed with queued requests. After a timeout (60s), it goes 'half-open' — one request is allowed through; if it succeeds, the circuit closes; if it fails, it opens again."
+
+## ⚡ Cheat Sheet
+
+**Inference Optimization Decision Tree**
+1. Export to ONNX → 2-4× CPU speedup (graph opts + hardware kernels)
+2. Dynamic quantization (INT8 Linear layers) → 2-4× size reduction, minimal accuracy loss
+3. Static quantization → better accuracy, requires calibration dataset (~1000 samples)
+4. FP16 on GPU (Tensor Cores) → 2× throughput, near-zero accuracy loss → always try first
+5. TensorRT engine → further GPU kernel fusion, highest throughput
+
+**FP16 vs INT8 Decision Rule**
+- **FP16**: V100/A100 with Tensor Cores, near-zero loss, always try first
+- **INT8**: T4, edge (Jetson), extreme throughput; requires calibration; 0.5–2% accuracy loss
+- GPU memory: FP32 → FP16 = 2× reduction; FP32 → INT8 = 4× reduction
+
+**ONNX Export Checklist**
+```python
+torch.onnx.export(model, dummy_input, path,
+    opset_version=17,
+    dynamic_axes={"features": {0: "batch_size"}},  # variable batch
+    do_constant_folding=True)
+onnx.checker.check_model(onnx.load(path))  # validate
+```
+- `onnxruntime` with `CUDAExecutionProvider` for GPU fallback to CPU
+
+**Triton Dynamic Batching Config**
+```
+dynamic_batching {
+  preferred_batch_size: [ 32, 64, 128 ]
+  max_queue_delay_microseconds: 50000  # 50ms max wait
+}
+```
+- Triton batches transparently across multiple clients → no application-level batching needed
+- `instance_group count: 2` → 2 model replicas on same GPU
+
+**GPU Sharing Strategies**
+| Strategy | Isolation | Use Case |
+|---|---|---|
+| Time-slicing (k8s) | Weak (shared memory) | Many small models |
+| MIG (A100/H100) | Strong (partitioned BW) | Guaranteed QoS per tenant |
+| MPS | Medium | Multiple inference processes |
+
+**Circuit Breaker States + Thresholds**
+- CLOSED → OPEN: 5 failures in rolling window of 10 requests
+- OPEN → HALF_OPEN: after 60s recovery timeout
+- HALF_OPEN → CLOSED: 2 consecutive successes
+- When OPEN: reject immediately, use fallback model if available
+
+**Latency SLA Typical Values**
+- p50 SLA: 20 ms; p99 SLA: 100 ms (adjust by use case)
+- Error rate SLA: < 0.1%
+- Prometheus metrics: `Histogram` for latency, `Counter` for errors, `Gauge` for circuit state

@@ -288,3 +288,48 @@ def migrate_hive_table_to_uc(
 > **Tip 2:** "What are UC system tables and why are they useful?" — System tables (system.access.audit, system.billing.usage, system.information_schema.*) provide governance analytics. Access audit log: every query, who ran it, on what table. Usage: correlate access with compute cost. Information schema: current grants, table metadata. All queryable via standard SQL — no separate tool needed.
 
 > **Tip 3:** "How do you handle column masking for complex data types (structs, arrays)?" — UC column masking operates on the top-level column. For structs, you need to either (a) create a view that extracts and masks specific nested fields, or (b) write a masking function that returns the entire struct with sensitive fields nulled/hashed. Arrays of structs: same challenge — mask via a view using `TRANSFORM(array_col, x -> struct(x.id, sha2(x.email, 256)))`.
+
+## ⚡ Cheat Sheet
+
+**Hierarchy**: Metastore (1/region) → Catalog → Schema → Table/View/Volume/Function
+
+**Privilege commands**
+```sql
+GRANT USE CATALOG ON CATALOG prod TO `data-analysts`;
+GRANT USE SCHEMA  ON SCHEMA prod.gold TO `data-analysts`;
+GRANT SELECT      ON TABLE prod.gold.orders TO `data-analysts`;
+GRANT MODIFY      ON TABLE prod.gold.orders TO `data-engineers`;
+SHOW GRANTS ON TABLE prod.gold.orders;
+```
+
+**Column masking**
+```sql
+CREATE FUNCTION prod.masks.mask_email(email STRING) RETURNS STRING
+  RETURN CASE WHEN is_member('pii_approved') THEN email ELSE sha2(email, 256) END;
+ALTER TABLE prod.gold.customers ALTER COLUMN email SET MASK prod.masks.mask_email;
+```
+
+**Delta Sharing (cross-org, zero data copy)**
+```sql
+CREATE SHARE sales_share;
+ADD TABLE prod.gold.orders TO SHARE sales_share;
+CREATE RECIPIENT partner_corp;
+GRANT SELECT ON SHARE sales_share TO RECIPIENT partner_corp;
+-- Partner accesses via open Delta Sharing protocol (no Databricks required)
+```
+
+**System tables**
+```sql
+-- Audit log
+SELECT event_time, user_identity.email, action_name
+FROM system.access.audit
+WHERE service_name = 'unityCatalog' AND event_time > now() - INTERVAL 7 DAYS;
+-- Lineage
+SELECT * FROM system.lineage.table_lineage WHERE target_table_full_name = 'prod.gold.orders';
+```
+
+**Key points**
+- One metastore per region — data never crosses regional boundary
+- Lineage auto-captured for all Databricks notebook/job ops (zero instrumentation)
+- Replaces Hive metastore + cluster ACLs with centralized governance
+- Delta Sharing: open protocol — recipients don't need Databricks

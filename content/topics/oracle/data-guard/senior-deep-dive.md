@@ -182,3 +182,34 @@ WHERE name IN ('apply rate', 'apply lag', 'transport lag');
 > **Tip 2:** "How do you patch Oracle Database with near-zero downtime using Data Guard?" — Use Data Guard Rolling Upgrades (DRU): (1) apply the patch to the standby first, (2) switchover to the now-patched standby as primary (seconds of downtime), (3) apply patch to the old primary (now standby), (4) optionally switchover back. Application experiences only the switchover time (typically < 30 seconds). For major version upgrades, use the Transient Logical Standby method.
 
 > **Tip 3:** "Design a Data Guard configuration that achieves zero RPO and < 1 minute RTO." — Zero RPO requires SYNC transport: primary only commits when standby confirms redo receipt. For low-latency SYNC: use a Far Sync instance in the same datacenter if the DR site is distant. < 1 minute RTO requires Fast-Start Failover (FSFO) with an Observer process: FSFO automatically promotes the standby when primary is unreachable for X seconds (configurable to 15-30 sec). FSFO + SYNC + Far Sync is the standard Oracle architecture for zero RPO + sub-minute RTO.
+
+## ⚡ Cheat Sheet
+
+**Protection Modes vs RPO/RTO**
+| Mode | Transport | Commit Ack | RPO | Notes |
+|---|---|---|---|---|
+| Maximum Protection | SYNC | Before commit | 0 | Primary shuts down if standby unavailable |
+| Maximum Availability | SYNC | After standby write | ~0 | Falls back to async if standby down |
+| Maximum Performance | ASYNC | None | Seconds–minutes | Default; no commit overhead |
+
+**Key Architecture Patterns**
+- Far Sync: lightweight instance (no datafiles) used as SYNC relay in same metro; standby gets ASYNC — achieves zero RPO without WAN latency on commit path
+- Active Data Guard: standby is open READ-ONLY while applying redo; requires ADG license
+- FSFO: Observer on 3rd site triggers automatic failover; set `FastStartFailoverThreshold=30` (seconds)
+- Snapshot Standby: convert to writable test environment; re-convert re-applies all missed redo
+
+**Redo Transport Tuning**
+- `LOG_ARCHIVE_DEST_n` attributes: `SYNC`/`ASYNC`, `AFFIRM`/`NOAFFIRM`, `COMPRESSION=ENABLE`
+- `REDO_TRANSPORT_USER` for cross-domain replication
+- Monitor lag: `SELECT NAME, VALUE FROM V$DATAGUARD_STATS WHERE NAME='apply lag'`
+- `DB_RECOVERY_FILE_DEST_SIZE` must be large enough to hold unconsumed standby redo
+
+**Switchover vs Failover**
+- Switchover: planned, graceful, no data loss; both sides must be in MOUNT or OPEN
+- Failover: unplanned; if SYNC → zero data loss; if ASYNC → use `FLASHBACK DATABASE` to reinstate old primary
+- Commands: `ALTER DATABASE COMMIT TO SWITCHOVER TO STANDBY` → `ALTER DATABASE OPEN`
+
+**Rolling Upgrades Decision**
+- Patch set / PSU: use DRU (Data Guard Rolling Upgrade) — patch standby first, switchover, patch old primary
+- Major version: Transient Logical Standby method — converts physical to logical temporarily
+- Both avoid application downtime beyond switchover time (~30 sec)

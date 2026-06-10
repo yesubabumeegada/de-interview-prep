@@ -220,3 +220,47 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY dept ORDER BY salary DESC) <= 3;
 ## Interview Tip 💡
 
 > At the senior level, interviewers want to hear about **trade-offs**. Mention that window functions with `PARTITION BY` cause data redistribution (shuffle) in distributed systems, and that matching indexes to the PARTITION BY + ORDER BY columns eliminates sort operations. Discuss when a self-join might actually be faster than a window function (hint: when you only need one comparison and the table is properly indexed).
+
+## ⚡ Cheat Sheet
+
+**Execution Order Rule**
+- Window functions execute AFTER GROUP BY/HAVING, BEFORE SELECT/DISTINCT/ORDER BY/LIMIT
+- Cannot filter on window function output without a subquery/CTE wrapper
+- Can use window functions on aggregated results in the same query
+
+**Performance: Eliminate Redundant Sorts**
+- Multiple `OVER(ORDER BY x)` clauses = multiple sort operations = expensive
+- Consolidate with `WINDOW w1 AS (PARTITION BY dept ORDER BY hire_date)` + `FUNC OVER w1`
+- Matching index on `(PARTITION BY cols, ORDER BY cols)` eliminates the sort entirely
+
+**Index Strategy for Window Functions**
+```sql
+-- For ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date DESC)
+CREATE INDEX idx ON orders(customer_id, order_date DESC) INCLUDE (amount, status);
+-- Optimizer can skip sort if index matches PARTITION BY + ORDER BY exactly
+```
+
+**Spill to Disk**
+- PG: look for `Sort Method: external merge Disk: XXkB` in EXPLAIN ANALYZE
+- Fix: `SET work_mem = '256MB'` for session; or reduce PARTITION BY cardinality
+
+**Frame Clause Reference**
+| Clause | Meaning |
+|---|---|
+| `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` | Classic running total |
+| `ROWS BETWEEN 6 PRECEDING AND CURRENT ROW` | Rolling 7-day window |
+| `RANGE BETWEEN INTERVAL '7 days' PRECEDING AND CURRENT ROW` | Date-based rolling window |
+| `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING` | Full partition value (same as no frame for AGG) |
+
+**Platform-Specific**
+- Snowflake: `QUALIFY ROW_NUMBER() OVER (...) <= 3` filters window output directly (no CTE needed)
+- Spark: `PARTITION BY` triggers a shuffle; use `DISTRIBUTE BY` + `SORT BY` hints to pre-partition
+- PostgreSQL: `FILTER (WHERE status='success') OVER (...)` for conditional running totals
+
+**Sessionization Pattern**
+```sql
+-- Gap > 30 min = new session
+new_session_flag = CASE WHEN event_time - LAG(event_time) OVER (PARTITION BY user_id ORDER BY event_time)
+                             > INTERVAL '30 minutes' THEN 1 ELSE 0 END
+session_id = SUM(new_session_flag) OVER (PARTITION BY user_id ORDER BY event_time ROWS UNBOUNDED PRECEDING)
+```

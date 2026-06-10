@@ -226,3 +226,35 @@ END;
 > **Tip 2:** "How would you design a data retention policy for a 3-year partitioned table?" — Use partition lifecycle management: (1) current quarter: uncompressed on fast SSD, (2) 3-12 months: COMPRESS FOR OLTP on slower tier, (3) 1-3 years: COMPRESS FOR QUERY HIGH on archive tablespace, (4) >3 years: drop partition. Automate with a monthly DBMS_SCHEDULER job. For compliance: exchange old partitions to an archive database before dropping.
 
 > **Tip 3:** "What is ROW MOVEMENT and when do you need it?" — ROW MOVEMENT allows Oracle to physically move a row to a different partition when an UPDATE changes the partition key value. By default it's disabled — an UPDATE that would change the partition key raises ORA-14402. Enable with `ALTER TABLE ... ENABLE ROW MOVEMENT` when your application does update the partition key column. Note: enabling row movement can change ROWIDs, breaking any application that caches ROWIDs.
+
+## ⚡ Cheat Sheet
+
+**Partition Type Decision**
+| Type | Best For | Gotcha |
+|---|---|---|
+| RANGE | Time-series, rolling windows | Hot last partition on inserts |
+| LIST | Discrete values (region, status) | Use DEFAULT for unknowns |
+| HASH | Even distribution, no natural key | No partition pruning on range queries |
+| RANGE-HASH (composite) | Time + hash distribution | Partition count = range × hash; can be large |
+| INTERVAL | Auto-create range partitions on insert | Cannot be used as sub-partition type |
+
+**Index Strategy**
+- Local index: each partition has its own index segment; auto-maintained on partition ops; preferred for DW
+- Global index: spans all partitions; required for unique constraints on non-partition key; must be rebuilt after partition drop/truncate unless `UPDATE GLOBAL INDEXES`
+- Global partitioned index: global but partitioned by range/hash; better scalability than unpartitioned global
+
+**Partition Pruning Rules**
+- Pruning only works when the partition key column appears in WHERE with a literal or bind variable
+- `TO_DATE(col)` or `TRUNC(col)` applied to partition key prevents pruning — store dates as DATE type
+- Verify pruning: `EXPLAIN PLAN` → `PARTITION RANGE SINGLE` or `PARTITION RANGE ITERATOR` (good); `PARTITION RANGE ALL` (no pruning)
+
+**Partition Maintenance Efficiency**
+- `ALTER TABLE ... DROP PARTITION` = O(1) — metadata only, no row-by-row delete
+- `ALTER TABLE ... EXCHANGE PARTITION WITH TABLE` = O(1) — metadata swap; use for bulk loads (load into staging, then exchange)
+- `WITHOUT VALIDATION` on exchange skips row-level check — fast but dangerous; pre-validate data
+- `UPDATE GLOBAL INDEXES` keeps global indexes usable but adds cost; weigh vs rebuild
+
+**Key Numbers**
+- Max partitions per table: 1,048,575
+- Interval partitioning: transition point = first `INSERT` beyond last manual partition
+- `dba_tab_partitions`, `dba_ind_partitions` — monitor partition-level stats staleness

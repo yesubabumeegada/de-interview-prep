@@ -179,3 +179,55 @@ Why ASA for alerts + Databricks for transforms:
 > **Tip 2:** "Can you do exactly-once processing with ASA?" — ASA provides at-least-once semantics (events may be redelivered on failure). To achieve effectively-once results: use idempotent sinks. For SQL DB: configure primary key on output table → ASA generates UPSERT (reprocessed event updates to same value). For ADLS: path pattern with timestamp + minimum rows per file → duplicate micro-batches overwrite same path. For Event Hubs output: deduplication at the consumer using message IDs. True exactly-once (like Flink's TwoPhaseCommitSinkFunction) is not natively supported in ASA.
 
 > **Tip 3:** "What's the maximum throughput of Azure Stream Analytics and how do you exceed it?" — ASA scales to approximately 1 GB/sec input with sufficient SUs (100-200 SUs). For higher throughput: (a) partition the query with PARTITION BY to run independently per Event Hubs partition (embarrassingly parallel), (b) split into multiple ASA jobs (each reading from different partitions), (c) switch to Databricks Structured Streaming or Apache Flink (no meaningful throughput ceiling). In practice, most use cases don't hit ASA's limit — typical IoT/clickstream workloads are 10-100 MB/sec. If you need >1 GB/sec with sub-second latency, Flink on AKS is the right answer.
+
+## ⚡ Cheat Sheet
+
+**Job modes**
+| Mode | Deployment | Latency | Best for |
+|---|---|---|---|
+| Cloud | Azure-managed | ~1s | Standard streaming |
+| Edge | IoT Edge device | <100ms | On-device processing |
+
+**Windowing functions**
+```sql
+-- Tumbling: fixed, non-overlapping
+SELECT region, COUNT(*) FROM orders TIMESTAMP BY event_time
+GROUP BY region, TumblingWindow(minute, 5)
+
+-- Hopping: fixed size, overlapping (window every 1min, 5min wide)
+GROUP BY region, HoppingWindow(minute, 5, 1)
+
+-- Sliding: emits on every event; window closes when no new events
+GROUP BY region, SlidingWindow(minute, 5)
+
+-- Session: groups events until gap > threshold
+GROUP BY session_id, SessionWindow(minute, 5, 60)
+```
+
+**Temporal joins**
+```sql
+-- Join streams with max 5-minute time difference
+SELECT a.*, b.name FROM stream_a a JOIN stream_b b
+ON a.id = b.id AND DATEDIFF(minute, a, b) BETWEEN 0 AND 5
+```
+
+**Input/output compatibilities**
+- Inputs: Event Hubs, IoT Hub, Blob/ADLS (reference data)
+- Outputs: Event Hubs, Service Bus, Blob/ADLS, SQL DB, Cosmos DB, Power BI, Azure Functions
+
+**Streaming Units (SU)**
+- 1 SU ≈ 1 MB/s throughput; 6 SU = 1 vCore + 6 GB RAM
+- Partition the job: each SU can handle one partition in parallel
+- Monitor `SU% Utilization`; scale up if consistently >80%
+
+**Late arrival and out-of-order**
+```
+Late arrival tolerance: events arrive up to N seconds after watermark
+Out-of-order tolerance: events arrive out of sequence within N seconds
+Both set in job config; larger window = higher latency but fewer dropped events
+```
+
+**Cost**
+- $0.11/SU/hour (standard tier)
+- Minimize SUs with partition alignment: input partitions = job SUs
+- Use reference data joins instead of stream-stream joins where possible

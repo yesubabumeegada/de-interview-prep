@@ -269,3 +269,56 @@ def glue_job_complete_handler(event, context):
 > **Tip 2:** "Step Functions vs Airflow for a data platform?" — "Step Functions for AWS-native, event-driven, serverless workflows with <20 steps. Airflow for complex multi-cloud DAGs with heavy scheduling, dynamic task generation, and existing Python expertise. In practice, many teams use both: Airflow as the top-level scheduler and Step Functions for AWS-specific sub-workflows (Glue orchestration, file processing)."
 
 > **Tip 3:** "How do you optimize Step Functions cost for high-volume pipelines?" — "Three strategies: (1) Use Express workflows for short, frequent sub-processes (100x cheaper at scale). (2) Replace Lambda states with direct SDK integrations (200+ services supported, saves Lambda cost). (3) Batch operations to reduce state transitions — process 100 records in one Lambda call instead of 100 separate Task states."
+
+## ⚡ Cheat Sheet
+
+**Workflow types**
+| Type | Max duration | Price | Use case |
+|---|---|---|---|
+| Standard | 1 year | Per state transition | Long-running, auditable |
+| Express (async) | 5 min | Per duration+transitions | High-volume, streaming |
+| Express (sync) | 5 min | Per duration+transitions | API orchestration |
+
+**State types**
+- `Task`: calls Lambda, ECS, Glue, SageMaker, HTTP, etc.
+- `Choice`: branching on condition (`StringEquals`, `NumericGreaterThan`)
+- `Wait`: fixed delay or until timestamp
+- `Parallel`: concurrent branches; waits for ALL to complete
+- `Map`: iterate over array; `maxConcurrency` controls parallelism
+- `Pass`: inject data / transform without calling service
+- `Succeed` / `Fail`: terminal states
+
+**Error handling**
+```json
+"Retry": [{"ErrorEquals": ["Lambda.TooManyRequestsException"],
+           "IntervalSeconds": 2, "MaxAttempts": 3, "BackoffRate": 2}],
+"Catch": [{"ErrorEquals": ["States.ALL"],
+           "Next": "HandleError",
+           "ResultPath": "$.error"}]
+```
+
+**Map state for DE pipelines**
+```json
+{"Type": "Map", "ItemsPath": "$.partitions",
+ "MaxConcurrency": 10,
+ "Iterator": {"StartAt": "ProcessPartition", "States": {...}}}
+```
+
+**Input/output processing**
+- `InputPath`: filter input passed to state
+- `Parameters`: reshape/rename input
+- `ResultSelector`: filter task output
+- `ResultPath`: where to put result in state (`$.result` or `null` to discard)
+- `OutputPath`: filter final state output
+
+**Integration patterns**
+- `.sync:2` suffix: wait for job completion (Glue, ECS, SageMaker)
+- `.waitForTaskToken`: pause until external callback with token
+- SDK integration: any AWS API call without Lambda wrapper
+
+**ETL pipeline pattern**
+```
+StartGlueJob → Wait(POLLING) → CheckJobStatus →
+  Success → ValidateOutput → NotifySuccess
+  Failure → SendAlert → Fail
+```

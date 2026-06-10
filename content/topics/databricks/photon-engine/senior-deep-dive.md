@@ -248,3 +248,35 @@ BENCHMARK_QUERIES = {
 > **Tip 2:** "What's the relationship between Photon, AQE, and code generation?" — Three complementary layers: (1) AQE optimizes the PLAN at runtime (join type, partition count, skew handling), (2) WholeStageCodeGen fuses operators into compiled Java code (reduces virtual dispatch), (3) Photon replaces the generated code with native C++ vectorized execution (faster than JVM can achieve). All three work together — AQE picks the plan, Photon executes it.
 
 > **Tip 3:** "When would you NOT use Photon?" — Python-heavy workloads (ML training, pandas operations) where Spark SQL isn't the bottleneck. Very short jobs (<5 min) where the DBU premium isn't offset by speedup. And legacy RDD code that doesn't go through the SQL engine. For these: standard runtime is cheaper. For everything else (ETL, SQL, DLT, Delta maintenance): Photon is almost always the better choice.
+
+## ⚡ Cheat Sheet
+
+**What Photon accelerates**
+- ✅ Vectorized: SELECT, WHERE, GROUP BY, JOIN (hash/sort-merge), ORDER BY, window functions, Delta scans
+- ❌ Not vectorized: Python UDFs, pandas UDFs (use Arrow-based for partial benefit), RDD API, complex type mutations
+
+**Enabling Photon**
+- All-purpose cluster: `spark.databricks.photon.enabled true` (default on Photon-enabled instance types)
+- SQL warehouses: always on (Pro and Serverless warehouses)
+- Instance types: requires `photon`-tagged instances (e.g., `i3.xlarge` on AWS, `Standard_L8s` on Azure)
+
+**Performance characteristics**
+- 2–3× faster for SQL aggregations and scans vs standard Spark
+- 10× faster for MERGE INTO with large datasets
+- Near-linear scaling with vectorized batch size (default 8K rows/batch)
+- Cache-friendly: columnar in-memory format aligns with CPU cache lines
+
+**Query profile signals**
+- Good: `PhotonGroupingAgg`, `PhotonHashJoin`, `PhotonFilter` operators
+- Spill: `PhotonHashJoin` → `sort merge join` in profile = memory pressure → increase executor memory
+- Fallback: `HashAggregate` (non-Photon) = Python UDF or unsupported operation in path
+
+**Cost–performance tradeoff**
+- Photon clusters same DBU rate as standard DBR — only faster = lower wall-clock time = lower cost per query
+- Choose Photon when: SQL-heavy workloads, large scans, concurrent BI queries
+- Avoid when: Python-heavy ML pipelines (no benefit; pay for Photon-capable instance overhead)
+
+**Key tuning**
+- `spark.databricks.photon.allDataTypesEnabled true` — enables Photon for complex types (DBR 12+)
+- Delta caching + Photon: orthogonal — Delta cache serves data off SSD; Photon processes it fast
+- AQE + Photon: fully compatible; AQE coalesces shuffle partitions, Photon vectorizes each task

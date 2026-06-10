@@ -185,3 +185,39 @@ Based on real-world production benchmarks:
 > **Tip 2:** "How does AQE's skew handling compare to manual salting?" — "AQE is automatic (zero code changes) but reactive (detects after shuffle). Manual salting is proactive (handles skew before shuffle) and gives you control over splitting granularity. AQE is sufficient for most cases. Manual salting is needed when: AQE's detection threshold misses your skew pattern, or you need to control exactly how the hot key is split."
 
 > **Tip 3:** "What's the most impactful AQE configuration?" — "For ETL: `advisoryPartitionSizeInBytes = 128MB` (matches Parquet/Delta optimal file size) and `skewJoin.enabled = true`. For interactive queries: same but with lower `advisoryPartitionSizeInBytes = 64MB` (smaller partitions = faster individual tasks). The single biggest win is usually skew join handling — turning a 45-minute job into an 8-minute job with one config change."
+
+## ⚡ Cheat Sheet
+
+**AQE Key Configs**
+- `spark.sql.adaptive.enabled` = true (default Spark 3.2+)
+- `spark.sql.adaptive.coalescePartitions.enabled` = true — merges small post-shuffle partitions
+- `spark.sql.adaptive.skewJoin.enabled` = true — splits skewed partitions automatically
+- `spark.sql.adaptive.advisoryPartitionSizeInBytes` = 64MB (target post-coalesce size)
+- `spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes` = 256MB (partition is "skewed" if > this)
+
+**When AQE Fires**
+- After each shuffle stage completes, Spark re-plans downstream stages with real stats
+- AQE cannot help with: broadcast decisions before first shuffle, non-shuffle queries
+- Disable AQE for benchmarking to get deterministic plans: `spark.sql.adaptive.enabled=false`
+
+**AQE Features Decision Table**
+| Feature | Trigger | What It Does |
+|---------|---------|--------------|
+| Coalesce partitions | Post-shuffle small partitions | Merges N small → fewer large partitions |
+| Skew join | Partition > skew threshold | Splits fat partition, replicates other side |
+| Dynamic broadcast | Build side < autoBroadcastJoinThreshold at runtime | Converts SortMergeJoin → BroadcastHashJoin |
+
+**Skew Join Gotchas**
+- Both `skewJoin.enabled` AND `coalescePartitions.enabled` must be true for skew handling
+- AQE skew detection is per-partition — null skew needs manual salting first
+- Check `spark.sql.adaptive.skewJoin.skewedPartitionFactor` (default 5×) — partition is skewed if > factor × median
+
+**Diagnosing AQE in Spark UI**
+- Look for "AQEShuffleRead" nodes in physical plan — confirms coalescing fired
+- "CustomShuffleReader" replacing "Exchange" = AQE active
+- Stage timeline gaps = AQE re-planning pauses between stages (normal, usually < 1s)
+
+**Interview Traps**
+- AQE does NOT eliminate shuffles — it optimizes after they happen
+- AQE re-optimization is per query, not persisted; next run may produce a different plan
+- Setting `spark.sql.shuffle.partitions` too low defeats coalesce (nothing to coalesce down from)

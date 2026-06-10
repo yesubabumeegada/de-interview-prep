@@ -193,3 +193,37 @@ ORDER BY flash_hit_pct;
 > **Tip 2:** "What is the key architectural difference between Exadata X8 and X8M?" — X8M introduced RDMA over Converged Ethernet (RoCE) and Persistent Memory (PMem) on the storage cells. With RDMA, the database server's CPU can directly read/write storage cell PMem without involving the storage cell's CPU — eliminating the inter-process communication overhead. This brings OLTP single-block I/O latency from ~100 microseconds (SSD) to ~1-2 microseconds (PMem via RDMA), a 50-100× improvement relevant for OLTP commit latency.
 
 > **Tip 3:** "When would you recommend Exadata vs cloud alternatives like AWS RDS or Snowflake?" — Exadata excels when: (1) you need extreme Oracle-specific performance (Smart Scan, HCC, SPM stability), (2) migrating an existing large Oracle OLTP + DW workload where Oracle licensing is already sunk, (3) compliance requires on-premises data. Cloud alternatives win when: (1) you want managed services with auto-scaling, (2) workloads are not Oracle-specific, (3) cost per query matters more than raw performance. Exadata Cloud (ExaCS, ExaCC) bridges this gap — Exadata infrastructure in Oracle Cloud.
+
+## ⚡ Cheat Sheet
+
+**Key Exadata Offload Features**
+- Smart Scan: WHERE/JOIN/GROUP predicates pushed to Storage Cells; only relevant rows returned via Exadata Smart Scan API
+- Storage Index: in-memory min/max per 1 MB region; eliminates I/O for non-matching regions without consuming SGA
+- Hybrid Columnar Compression (HCC): compress by column within CU (~1 MB); `QUERY HIGH` ~10-15x, `ARCHIVE HIGH` ~50x
+- Smart Flash Log: log write mirrored to NAND flash; `log file sync` waits drop dramatically
+- IORM (I/O Resource Manager): per-database/consumer-group I/O throttling on storage layer
+
+**Hardware Tiers (Full Rack)**
+| Component | Count | Role |
+|---|---|---|
+| DB Servers | 8 | Oracle instances, RAC nodes |
+| Storage Cells | 14 | Smart Scan, HCC, Storage Index |
+| InfiniBand switches | 3 | 40 Gb/s internal fabric |
+
+**HCC Compression Decision**
+- `QUERY LOW` / `QUERY HIGH`: good for DW/reporting (still allows DML but with overhead)
+- `ARCHIVE LOW` / `ARCHIVE HIGH`: max compression; best for cold/historical partitions
+- Never use HCC on OLTP hot rows — row-level locking requires decompression; use OLTP compression instead
+- Check: `SELECT compression, compress_for FROM dba_tables WHERE table_name='...'`
+
+**Smart Scan Eligibility Rules**
+- Must be a Full Table Scan or Fast Full Index Scan (no single-block I/O)
+- Table must be on Exadata storage (not OS file, NFS, etc.)
+- `CELL_OFFLOAD_PROCESSING=TRUE` (session or system level)
+- Inhibited by: `ROWID` access, object stored in SECUREFILE with encryption
+
+**Monitoring Commands**
+- `SELECT * FROM v$cell_state` — cell health
+- `SELECT * FROM v$sql_plan WHERE operation='TABLE ACCESS' AND options='STORAGE FULL'` — Smart Scan plans
+- `SELECT name,value FROM v$sysstat WHERE name LIKE 'cell%'` — offload statistics
+- AWR's "Cell" section shows Smart Scan efficiency ratio; target > 95%

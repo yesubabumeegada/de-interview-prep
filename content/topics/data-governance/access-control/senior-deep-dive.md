@@ -265,3 +265,37 @@ Prevent data exfiltration at the AWS organization level:
 > **Tip 2:** "What is a data perimeter?" — AWS organization-level controls that prevent data from leaving your org boundary. SCP (Service Control Policy) denies cross-account S3 writes, denies resource-based policies that allow external access. Prevents credential compromise from being used to exfiltrate data to attacker-controlled S3 buckets.
 
 > **Tip 3:** "How do you design access control for a multi-tenant data platform?" — Row-level security with tenant_id column. Each tenant is isolated at the row level. Service accounts per tenant, not shared. Separate encryption keys per tenant in KMS. Audit log partitioned by tenant_id. Test isolation regularly: verify tenant A cannot see tenant B's data, even if they construct adversarial queries.
+
+## ⚡ Cheat Sheet
+
+**RBAC hierarchy**: Privilege → Role → User/Group (never grant directly to users)
+
+**Snowflake RBAC**
+```sql
+CREATE ROLE analyst_revenue;
+GRANT SELECT ON SCHEMA gold TO ROLE analyst_revenue;
+GRANT ROLE analyst_revenue TO USER jane_doe;
+SHOW GRANTS TO USER jane_doe;
+```
+
+**Row-level security**
+```sql
+CREATE ROW ACCESS POLICY region_filter AS (region_col VARCHAR) RETURNS BOOLEAN ->
+  CURRENT_ROLE() IN ('GLOBAL_ADMIN')
+  OR region_col = (SELECT user_region FROM user_region_map WHERE username = CURRENT_USER());
+ALTER TABLE gold.sales ADD ROW ACCESS POLICY region_filter ON (region);
+```
+
+**Column masking**
+```sql
+CREATE MASKING POLICY email_mask AS (val STRING) RETURNS STRING ->
+  CASE WHEN IS_ROLE_IN_SESSION('PII_APPROVED') THEN val ELSE SHA2(val, 256) END;
+ALTER TABLE gold.customers MODIFY COLUMN email SET MASKING POLICY email_mask;
+```
+
+**Key rules**
+- Principle of least privilege: grant minimum needed; revoke after use
+- RBAC = who you are; ABAC = attribute-based (team/function/pii_approved)
+- OAuth/OIDC for SSO — no native DB passwords in prod
+- Terraform for role management — grants reviewed via PR
+- Quarterly review: remove unused grants

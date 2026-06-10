@@ -538,3 +538,49 @@ def run_daily_training_pipeline():
 > **Tip 3:** "How do you handle 100+ models on the same ML platform?" — "Enforce quotas per team (CPU, GPU, memory, concurrent runs), use priority queues so business-critical pipelines preempt batch jobs, and implement cost attribution so teams can see their spend. Shared feature stores and model registries reduce duplication. Standardize pipeline templates — most teams need the same 5-stage flow, just with different models."
 
 > **Tip 4:** "What's the difference between shadow deployment and canary deployment?" — "Shadow: 100% of traffic goes to the champion, a copy goes to the challenger — users see zero impact, you observe model behavior risk-free. Canary: a small percentage (e.g., 5%) of users get the new model for real — you measure actual business impact but risk degraded experience for that slice. Use shadow first to validate model quality, then canary to measure business lift."
+
+## ⚡ Cheat Sheet
+
+**Pipeline Stage Summary**
+1. Raw Events → Feature Computation → Feature Store (Offline)
+2. Training Job → Evaluation → Model Registry
+3. Shadow Deployment → compare champion vs challenger (no user impact)
+4. Canary (5% live traffic) → A/B test (business metrics) → Promote champion
+
+**Shadow vs Canary — Decision Rule**
+- **Shadow first**: validate model quality risk-free (100% to champion, copy to challenger)
+- **Canary next**: small % (5-10%) of real users; measures business lift
+- Never skip shadow for architecturally different models or high-stakes decisions
+
+**PSI Thresholds for Skew Detection**
+- PSI < 0.1: no skew
+- PSI 0.1–0.2: investigate
+- PSI > 0.2: significant skew → likely training-serving mismatch
+
+**Promotion Gates (All Must Pass)**
+1. A/B test statistical significance (p < 0.05) with sufficient sample size
+2. No latency/error rate regression vs SLA
+3. Shadow test label agreement rate > threshold (e.g., 95%)
+
+**A/B Test Statistics**
+```python
+# Two-proportion z-test
+p_pool = (conv_ctrl + conv_treat) / (n_ctrl + n_treat)
+se = sqrt(p_pool * (1 - p_pool) * (1/n_ctrl + 1/n_treat))
+z = (p_treat - p_ctrl) / se
+pvalue = 2 * (1 - norm.cdf(abs(z)))
+```
+- Minimum sample size: compute from effect size + 80% power before launching
+
+**Multi-Team Quota Framework**
+- Enforce per-team: `max_cpu_cores`, `max_memory_gb`, `max_gpu_count`, `max_concurrent_runs`
+- Priority queue: fraud/revenue-critical → `priority=2`; batch backfill → `priority=0`
+- Cost attribution: tag pipeline runs by `cost_center` for chargeback
+
+**Feature Store Integration Pattern**
+```python
+# Training (offline, PIT-correct)
+store.get_historical_features(entity_df=..., features=[...]).to_df()
+# Serving (online, < 10ms)
+store.get_online_features(features=[...], entity_rows=[{"user_id": x}]).to_dict()
+```

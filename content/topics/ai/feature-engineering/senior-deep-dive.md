@@ -415,3 +415,46 @@ def build_transaction_graph_features(transactions: pd.DataFrame) -> pd.DataFrame
 > **Tip 3:** "Feast vs Tecton — when would you choose each?" — "Feast is open-source, free, and great for teams building their first feature store. Tecton is enterprise, managed SaaS with better operational tooling, built-in monitoring, and SLAs. Choose Feast if you have engineering bandwidth to operate it and want flexibility. Choose Tecton if you need rapid deployment, operational reliability, and are willing to pay for a managed service."
 
 > **Tip 4:** "How do you ensure feature consistency between training and serving?" — "Three strategies: (1) Unified code: define feature logic in Python, compile to Spark SQL for batch and to Redis commands for online — same logic, different executors. (2) Feature store: compute once, serve everywhere (Feast/Tecton materialize batch features to both offline and online stores). (3) Consistency testing: after each deployment, compare training-time feature values against serving-time values for a held-out set of entities and assert they match within tolerance."
+
+## ⚡ Cheat Sheet
+
+**Feature Store Architecture — Two Stores**
+| Store | Purpose | Tech | Latency |
+|---|---|---|---|
+| Offline Store | Training, batch scoring | S3 + Delta Lake | Minutes |
+| Online Store | Real-time serving | Redis / DynamoDB | < 10 ms |
+
+**Point-In-Time Join — The Rule**
+- Entity DataFrame must have `event_timestamp` = label event time
+- Feast's `get_historical_features()` uses binary search: for each row, returns the most recent feature value **before** `event_timestamp`
+- Without PIT join: you'd use features from Jan 20 for a Jan 10 event → future leakage → model collapses in production
+
+**Feast vs Tecton Decision Rule**
+- **Feast**: open-source, first feature store, engineering bandwidth available, flexibility needed
+- **Tecton**: managed SaaS, need operational SLAs, rapid deployment, willing to pay
+
+**Drift Detection Thresholds**
+- PSI < 0.1: no significant change
+- PSI 0.1–0.2: moderate shift → monitor closely
+- PSI > 0.2: significant shift → alert + retrain investigation
+- KL divergence > 0.1: flag categorical drift
+- KS test p-value < 0.05: distribution has shifted (use alongside PSI)
+
+**Training-Serving Consistency — Three Strategies**
+1. **Unified code**: same Python class implements `compute_offline_batch()` (Spark) and `compute_online()` (Redis)
+2. **Feature store**: compute once (Feast/Tecton materializes to both stores)
+3. **Consistency test**: compare training-time vs serving-time feature values for held-out entities after each deploy
+
+**Common Skew Sources + Fixes**
+| Cause | Fix |
+|---|---|
+| Different aggregation windows | Pin exact window in shared class |
+| UTC vs local timezone | UTC everywhere, log explicitly |
+| NULL handling | Feature store enforces consistent default |
+| Schema drift (new category) | `handle_unknown="ignore"` in sklearn encoders |
+| Data freshness difference | Monitor `feature_freshness` metric in prod |
+
+**Graph Feature Rules (Fraud)**
+- Dense subgraphs = fraud signal (rings, chains)
+- Key features: `in_degree`, `out_degree`, `pagerank`, `clustering_coeff`, `betweenness`
+- Compute PageRank on full graph first, then extract per-node features

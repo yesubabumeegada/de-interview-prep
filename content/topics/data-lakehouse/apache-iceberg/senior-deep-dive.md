@@ -228,3 +228,46 @@ for table in tables_to_maintain:
 > **Tip 2:** "How does Iceberg ensure atomic cross-table commits?" — Standard Iceberg (Hive/Glue catalog) doesn't support multi-table atomic commits. For that you need Nessie, which provides a Git-like catalog with branch-level atomic commits across any number of tables. A Nessie commit atomically updates multiple table pointers in the catalog. This enables: atomic schema migrations across related tables, A/B testing with isolated table states, rollback of a full pipeline run (not just one table).
 
 > **Tip 3:** "How do you monitor Iceberg table health in production?" — Track: (1) snapshot count — if growing, expire_snapshots isn't running; (2) average data file size — if < 32MB, compaction is needed; (3) delete file ratio — if > 10% of read I/O comes from delete files, run rewrite_data_files; (4) manifest file count — if > 1000 manifests, run rewrite_manifests. Alert thresholds: average file < 32MB → trigger compaction, delete file overhead > 20% → urgent compaction.
+
+## ⚡ Cheat Sheet
+
+**Metadata architecture**: Table metadata (JSON) → Manifest list (.avro) → Manifest files (.avro) → Data files (.parquet)
+
+**Key operations**
+```python
+df.writeTo("prod.gold.orders").append()
+df.writeTo("prod.gold.orders").overwritePartitions()
+# Upsert
+spark.sql("""
+  MERGE INTO prod.gold.orders t USING updates s ON t.order_id = s.order_id
+  WHEN MATCHED THEN UPDATE SET *
+  WHEN NOT MATCHED THEN INSERT *
+""")
+```
+
+**Time travel**
+```sql
+SELECT * FROM prod.gold.orders VERSION AS OF 12345678;
+SELECT * FROM prod.gold.orders TIMESTAMP AS OF '2024-01-15 00:00:00';
+CALL system.rollback_to_snapshot('prod.gold.orders', 12345678);
+```
+
+**Schema evolution** (all backward-compatible)
+```sql
+ALTER TABLE prod.gold.orders ADD COLUMN discount DOUBLE;
+ALTER TABLE prod.gold.orders RENAME COLUMN amount TO order_amount;
+-- Iceberg tracks column IDs internally — safe to rename/drop
+```
+
+**Maintenance**
+```sql
+CALL system.expire_snapshots('prod.gold.orders', TIMESTAMP '2024-01-01 00:00:00', 10);
+CALL system.rewrite_data_files('prod.gold.orders');
+CALL system.rewrite_manifests('prod.gold.orders');
+```
+
+**Key interview points**
+- Catalog: Hive, Glue, REST, Nessie, JDBC (pluggable)
+- Hidden partitioning: Iceberg manages partition columns; users filter on raw columns
+- Partition evolution: change partition spec without rewriting existing data
+- Best multi-engine support (Spark + Trino + Flink + DuckDB on same table)

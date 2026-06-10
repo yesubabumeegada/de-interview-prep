@@ -329,3 +329,38 @@ ORDER BY stddev_ms DESC;
 > **Tip 2:** "When would you use query hints to override the optimizer?" — "Hints are a last resort — when you've verified via EXPLAIN ANALYZE that the optimizer's chosen plan is wrong, you understand WHY (bad statistics, unusual data distribution), and you can't easily fix it through better statistics or indexes. In SQL Server, I'd use OPTION(RECOMPILE) for parameter sniffing or WITH(FORCESEEK) to force an index. In PostgreSQL, I'd use pg_hint_plan or restructure the query (CTEs with MATERIALIZED, JOIN order tricks). Hints are fragile — they break when schema changes. I document them with comments explaining why and track them for periodic review."
 
 > **Tip 3:** "How do you monitor query plan stability in production?" — "I use pg_stat_statements to track queries with high standard deviation in execution time — that's a sign of plan instability (sometimes fast, sometimes slow). I set up auto_explain to automatically log plans for queries exceeding my SLA threshold. For SQL Server, I monitor sys.dm_exec_query_stats for plan_generation_num > 1. When I see instability, I compare the fast and slow plans to identify what changed — it's usually statistics, a new index, or parameter sniffing. I also periodically run EXPLAIN on critical production queries from a test environment to catch plan changes before they cause incidents."
+
+## ⚡ Cheat Sheet
+
+**Bad Plan Root Causes (in order of likelihood)**
+- Stale statistics → run `ANALYZE` / `UPDATE STATISTICS`
+- Skewed column histogram → raise `SET STATISTICS 500` for that column
+- Multi-column correlations → `CREATE STATISTICS ... (dependencies)`
+- Parameter sniffing (SQL Server) → `OPTION(OPTIMIZE FOR UNKNOWN)` or `OPTION(RECOMPILE)`
+- GEQO threshold hit (PG, >12 tables) → restructure query or lower join count
+
+**Key EXPLAIN Metrics**
+- `Rows Estimated` vs `Actual Rows` — gap > 10× = bad estimate → fix stats
+- `Sort Method: external merge Disk: XXkB` → spilling; raise `work_mem`
+- `CTE Scan` → materialized; `Nested Loops` on large table → missing index
+- `Hash (Spill)` → build table too large for memory → filter earlier or upsize WH
+
+**Snowflake Query Profile Signals**
+- `partitions_scanned / partitions_total` > 10% → add clustering key
+- `bytes_spilled_to_remote_storage` > 0 → seriously undersized warehouse
+- `compilation_time` dominant → very complex query; split into CTEs/temp tables
+
+**BigQuery Execution Signals**
+- High bytes despite small result → missing partition filter
+- High slot time in join stage → data skew on join key
+- `Spilled to disk: TRUE` → use APPROX_ functions or pre-aggregate
+
+**Plan Stability Tools**
+- `pg_stat_statements`: find queries with `stddev_exec_time / avg_exec_time > 2` (CV > 2 = unstable plan)
+- `auto_explain.log_min_duration = '1s'` → auto-log slow plans to pg_log
+- SQL Server: `sys.dm_exec_query_stats` — `plan_generation_num > 1` = plan recompile
+
+**Hints — Last Resort Only**
+- PG: `pg_hint_plan` extension; `/*+ SeqScan(t) HashJoin(t c) */`
+- SQL Server: `WITH(INDEX(...))`, `OPTION(HASH JOIN)`, `OPTION(FORCE ORDER)`, `OPTION(RECOMPILE)`
+- Document every hint with a comment explaining why; review quarterly

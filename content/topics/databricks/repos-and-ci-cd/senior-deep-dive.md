@@ -228,3 +228,40 @@ class AutoRollback:
 > **Tip 2:** "How do you handle rollbacks?" — For code: update Repos to previous Git tag/commit (instant, one command). For infrastructure: `terraform apply` with previous state (reverts job configs). For data: Delta time travel (RESTORE TABLE to previous version). For complete rollback: all three together (code + infra + data).
 
 > **Tip 3:** "Monorepo vs multi-repo for data pipelines?" — Monorepo for <20 engineers: simpler shared code, single CI/CD pipeline, one source of truth. Multi-repo for >20 engineers: team autonomy, independent deployment schedules, faster CI (only test affected pipeline). Compromise: monorepo with path-based CI triggers (fast CI + shared code).
+
+## ⚡ Cheat Sheet
+
+**Repos vs Workspace files**
+| Feature | Repos | Workspace files |
+|---|---|---|
+| Git sync | Yes (per commit/branch) | No |
+| PR workflow | Via Git provider | No |
+| File types | All (notebooks, .py, .sql) | All |
+| Recommended | Production code | Quick experiments |
+
+**CI/CD pipeline pattern**
+```
+Dev branch → PR → CI (lint + unit tests) → merge to main
+→ CD (deploy bundle to staging → integration test → promote to prod)
+```
+
+**Databricks Asset Bundles (DAB)**
+- `databricks.yml`: defines jobs, pipelines, clusters, permissions as code
+- `databricks bundle deploy --target prod`: deploys all resources
+- `databricks bundle run job_name`: triggers a job run
+- Supports variable substitution per target (`dev`, `staging`, `prod`)
+
+**Testing strategy**
+- Unit tests: `pytest` with `pyspark.testing` or `chispa`; use `spark.builder.master("local[*]")`
+- Integration tests: deploy to staging cluster; run against real Delta tables
+- DQ tests: dbt tests or Great Expectations in CI before promoting models
+
+**Secrets in CI/CD**
+- Databricks secrets: `dbutils.secrets.get(scope, key)` — inject at runtime, never in code
+- GitHub Actions: store PAT as `DATABRICKS_TOKEN` secret; use `databricks-labs/deco` action
+- `.databrickscfg`: local only; never commit
+
+**Branching strategy**
+- Feature branches → dev workspace (personal); main → staging; tags/releases → prod
+- Repos API: `/api/2.0/repos/{id}` → checkout branch programmatically in CI
+- Notebook outputs: strip with `nbstripout` pre-commit hook to keep diffs clean

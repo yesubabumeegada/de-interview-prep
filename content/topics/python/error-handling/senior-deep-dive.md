@@ -444,3 +444,42 @@ with monitored_step("daily_etl", "transform", reporter, budget):
 > **Tip 2:** Error budgets connect engineering to business SLOs. In interviews, frame it: "Our SLO is 99.9% records processed successfully. That gives us an error budget of 0.1%. If we burn through that budget, we halt and investigate rather than degrading data quality. This keeps stakeholder trust intact while allowing some tolerance for inevitable issues."
 
 > **Tip 3:** Dead-letter queues demonstrate data preservation philosophy. Explain: "I never drop records. If a record can't be processed, it goes to a DLQ with full context (error, timestamp, attempt count). We can fix the bug, then replay the DLQ to recover without data loss. This is how we achieve exactly-once semantics in practice."
+
+## ⚡ Cheat Sheet
+
+**Error Severity Classification**
+| Severity | Meaning | Action |
+|----------|---------|--------|
+| LOW | Single record issue | Log + send to DLQ, continue |
+| MEDIUM | Batch partially failed | Log + alert, continue if budget allows |
+| HIGH | Source unavailable | Alert on-call, use fallback |
+| CRITICAL | Pipeline halted | Page immediately, stop processing |
+
+**Circuit Breaker Rules**
+- `failure_threshold=3–5`, `recovery_timeout=30–60 s`, `success_threshold=3`
+- Thread-safe: wrap state mutations in `threading.Lock`
+- HALF_OPEN: any failure → back to OPEN; N successes → CLOSED
+- Expose `_time_until_retry()` for logging how long until next attempt
+
+**Dead-Letter Queue Pattern**
+- Every failed record goes to DLQ — never drop silently
+- Store: `{original_record, error_type, error_message[:1000], pipeline_step, timestamp, attempt_count}`
+- `replay()`: re-process DLQ records; skip if `attempt_count >= max_retries`
+- Write DLQ to S3 bucket (queryable) or dead-letter Kafka topic
+
+**Error Budget Math**
+- `error_rate = failures / (successes + failures)`
+- `budget_remaining = 1 - (error_rate / allowed_error_rate)` where `allowed = 1 - slo_target`
+- 99.9% SLO → 0.1% error budget → 100 failures per 100K records
+- On exhaustion: halt pipeline + alert — prevents silent data degradation
+
+**monitored_step Context Manager**
+- Wrap every pipeline stage: `with monitored_step("etl", "extract", reporter, budget):`
+- Auto-records success/failure to error budget
+- Non-critical → log and continue; CRITICAL → re-raise
+- Combines: error budget tracking + structured reporting + conditional halt
+
+**CloudWatch Metric Dimensions**
+- Always include: `Pipeline`, `Step`, `ErrorType`, `Severity`
+- Use `put_metric_data` with `Unit="Count"` for error counts
+- Alert on `ErrorCount > 0 where Severity=CRITICAL` (immediate) and `ErrorCount > 100 where Severity=MEDIUM` (5-min window)

@@ -270,3 +270,57 @@ dbt test \
 ```
 
 This reduces CI time from 2 hours to minutes on large projects.
+
+## ⚡ Cheat Sheet
+
+**Model materialization choice**
+| Materialization | When to use |
+|---|---|
+| `view` | Lightweight transform; data not reused |
+| `table` | Expensive transform reused by many downstream |
+| `incremental` | Large tables; append or merge new rows only |
+| `ephemeral` | CTE-like; inlined into referencing model; no table created |
+
+**Incremental strategy by warehouse**
+| Strategy | Warehouse | Behavior |
+|---|---|---|
+| `append` | All | INSERT only; no dedup |
+| `delete+insert` | All | DELETE matching rows, then INSERT |
+| `merge` | Snowflake, BQ, Databricks, Spark | MERGE INTO |
+| `insert_overwrite` | Spark, BQ | Overwrite partitions |
+| `microbatch` | dbt 1.9+ | Time-window incremental |
+
+**Key config blocks**
+```sql
+{{ config(
+    materialized='incremental',
+    unique_key='id',
+    incremental_strategy='merge',
+    on_schema_change='sync_all_columns',
+    partition_by={'field': 'date', 'data_type': 'date'},
+    cluster_by=['region']
+) }}
+```
+
+**`is_incremental()` pattern**
+```sql
+WHERE updated_at > (SELECT MAX(updated_at) FROM {{ this }})
+-- Only applied when materialization=incremental AND table exists
+-- Full refresh: dbt run --full-refresh (ignores is_incremental filter)
+```
+
+**Selection syntax**
+```bash
+dbt run --select my_model           # single model
+dbt run --select +my_model          # model + all upstream
+dbt run --select my_model+          # model + all downstream
+dbt run --select tag:daily          # all models with tag
+dbt run --select path:models/core/  # all in folder
+```
+
+**Naming conventions**
+- `stg_*`: staging (1:1 with source, light cleaning)
+- `int_*`: intermediate (joins across sources)
+- `fct_*`: facts (measurable events)
+- `dim_*`: dimensions (entities)
+- `mart_*` / `rpt_*`: business-facing aggregations

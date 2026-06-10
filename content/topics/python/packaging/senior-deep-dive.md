@@ -310,3 +310,46 @@ jobs:
 > **Tip 2:** "Mono-repo or multi-repo for a data team?" — "Mono-repo for small-to-medium teams (5-20 engineers) sharing core libraries. Benefits: atomic cross-package changes, shared tooling, easier code discovery. Multi-repo when teams are autonomous and have different release cadences. The key consideration is CI/CD complexity — mono-repos need smart builds (only test changed packages), while multi-repos need coordination for shared library updates."
 
 > **Tip 3:** "How do you handle security in Python dependencies?" — "Three layers: (1) `pip-audit` in CI to block PRs with known CVEs. (2) Hash pinning (`--require-hashes`) to prevent supply-chain attacks (tampered packages). (3) Private registry (CodeArtifact/Artifactory) as a proxy that caches and scans packages. Weekly scheduled scans catch newly-discovered vulnerabilities in existing dependencies."
+
+## ⚡ Cheat Sheet
+
+**Deployment Platform Constraints**
+| Platform | Method | Size Limit |
+|----------|--------|------------|
+| Lambda (zip) | Layers | 250 MB unzipped |
+| Lambda (container) | Docker image | 10 GB |
+| Glue | `--additional-python-modules` or S3 zip | Network access at start |
+| Spark on YARN | `--py-files` zip or conda-pack | All executors need packages |
+| Spark on K8s | Docker image | Practical ~5 GB |
+| ECS/Fargate | Docker image | No hard limit |
+
+**Spark Dependency Methods (priority order)**
+1. **Docker image** (K8s) — most reproducible; handles native/C extensions
+2. **conda-pack** — ships entire Python env; handles native libs; YARN-friendly
+3. **`--py-files`** zip — simple; breaks for packages with C extensions
+
+**Lambda Layer Build Commands**
+```bash
+pip install -t python/lib/python3.11/site-packages \
+    --platform manylinux2014_x86_64 --only-binary=:all: pandas pyarrow
+zip -r layer.zip python/
+```
+- `--only-binary=:all:` ensures Linux-compatible wheels (not macOS .so files)
+- pandas + pyarrow layer: ~150 MB; hits limit → use container image for heavy deps
+
+**Reproducible Builds**
+- `pip-compile --generate-hashes` → `requirements.txt` with SHA256 per package
+- `pip install --require-hashes -r requirements.txt` → fails if tampered
+- Poetry lock file includes hashes by default
+- Hash pinning prevents supply-chain attacks (tampered PyPI packages)
+
+**Security Scanning**
+- `pip-audit` (PyPA official): scan for CVEs; `--strict` exits non-zero if found
+- `safety check -r requirements.txt`: alternative; can generate SBOM
+- Run in CI on: PR (block merge), weekly schedule (catch new CVEs in existing deps)
+- Private registry (CodeArtifact/Artifactory): proxy + scan + cache = supply-chain control
+
+**Mono-Repo Rules**
+- Use for teams of 5–20 sharing core libraries; atomic cross-package PRs
+- Need smart CI: only test packages affected by changed files
+- Multi-repo when teams have autonomous release cadences and minimal shared code

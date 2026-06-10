@@ -200,3 +200,42 @@ Key design decisions:
 > **Tip 2:** "What happens to data writes during an Azure region outage if using GRS?" — GRS asynchronously replicates to a secondary region with ~15-minute RPO (data written in the last 15 minutes before outage may be lost). During the outage: the secondary region is read-only (RA-GRS) or inaccessible (GRS without RA). Microsoft must initiate failover; self-initiated failover available in preview. For analytics: most teams accept the RPO for cold/warm data. For raw Bronze data that cannot be replicated from source: use RA-GRS and immediately fail over reads to secondary during outage. For zero RPO: active-active dual-write (custom application logic required).
 
 > **Tip 3:** "How do you audit ADLS Gen2 access for compliance?" — Enable diagnostic settings: Storage → Diagnostic Settings → add Log Analytics workspace, select "StorageRead", "StorageWrite", "StorageDelete" categories. This logs every blob operation with: identity (who), operation, time, status, bytes. KQL query in Log Analytics: `StorageBlobLogs | where OperationType == "GetBlob" | where AuthenticationType == "SAS" | project TimeGenerated, CallerIpAddress, Uri`. For Purview: register ADLS Gen2 as a data source and run classification scans (auto-detects PII columns). Combine: Log Analytics for access patterns, Purview for data classification.
+
+## ⚡ Cheat Sheet
+
+**ADLS Gen2 vs Blob Storage**
+- ADLS Gen2 = Blob Storage + hierarchical namespace (HNS) enabled
+- HNS enables: atomic directory rename/delete (O(1)); POSIX-compatible ACLs
+- Never use Blob Storage for data lake — always enable HNS
+
+**Storage tiers**
+| Tier | Access | Cost | Min retention |
+|---|---|---|---|
+| Hot | Frequent | Highest storage | None |
+| Cool | Infrequent | Lower storage, retrieval fee | 30 days |
+| Cold | Rare | Very low storage | 90 days |
+| Archive | Near-zero | Lowest storage, high retrieval | 180 days |
+
+**Access control (dual model)**
+- RBAC: Azure roles (Storage Blob Data Reader/Contributor/Owner) — coarse-grained
+- POSIX ACLs: fine-grained on files/dirs; `getfacl` / `setfacl` pattern
+- Recommended: RBAC for broad access + ACLs for fine-grained per-directory control
+- Managed identities: always prefer over access keys/SAS for service access
+
+**Performance**
+- Partitioning: `container/year=YYYY/month=MM/day=DD/` — enables partition pruning in Synapse/Databricks
+- File size: target 256 MB–1 GB for Parquet/ORC; small files (<1 MB) hurt performance
+- Premium tier: SSD-backed; 10× lower latency; use for streaming ingestion
+
+**Lifecycle management**
+```json
+{"rules": [{"name": "cool-after-30", "type": "Lifecycle",
+  "definition": {"filters": {"blobTypes": ["blockBlob"], "prefixMatch": ["raw/"]},
+    "actions": {"baseBlob": {"tierToCool": {"daysAfterModificationGreaterThan": 30},
+                              "tierToArchive": {"daysAfterModificationGreaterThan": 90}}}}}]}
+```
+
+**Key integration patterns**
+- Databricks: mount with service principal + OAuth; or use direct ABFS path `abfss://container@account.dfs.core.windows.net/`
+- Synapse Analytics: built-in managed private endpoint; linked service with managed identity
+- ADF: ADLS Gen2 connector; copy activity; Data Flow for transform

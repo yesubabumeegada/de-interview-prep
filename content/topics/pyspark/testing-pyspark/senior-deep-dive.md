@@ -444,3 +444,68 @@ def test_silver_orders_meets_contract(spark):
 3. **CI/CD with matrix testing** (multiple PySpark versions) catches version-specific API changes before they reach production.
 4. **Generated test data** with controlled statistical properties (known null %, duplicate %, skew) finds real bugs that hand-crafted tiny DataFrames don't.
 5. **Contract tests** between producers and consumers prevent the most painful incident type in DE: a schema change that silently breaks downstream pipelines.
+
+## ⚡ Cheat Sheet
+
+**Test Pyramid for PySpark**
+- Unit tests (fast): pure Python functions, schema validation, transformation logic without Spark
+- Integration tests (medium): SparkSession with local mode + Delta Lake
+- End-to-end tests (slow): real storage, real cluster (CI on PR only)
+
+**SparkSession in Tests**
+```python
+# conftest.py — shared session for test module
+@pytest.fixture(scope="module")
+def spark():
+    return SparkSession.builder \
+        .master("local[2]") \
+        .config("spark.sql.shuffle.partitions", "2") \
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+        .getOrCreate()
+# scope="module" reuses session; scope="function" creates per test (slow)
+```
+
+**Delta Lake in Tests**
+```python
+# Use tmp_path (pytest fixture) for isolated Delta tables
+def test_merge(spark, tmp_path):
+    target = str(tmp_path / "target")
+    # write initial data, run MERGE, assert result
+    # Each test gets fresh isolated directory
+```
+
+**Streaming Tests**
+```python
+# Use MemoryStream + awaitTermination(timeout)
+from pyspark.sql.streaming import DataStreamWriter
+query = stream_df.writeStream.format("memory").queryName("test").start()
+query.processAllAvailable()  # blocks until all data processed
+result = spark.sql("SELECT * FROM test")
+```
+
+**Key Assertions**
+```python
+# Schema equality
+assert actual_df.schema == expected_df.schema
+
+# Data equality (order-independent)
+assert sorted(actual_df.collect()) == sorted(expected_df.collect())
+
+# Row count
+assert actual_df.count() == expected_count
+
+# Use chispa library for cleaner DataFrame assertions:
+from chispa import assert_df_equality
+assert_df_equality(actual, expected, ignore_row_order=True)
+```
+
+**CI/CD Patterns**
+- Run unit tests on every commit (< 2 min target)
+- Integration tests on PR (local Spark + Delta, 5–15 min)
+- E2E tests nightly or on merge to main
+- `pytest-spark` or manual conftest.py for session management
+
+**Interview Traps**
+- `spark.sql.shuffle.partitions=2` in tests avoids 200-partition overhead in local mode
+- `collect()` in tests is fine (small data); in production always avoid
+- Streaming `processAllAvailable()` can hang if source never closes — always set timeout

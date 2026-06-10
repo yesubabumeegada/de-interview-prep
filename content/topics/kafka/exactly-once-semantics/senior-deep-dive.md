@@ -185,3 +185,46 @@ eos_metrics = {
 > **Tip 4:** The sequence number ring buffer (last 5 sequences) is why `max.in.flight.requests.per.connection` must be ≤ 5 with idempotence. With 6 in-flight requests, a duplicate could arrive after the sequence has scrolled out of the ring buffer.
 
 > **Tip 5:** For performance, distinguish the three levels: (1) no idempotence — baseline, (2) idempotence only — 5% overhead, (3) full transactions — 15-30% overhead. Choosing the right level for each pipeline is an engineering decision, not a one-size-fits-all.
+
+## ⚡ Cheat Sheet
+
+**Transaction State Machine**
+`Empty → Ongoing → PrepareCommit → CompleteCommit (or PrepareAbort → CompleteAbort)`
+- TC crash during PrepareCommit → recovery COMPLETES the commit (not abort)
+- TC crash before PrepareCommit → recovery ABORTS the transaction
+
+**EOS Config Checklist**
+```properties
+# Producer
+enable.idempotence=true
+transactional.id=my-app-partition-0   # Unique per producer instance
+transaction.timeout.ms=60000          # Must be < consumer max.poll.interval.ms
+max.in.flight.requests.per.connection=5  # Max 5 with idempotence
+
+# Consumer (reading txn output)
+isolation.level=read_committed
+
+# Streams
+processing.guarantee=exactly_once_v2  # One producer per thread (Kafka 2.6+)
+```
+
+**Epoch Fencing (Zombie Prevention)**
+- Each `initTransactions()` bumps the producer epoch on the broker
+- Old producer (zombie) with stale epoch → `ProducerFencedException` on send
+- New epoch invalidates all pending transactions from previous instance
+
+**Sequence Numbers**
+- Broker maintains ring buffer of last 5 sequence numbers per `(transactional.id, partition)`
+- Duplicate: sequence already seen → silently dropped (idempotent)
+- Gap: out-of-order → `OutOfOrderSequenceException` → non-retriable → restart producer
+- `max.in.flight.requests.per.connection ≤ 5` required for correct sequence ordering
+
+**Cross-System Exactly-Once (Outbox Pattern)**
+- Write to DB outbox table + business table in ONE DB transaction
+- Separate CDC process reads outbox → publishes to Kafka → marks sent
+- Avoids 2PC across DB + Kafka; safe for DB→Kafka→downstream guarantees
+
+**When NOT to Use Transactions**
+- Pure consumer-only pipelines: use idempotent consumer logic instead
+- Very high throughput (< 10ms latency): txn overhead adds 1-5ms
+- Small messages at massive fan-out: transaction markers inflate partition overhead

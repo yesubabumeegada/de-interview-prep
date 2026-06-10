@@ -599,3 +599,51 @@ models:
 > **Tip 3:** "How do you avoid false alert storms in real-time monitoring?" — "False alert storms happen when one root cause (e.g., upstream data pipeline change) triggers alerts for every affected feature simultaneously. Solutions: (1) Alert deduplication — group alerts by root cause using correlation analysis; (2) Minimum sample size — only alert when the rolling window has enough data; (3) Alert cooldown — suppress re-alerts within a cooldown window; (4) Threshold tuning using historical data — what PSI level actually predicts degradation for this specific model? (5) Tiered severity — only send immediate alerts (PagerDuty) for verified performance impact, not for drift signals alone."
 
 > **Tip 4:** "How do you design automated retraining to avoid training-serving skew?" — "Automated retraining can introduce skew if not careful: (1) The same data pipeline must be used for training and serving feature computation — use a shared feature store; (2) The retraining trigger should evaluate the monitoring signals that indicate actual degradation, not just any drift; (3) The retrained model should go through the same validation and shadow mode evaluation as any manually retrained model — don't deploy automatically without gates; (4) Implement a minimum time between retrains to prevent thrashing; (5) Log the trigger reason and feature data snapshot for every automated retraining run for reproducibility."
+
+## ⚡ Cheat Sheet
+
+**Monitoring Types — Reactive vs Proactive**
+- **Reactive**: AUC dropped, error rate spiked → already damaged
+- **Proactive**: PSI > 0.1, score distribution shifted, data quality alerts → early warning
+- Gold standard: both layers
+
+**Retraining Signal Weights (Scoring Model)**
+| Signal | Weight |
+|---|---|
+| PSI > 0.2 for important feature | 3 |
+| AUC drop > 5% | 3 |
+| Score distribution drift | 2 |
+| AUC drop > 3% | 1 |
+| PSI 0.1–0.2 (moderate drift) | 1 |
+| Days since last train × 0.1 | rolling |
+- Retrain threshold: score ≥ 3; immediate if score ≥ 6
+
+**PSI Alert Thresholds**
+- < 0.1: no change
+- 0.1–0.2: warning → investigate
+- > 0.2: critical → alert + retrain
+
+**Streaming Drift Detection Pattern**
+- `deque(maxlen=1000)` rolling window per feature
+- Run KS test vs reference distribution every N predictions
+- Alert only when window is full (avoid false alerts on sparse data)
+- `threading.Lock` for thread safety in sidecar
+
+**Shadow Mode — When to Use**
+- New model architecture significantly different from champion
+- Training data substantially changed
+- Model impacts regulated or high-stakes decision
+- Goal: zero-risk validation before any canary
+
+**Alert Storm Prevention**
+1. Deduplication: group alerts by root cause (one upstream pipeline change → one alert)
+2. Minimum sample size: only alert when rolling window is full
+3. Cooldown window: suppress re-alerts within N minutes
+4. Threshold tuning: use historical data to find PSI level that predicts actual degradation
+5. Tiered severity: PagerDuty only for verified performance impact; Slack for drift signals
+
+**Automated Retraining Safeguards**
+- Same feature store for training + serving (prevents skew)
+- Retrained model must pass shadow + validation gates (no auto-deploy without checks)
+- Minimum time between retrains (prevent thrashing)
+- Log trigger reason + feature snapshot for reproducibility

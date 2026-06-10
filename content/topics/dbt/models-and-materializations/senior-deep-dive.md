@@ -187,3 +187,54 @@ query-comment:
 ```
 
 This enables cost breakdown by model in warehouse query history.
+
+## ⚡ Cheat Sheet
+
+**Materialization decision tree**
+```
+Data size < 1M rows AND no performance concern → view
+Data reused by 3+ downstream models → table
+Data grows by append (events, logs) → incremental (append strategy)
+Data has updates (orders, users) → incremental (merge/delete+insert)
+Model is a building block, not a destination → ephemeral
+Need history tracking → snapshot (SCD Type 2)
+```
+
+**Incremental merge**
+```sql
+{{ config(materialized='incremental', unique_key='order_id', incremental_strategy='merge') }}
+SELECT id as order_id, status, updated_at FROM {{ source('app', 'orders') }}
+{% if is_incremental() %}
+  WHERE updated_at > (SELECT MAX(updated_at) FROM {{ this }})
+{% endif %}
+```
+
+**`on_schema_change` options**
+| Value | Behavior |
+|---|---|
+| `ignore` (default) | New columns in model ignored; target schema unchanged |
+| `fail` | Error if schema changes detected |
+| `append_new_columns` | Add new columns; don't remove old |
+| `sync_all_columns` | Add new + remove dropped columns |
+
+**Partition + cluster (BigQuery/Databricks)**
+```sql
+{{ config(
+    partition_by={"field": "created_date", "data_type": "date", "granularity": "month"},
+    cluster_by=["customer_id", "region"]
+) }}
+```
+
+**Custom schema strategy**
+```python
+# macros/generate_schema_name.sql — override default schema naming
+{% macro generate_schema_name(custom_schema_name, node) %}
+  {{ target.schema }}_{{ custom_schema_name | trim if custom_schema_name else '' }}
+{% endmacro %}
+```
+
+**Performance rules**
+- Break complex models into stages (ephemeral → incremental) to isolate slow transforms
+- `--threads`: parallel model execution; safe to set 8–32 for independent models
+- `--defer + --state`: CI runs only changed models against prod upstream (50–90% faster CI)
+- Pre/post hooks: run `ANALYZE`/`VACUUM` after large table builds

@@ -347,3 +347,82 @@ done
 > **Tip 4:** Schema evolution is the top production pain point. The mature pattern is: import to staging, compare schemas, alter Hive table, then move to production. Never blindly overwrite production Hive tables after source schema changes.
 
 > **Tip 5:** When comparing Sqoop vs Spark JDBC, Sqoop is winning only in direct-mode bulk transfers. For anything involving transformation, cloud targets, or Delta/Iceberg, Spark JDBC is superior and is the industry direction.
+
+## ⚡ Cheat Sheet
+
+**HDFS architecture**
+```
+NameNode:   stores metadata (file → block mappings, permissions, namespace)
+DataNode:   stores actual data blocks (default 128 MB per block)
+Replication: default factor 3 (two local rack + one remote rack)
+HA:         Active/Standby NameNode with JournalNodes for edit log sharing
+```
+
+**HDFS key commands**
+```bash
+hdfs dfs -ls /data/warehouse          # list files
+hdfs dfs -put local.csv /data/raw/    # upload
+hdfs dfs -get /data/output/ ./local/  # download
+hdfs dfs -rm -r /data/tmp/            # delete
+hdfs dfs -du -s -h /data/warehouse/   # disk usage
+hdfs dfs -copyFromLocal -f src dst    # overwrite on upload
+hdfs fsck /path -files -blocks        # check file health
+```
+
+**YARN resource model**
+```
+ResourceManager:  cluster master — allocates containers
+NodeManager:      per-node agent — runs containers, reports health
+ApplicationMaster: per-job — negotiates resources with RM
+Container:        allocated unit (CPU cores + memory)
+
+Scheduler types: FIFO, Capacity Scheduler (queues), Fair Scheduler
+```
+
+**Hive vs Spark SQL**
+```
+Hive:      MapReduce by default (slow); good for compatibility; HQL ≈ SQL
+Hive LLAP: in-memory daemon; much faster (sub-minute queries)
+Spark SQL:  Hive Metastore compatible but Spark execution — 10-100x faster
+```
+
+**Hive partitioning**
+```sql
+CREATE TABLE orders (order_id BIGINT, amount DOUBLE)
+PARTITIONED BY (dt STRING, region STRING)
+STORED AS PARQUET;
+-- Dynamic partition insert
+SET hive.exec.dynamic.partition.mode=nonstrict;
+INSERT INTO orders PARTITION (dt, region)
+SELECT order_id, amount, dt, region FROM staging_orders;
+```
+
+**MapReduce pattern**
+```
+Map:    input splits → emit (key, value) pairs
+Shuffle: sort + group by key across nodes
+Reduce: aggregate values per key → output
+Use case today: Hive compatibility, very large batch on older clusters
+```
+
+**ZooKeeper use cases in Hadoop**
+```
+HBase region assignment  — ZK tracks which RegionServer owns which region
+HDFS NameNode HA         — ZK elects Active NameNode
+YARN RM HA               — ZK elects Active ResourceManager
+Kafka broker coordination — ZK stores broker/topic metadata (pre-KRaft)
+```
+
+**HBase data model**
+```
+Table → Row → Column Family → Column Qualifier → Value (versioned by timestamp)
+Row key design is critical: avoid hot-spotting (don't use sequential IDs)
+Strategies: salt prefix, reverse timestamp, MD5 hash of natural key
+```
+
+**Key interview points**
+- HDFS is optimized for large files, sequential reads; terrible for many small files
+- Sqoop: parallel JDBC import from RDBMS to HDFS/Hive (one mapper per table partition)
+- Oozie: XML-based workflow scheduler (predecessor to Airflow in Hadoop ecosystem)
+- Pig: dataflow language (Latin) — pre-dbt/Spark era; rarely used in modern stacks
+- Ecosystem today: HDFS + YARN still used, but S3/GCS replacing HDFS in cloud-native stacks

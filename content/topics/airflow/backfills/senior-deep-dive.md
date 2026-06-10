@@ -401,3 +401,47 @@ echo "=== Backfill complete ==="
 > **Tip 2:** "Why must a backfill-safe pipeline be idempotent?" — "Backfilling means re-running tasks for past dates. If the task isn't idempotent — for example, if it uses INSERT without first DELETEing the partition — each re-run adds duplicate data. After a backfill of 30 days, you'd have 2× the data for those 30 days. The solution is always DELETE+INSERT for the specific date partition, UPSERT/MERGE, or partition overwrite in Spark. The idempotency guarantee means 'same execution_date → same result, regardless of how many times you run it.'"
 
 > **Tip 3:** "How do you backfill a pipeline that computes cumulative metrics?" — "Cumulative metrics (running totals, rolling averages) depend on all prior intervals being correct. For these, you must backfill sequentially in chronological order — `--max-active-runs 1` and `--run-backwards False` in the CLI, and `depends_on_past=True` on the task. Out-of-order backfill produces wrong cumulative values because Jan 15's cumulative total would be computed before Jan 14's data is loaded. Sequential processing guarantees each interval has correct prior state."
+
+## ⚡ Cheat Sheet
+
+**Scheduler vs Backfill CLI — Key Difference**
+- **Scheduler daemon**: continuous heartbeat, uses configured executor (Celery/K8s), dispatches to workers
+- **`airflow dags backfill` CLI**: separate process, **always uses LocalExecutor** regardless of cluster config
+- For CeleryExecutor clusters: trigger via API or UI, not CLI, to use distributed workers
+
+**Idempotency Patterns**
+| Pattern | Safe? | Notes |
+|---|---|---|
+| `INSERT` (unconditional) | ❌ | Duplicates on re-run |
+| `DELETE + INSERT` | ✅ | Delete partition first, then insert |
+| `MERGE / UPSERT` | ✅ | ON CONFLICT DO UPDATE |
+| Spark `mode('overwrite') + replaceWhere` | ✅ | Partition-level overwrite |
+| Append to file (`'a'` mode) | ❌ | Grows on re-run |
+
+**Backfill Strategy Decision**
+- **Incremental**: event tables, append-only, date-partitioned → fast, correct
+- **Full-refresh**: small reference/dimension tables only → expensive (runs N times for N-day backfill)
+- **Snapshot**: SCD tables with change history → `ON CONFLICT DO UPDATE`
+
+**Cumulative Metrics — Required Settings**
+```bash
+airflow dags backfill \
+  --dag-id cumulative_metrics \
+  --start-date 2024-01-01 \
+  --end-date 2024-01-31 \
+  --max-active-runs 1 \
+  --run-backwards False
+```
+- DAG also needs `depends_on_past=True` + `max_active_runs=1`
+
+**Metadata DB Impact Per Backfill Run**
+- 1 `dag_run` row + N `task_instance` rows (N = task count) + XCom + log rows
+- 730-day × 10-task backfill: 7,300+ task_instance rows, 50,000+ log rows
+- Before large backfill: `airflow db clean --clean-before-timestamp` to reduce DB load
+
+**Production Backfill Runbook**
+1. `airflow dags pause $DAG_ID` (prevent interference from scheduled runs)
+2. Reduce pool slots: `airflow pools set warehouse_pool 4 "Throttled for backfill"`
+3. Run backfill with `--max-active-runs` throttle
+4. Restore pool: `airflow pools set warehouse_pool 8 "Restored"`
+5. `airflow dags unpause $DAG_ID`

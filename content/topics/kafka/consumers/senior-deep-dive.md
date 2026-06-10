@@ -238,3 +238,45 @@ Throttled consumers receive a `Throttle` response with a back-off time — they 
 > **Tip 4:** Know that assignment strategies run on the client (group leader), not the broker. This is why custom assignors must be on every consumer's classpath and why a buggy assignor crashes the consumer, not the broker.
 
 > **Tip 5:** `max.poll.interval.ms` is the most common cause of unexpected rebalances in production. Slow processing loops (large DB writes, external API calls) easily exceed the 5-minute default. The fix is either increase the timeout or reduce `max.poll.records` to process smaller batches faster.
+
+## ⚡ Cheat Sheet
+
+**Offset Semantics Decision**
+- `read_uncommitted` (default): reads up to HWM — may see messages from aborted txns
+- `read_committed`: reads up to LSO (Last Stable Offset) — waits for txn to commit or abort
+- LSO < HWM during open transactions → consumer lags on large uncommitted batches (set tight `transaction.timeout.ms`)
+
+**Rebalance Types & Triggers**
+| Trigger | Rebalance Type | Impact |
+|---|---|---|
+| Consumer joins/leaves | Eager (STOP_THE_WORLD) | All stop, reassign |
+| Poll gap > `max.poll.interval.ms` | Eager | Most common production cause |
+| Static membership timeout | Eager after grace period | Use `group.instance.id` to prevent rolling restart rebalances |
+| Cooperative/incremental | Only reassigned partitions stop | Default in KIP-429 (Kafka 2.4+) |
+
+**Static Membership Key Config**
+```properties
+group.instance.id=consumer-pod-1  # Unique stable ID per consumer
+session.timeout.ms=60000          # Must be > max restart time
+max.poll.interval.ms=300000       # Must be > your batch processing time
+```
+
+**Exactly-Once Consumer Pattern (DB Txn)**
+```python
+# Atomic: store offset in same DB txn as processed data
+with db.transaction():
+    db.execute("INSERT INTO processed_events ...")
+    db.execute("UPDATE consumer_offsets SET offset=? WHERE partition=?", ...)
+consumer.seek(partition, db_offset_at_start)  # skip auto-commit entirely
+```
+
+**Partition Assignment Protocol**
+- JoinGroup → SyncGroup: leader calculates assignment, sends to coordinator, all members receive
+- Range: assigns contiguous partitions per topic (can be uneven)
+- RoundRobin: even distribution across topics/partitions
+- Cooperative Sticky (recommended): retains current assignments; only moves minimally
+
+**Key Metrics to Monitor**
+- `records-lag-max` per consumer group: lagging > 1min of produce rate = concern
+- `poll-idle-ratio`: < 0.2 = consumer is CPU-bound (shrink batch or add consumers)
+- `join-rate` > 0 frequently = unstable rebalances occurring

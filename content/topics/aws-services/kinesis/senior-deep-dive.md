@@ -206,3 +206,38 @@ kinesis.get_shard_iterator(
 > **Tip 2:** "How do you size a Kinesis stream?" — "Calculate from two limits per shard: 1 MB/s write AND 1000 records/s. Take the maximum. Example: 50K records/s at 500 bytes each = 25 MB/s write. By throughput: 25 shards. By record count: 50 shards. The higher number (50) is your minimum. Add 25% headroom for spikes: 63 shards, round to 64."
 
 > **Tip 3:** "Consumer is falling behind — how do you fix it?" — "Check IteratorAgeMilliseconds. Three fixes: (1) Add more Lambda concurrency (ParallelizationFactor up to 10 per shard). (2) Increase batch size (process more records per invocation). (3) Add more shards (enables more parallel consumers in KCL). For Lambda specifically: optimize per-record processing time (batch external calls, remove unnecessary I/O)."
+
+## ⚡ Cheat Sheet
+
+**Shard Sizing Formula**
+- Write limit: 1 MB/s AND 1,000 records/s per shard (take the binding constraint)
+- Read limit: 2 MB/s per shard (shared across consumers); Enhanced Fan-Out: 2 MB/s per consumer per shard
+- Formula: `shards = max(ceil(MB_per_sec / 1), ceil(records_per_sec / 1000))` × headroom factor (1.25)
+- Example: 50K msg/s → 50 shards (record count binding); 50 shards × 500B = 25 MB/s (fits in 1 MB/s limit)
+
+**On-Demand vs Provisioned**
+- On-Demand: auto-scales up to 2× previous peak; $0.08/GB + $0.04/million PUT records (no shard cost)
+- Provisioned: $0.015/shard-hr + $0.014/GB; cheaper for steady high-throughput; manual shard management
+- Switch to On-Demand for unknown/bursty traffic; Provisioned for predictable workloads
+
+**Hot Key Solutions**
+- Random suffix: append `#0`–`#49` to hot partition key; scatter-gather on read
+- `ExplicitHashKey`: bypass partition key routing, set hash directly to target shard
+- On-Demand mode: auto-splits hot shards (no manual intervention)
+
+**Consumer Lag Remediation**
+- `IteratorAgeMilliseconds` > 5 min = consumer behind
+- Fix 1: increase Lambda `ParallelizationFactor` (up to 10 per shard)
+- Fix 2: increase `BatchSize` (up to 10,000 records per Lambda invocation)
+- Fix 3: add shards (enables more parallel KCL consumers)
+- Enhanced Fan-Out: dedicated 2 MB/s per consumer (eliminates shared-read contention)
+
+**Exactly-Once Pattern**
+- Kinesis guarantees at-least-once; make consumer idempotent
+- Use sequence number as dedup key: DynamoDB conditional `attribute_not_exists(seq_num)`
+- KCL: checkpoint after successful write to idempotent sink → replay = same result
+
+**Retention & Replay**
+- Default: 24 hours; Extended: up to 365 days ($0.023/shard-hr extra)
+- Replay from timestamp: `ShardIteratorType=AT_TIMESTAMP` with specific datetime
+- Archive pattern: Firehose consumer writes all events to S3 as permanent replay store

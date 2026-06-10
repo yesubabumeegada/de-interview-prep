@@ -416,3 +416,60 @@ CREATE TABLE trigger (
 > **Tip 2:** "How does a deferrable sensor differ from reschedule mode?" — "Reschedule mode still uses a worker process during each poke call. Deferrable sensors release the worker entirely — the waiting is handled by an async trigger in the triggerer process, which can manage thousands of concurrent triggers with a tiny footprint. Deferrable sensors also support true async I/O, making them much more efficient for I/O-bound waiting."
 
 > **Tip 3:** "What are production anti-patterns with sensors?" — "The big ones: no timeout (default 7 days blocks slots), poke mode for long waits (deadlock risk), FileSensor on remote storage (doesn't work on Kubernetes), not setting failed_states on ExternalTaskSensor (waits forever if upstream fails), and poke() methods with side effects (called N times, creates N side effects)."
+
+## ⚡ Cheat Sheet
+
+**Sensor Mode Comparison**
+| Mode | Slots During Wait | When to Use |
+|---|---|---|
+| `poke` | Held entire duration | Short waits (< 5 min) |
+| `reschedule` | Released between polls | Long waits (minutes–hours) |
+| Deferrable | ~0 (async trigger) | Anything; most efficient |
+
+**Reschedule Mode Mechanics**
+1. `poke()` returns False → write `TaskReschedule` row to DB with `reschedule_date`
+2. Raise `AirflowRescheduleException` → worker process terminates, slot freed
+3. Scheduler watches for `up_for_reschedule` tasks past their `reschedule_date` → re-queue
+- Each reschedule = 1 DB row; 8h wait × 5min interval = 96 rows per sensor instance
+
+**Deferrable Sensor vs Reschedule Mode**
+- Reschedule: worker process still used during each poke call
+- Deferrable: NO worker during wait; triggerer process (asyncio) handles polling
+- Deferrable supports true async I/O (`aiobotocore`, async DB clients)
+
+**Trigger Class Requirements**
+```python
+def serialize(self) -> tuple:
+    return ('myproject.triggers.MyTrigger', {'key': self.key, ...})
+    # Must be JSON-serializable — stored in metadata DB
+
+async def run(self) -> AsyncIterator[TriggerEvent]:
+    while True:
+        if await self._check(): yield TriggerEvent({...}); return
+        await asyncio.sleep(self.poll_interval)  # non-blocking
+```
+
+**Production Anti-Patterns Checklist**
+- ❌ No timeout: default 7 days → blocks slots, never fails
+- ❌ `poke` mode for > 5 min waits → deadlock risk under load
+- ❌ `FileSensor` on remote storage in Kubernetes → each pod has different local FS
+- ❌ No `failed_states` on `ExternalTaskSensor` → waits forever if upstream fails
+- ❌ `poke()` with side effects → called N times → N side effects
+
+**Correct ExternalTaskSensor**
+```python
+ExternalTaskSensor(
+    mode='reschedule', poke_interval=300, timeout=10800,
+    allowed_states=['success'],
+    failed_states=['failed', 'skipped'],  # required!
+)
+```
+
+**Triggerer Architecture**
+- Single asyncio event loop; scales to 1000s of concurrent triggers
+- `default_capacity = 1000`; run multiple triggerer pods for HA
+- Trigger stored in `trigger` table; `classpath` + `kwargs` columns for deserialization
+
+**`poke_interval` vs `timeout` Rule**
+- `timeout` MUST be > `poke_interval` + single poke duration
+- If `poke_interval=3600` and `timeout=1800` → sensor times out before first poke

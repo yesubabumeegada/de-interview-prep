@@ -290,3 +290,37 @@ class AutoLoaderMonitor:
 > **Tip 2:** "Auto Loader vs COPY INTO?" — Auto Loader: streaming-based, supports schema evolution, notification mode for instant detection, scales to millions of files. COPY INTO: SQL command, simpler for ad-hoc loads, limited schema evolution, uses directory listing only. Use Auto Loader for production ETL pipelines; COPY INTO for one-off or simple batch loads.
 
 > **Tip 3:** "How do you handle 100K+ files per hour?" — Notification mode (SQS-based, no directory listing bottleneck), large batch sizes (maxFilesPerTrigger=10000), parallel notification workers, auto-scaling cluster (burst capacity for peaks), and date-partitioned source files to limit state store growth. Monitor: file backlog, processing time per batch, and rescued data rate.
+
+## ⚡ Cheat Sheet
+
+**Format detection**
+- `cloudFiles.inferColumnTypes=true` → samples 1/1000 files; disable in prod with explicit schema
+- `cloudFiles.schemaEvolutionMode`: `addNewColumns` (default) | `rescue` | `failOnNewColumns` | `none`
+- Schema location must be separate from checkpoint dir
+
+**Trigger modes**
+- `trigger(availableNow=True)` → processes all backlog then stops (replaces `Once`); use for cost-efficient batch
+- `trigger(processingTime="5 minutes")` → micro-batch streaming
+- Omit trigger → continuous streaming
+
+**File notification vs directory listing**
+- File notification (SQS/SNS or Azure Event Grid) → O(1) latency, no listing cost; use for high-volume
+- Directory listing → default; works without cloud infra but slow at scale (>10K files/trigger)
+- Switch: `cloudFiles.useNotifications=true` + IAM/SQS setup
+
+**Checkpoint and idempotency**
+- Checkpoint stores: schema, processed file list, stream offsets — never delete mid-stream
+- Exactly-once: Auto Loader + Delta sink; at-least-once with non-idempotent sinks
+- Rescue column `_rescued_data`: captures fields not matching schema
+
+**Key config numbers**
+- Max files per trigger: `cloudFiles.maxFilesPerTrigger` (default 1000)
+- Max bytes per trigger: `cloudFiles.maxBytesPerTrigger`
+- Schema hints: `cloudFiles.schemaHints="id BIGINT, ts TIMESTAMP"`
+
+**Production checklist**
+- ✓ Explicit schema + `schemaEvolutionMode=rescue` for prod
+- ✓ File notification for >10K files/day
+- ✓ Checkpoint on DBFS or cloud storage (not local)
+- ✓ Monitor `cloudFiles.numFilesProcessed` metric
+- ✓ `availableNow` for cost-optimized batch ingestion

@@ -295,3 +295,42 @@ glue_cost = {
 > **Tip 2:** "EMR on EC2 vs EMR on EKS vs EMR Serverless — when do you use each?" — "EMR on EC2 for large, dedicated workloads needing full control (custom AMIs, HDFS). EMR on EKS when you already have Kubernetes and want fast startup plus resource sharing. EMR Serverless for simplest operations — no cluster management, just submit jobs. Cost is similar; choose based on operational maturity and startup time requirements."
 
 > **Tip 3:** "How do you handle spot interruptions in EMR?" — "Instance fleet diversification across 6-8 instance types in multiple AZs using capacity-optimized allocation. Keep core nodes on-demand (they hold HDFS). Task nodes on spot (compute-only, safe to lose). Enable graceful decommissioning so interrupted nodes finish active tasks. For critical jobs, set TimeoutAction to SWITCH_TO_ON_DEMAND as fallback."
+
+## ⚡ Cheat Sheet
+
+**Spot Strategy Rules**
+- Always diversify: 6–8 instance types across families (r5, r5a, r5d, r6i, m5, r4)
+- Use `capacity-optimized` allocation — picks pool with most capacity = fewer interruptions
+- Core nodes: On-Demand only (hold HDFS data); Task nodes: Spot (compute only, safe to lose)
+- `TimeoutAction: SWITCH_TO_ON_DEMAND` as safety net if all Spot pools exhausted
+
+**Cluster Type Decision**
+| | Transient | Persistent |
+|---|---|---|
+| Cost | Pay only during job | 24/7 billing |
+| Spot safety | Excellent (retry whole job) | Risky (interrupts sessions) |
+| Use case | Scheduled batch ETL | Interactive notebooks |
+- `KeepJobFlowAliveWhenNoSteps: false` + `AutoTerminationPolicy.IdleTimeout: 300` for true transient
+
+**Executor Sizing Formula (r5.2xlarge = 64 GB, 8 vCPU)**
+- Usable: 60 GB RAM, 7 vCPU (reserve 4 GB OS, 1 vCPU for YARN NM)
+- 5 cores/executor (I/O parallelism sweet spot) → 1 executor/node with remaining cores
+- Overhead = max(384 MB, 10% of executor memory); PySpark: use 20–30% overhead
+- `shuffle.partitions` = total_executors × cores × 2
+
+**Cost Benchmark (500 GB, 2 hr nightly job)**
+| Option | Monthly | Startup |
+|---|---|---|
+| EMR EC2 Spot | ~$355 | 5–10 min |
+| EMR Serverless | ~$365 | 30–60 sec |
+| Glue | ~$528 | 1–2 min |
+| EMR on EKS | ~$300 | 30–60 sec |
+
+**Graviton Savings**
+- r5.2xlarge: $0.504/hr → r6g.2xlarge: $0.403/hr (20% cheaper)
+- No code changes needed for PySpark; check native C extensions for ARM64 compat
+
+**Deployment Pattern Decision**
+- EMR EC2: large dedicated workloads, HDFS, custom AMI
+- EMR on EKS: existing K8s cluster, fast startup, resource sharing with microservices
+- EMR Serverless: simplest ops, no cluster management — submit and forget

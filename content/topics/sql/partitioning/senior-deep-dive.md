@@ -278,3 +278,41 @@ SELECT create_distributed_table('orders', 'customer_id');
 > **Tip 2:** "How do you handle a partition that grows unexpectedly large?" — "First diagnose: is the partition key skewed (all rows have the same value)? Is data being incorrectly routed to the default partition? Is the partition granularity wrong for the data volume? Remediation options: add a sub-partition dimension, split the partition into smaller ones using DETACH + CREATE + INSERT SELECT + reattach, or for Snowflake change the cluster key. Going forward, set alerts when any single partition exceeds a threshold (e.g., 100GB) using pg_relation_size monitoring."
 
 > **Tip 3:** "Explain partition-wise join and when it helps." — "Partition-wise join works when two tables are partitioned identically on the same key. The planner can join each partition pair independently: partition 0 of table A joins only partition 0 of table B, and so on in parallel. This reduces the join's working set at each step and enables true parallelism across partition pairs. It's most beneficial for large fact-to-dimension joins in analytics workloads and requires enabling `enable_partitionwise_join`. The tables must use the same partition scheme (same key, same number of partitions, same boundaries)."
+
+## ⚡ Cheat Sheet
+
+**Partition Pruning Rules**
+- Static pruning (plan time): constant literal in WHERE → optimizer prunes at plan time
+- Dynamic pruning (runtime): parameterized query (`$1`) → PG 12+ prunes at execution time
+- Functions BLOCK pruning: `DATE_TRUNC('month', order_date) = '2024-01-01'` → no pruning
+- Direct comparison ENABLES pruning: `order_date >= '2024-01-01' AND order_date < '2024-02-01'`
+
+**Planning Overhead Rule of Thumb**
+- < 100 partitions: negligible overhead
+- 1,000 partitions: ~50–200 ms planning time
+- 10,000 partitions: 2+ seconds planning time (regardless of execution speed)
+- Daily partitions over 3 years = 1,095 → near limit; consider monthly for long retention
+
+**Partition Type Decision**
+| Workload | Partition Type | Example |
+|---|---|---|
+| Time-series / logs / events | RANGE on timestamp | Daily or monthly |
+| Multi-tenant SaaS | HASH on tenant_id | 64 buckets |
+| Analytics fact tables | RANGE + LIST sub-partition | year → region |
+
+**Sharding vs Partitioning**
+- Partitioning: all data on ONE server; transparent to app; full ACID
+- Sharding: data on MULTIPLE servers; app-aware or proxy-aware; distributed txns complex
+- Tools: Citus (PG extension for transparent sharding), Vitess (MySQL)
+
+**pg_partman Key Config**
+```sql
+SELECT partman.create_parent('public.orders', 'order_date', 'native', 'monthly', p_premake=>4);
+UPDATE partman.part_config SET retention='2 years', retention_keep_table=FALSE WHERE parent_table='public.orders';
+SELECT cron.schedule('0 * * * *', $$SELECT partman.run_maintenance()$$);
+```
+
+**Partition-Wise Join Requirement**
+- Both tables must use same partition scheme: same key, same count, same boundaries
+- Enable: `SET enable_partitionwise_join = on; SET enable_partitionwise_aggregate = on;`
+- Benefit: each partition pair joins independently in parallel → less memory pressure

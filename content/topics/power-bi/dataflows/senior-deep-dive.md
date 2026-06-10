@@ -291,3 +291,86 @@ Power BI Admin → Data Gateway → Configure
 - Monitor refresh health with the **Power BI REST API transactions endpoint**
 - The decision between dataflow/datamart/semantic model depends on team scope, SQL access needs, and Fabric vs Power BI Service environment
 - **Lineage view** and programmatic lineage API enable impact analysis for data pipeline changes
+
+## ⚡ Cheat Sheet
+
+**Data model (Import vs DirectQuery vs Composite)**
+```
+Import:       data loaded into Power BI memory → fastest queries; stale by refresh schedule
+DirectQuery:  queries sent live to source → always current; limited DAX; source load
+Composite:    Import for large tables + DirectQuery for real-time; best of both
+Dual storage: table can serve as Import or DirectQuery depending on query context
+```
+
+**DAX essentials**
+```dax
+-- Measure (always uses filter context)
+Total Revenue = SUM(orders[amount])
+Revenue YTD = CALCULATE([Total Revenue], DATESYTD(dates[date]))
+Revenue LY  = CALCULATE([Total Revenue], SAMEPERIODLASTYEAR(dates[date]))
+MoM Growth  = DIVIDE([Total Revenue] - [Revenue LY], [Revenue LY])
+
+-- CALCULATE: modifies filter context
+Revenue US = CALCULATE([Total Revenue], orders[region] = "US")
+
+-- Iterator functions (row context)
+Avg Order = AVERAGEX(orders, orders[amount])
+Weighted Score = SUMX(products, products[score] * products[weight]) / SUM(products[weight])
+
+-- Variables (performance + readability)
+Margin % = VAR revenue = [Total Revenue]
+           VAR cost = [Total Cost]
+           RETURN DIVIDE(revenue - cost, revenue)
+```
+
+**Row-level security (RLS)**
+```dax
+-- Static role (in Power BI Desktop)
+-- Add table filter: [region] = "US"
+
+-- Dynamic RLS (uses logged-in user)
+-- Table filter expression:
+[user_email] = USERPRINCIPALNAME()
+
+-- Or via mapping table:
+[region] IN VALUES(user_region_map[region])
+-- where user_region_map is filtered by USERPRINCIPALNAME()
+```
+
+**Power Query M patterns**
+```m
+// Load from Snowflake
+Source = Snowflake.Databases("xy12345.snowflakecomputing.com", "PROD"),
+gold = Source{[Name="GOLD"]}[Data],
+orders = gold{[Schema="PUBLIC",Item="ORDERS"]}[Data],
+// Type columns
+typed = Table.TransformColumnTypes(orders,{{"amount", type number}})
+
+// Parameterized query (for incremental refresh)
+#"Filtered Rows" = Table.SelectRows(orders, each [order_date] >= RangeStart 
+                                              and [order_date] < RangeEnd)
+```
+
+**Incremental refresh setup**
+```
+1. Create parameters: RangeStart (Date/Time), RangeEnd (Date/Time)
+2. Filter table in Power Query: order_date >= RangeStart AND < RangeEnd
+3. Define incremental refresh policy: Archive 3 years, Refresh last 3 days
+4. Publish → Power BI manages partitions automatically
+```
+
+**Performance optimization**
+```
+- Use Import mode for large historical tables (DirectQuery = slower)
+- Avoid calculated columns; prefer measures (calculated at query time, not stored)
+- Avoid bidirectional relationships (use CROSSFILTER sparingly)
+- Star schema: fact table has numeric keys + measures only; dimensions separate
+- Aggregations: pre-aggregate large tables; DQ falls through to aggregation table
+- Performance Analyzer: shows DAX query time + visual render time per visual
+```
+
+**Key interview points**
+- DAX filter context vs row context: measures use filter context; calculated columns use row context
+- CALCULATE is the most powerful function — changes filter context
+- Many-to-many relationships: use bridge table or CROSSFILTER(BOTH) with caution
+- Composite models: connect Power BI to Fabric/Databricks via DirectQuery + import local dims

@@ -300,3 +300,44 @@ def record_erasure_completion(customer_id: str, locations_erased: list):
 > **Tip 2:** "What is the Atlas TypeDef system and why does it matter for enterprise governance?" — Atlas TypeDef is the metadata schema system — it defines what types of assets Purview understands and what attributes those assets have. Built-in types: `azure_sql_table`, `adls_gen2_path`, `azure_databricks_job`, etc. You can extend Purview's model with custom TypeDefs for proprietary assets (ML models, data contracts, feature store entries, business metrics). This matters because: (a) everything in Purview is an entity of a TypeDef — custom types give first-class catalog entries for your proprietary systems, (b) relationship TypeDefs let you define custom lineage edges (e.g., "trained_on" between a ML model and a training dataset), (c) classification TypeDefs let you create domain-specific classification schemes.
 
 > **Tip 3:** "How would you measure data governance maturity using Purview?" — Use Purview's Data Insights dashboards plus custom metrics: (a) Asset coverage: % of registered data sources that have been scanned, (b) Classification coverage: % of assets with at least one classification applied, (c) Glossary coverage: % of assets linked to a business glossary term, (d) Owner coverage: % of assets with a designated data owner, (e) Lineage coverage: % of assets with at least one lineage edge, (f) Scan freshness: average time since last scan per source. Target maturity: 90%+ scan coverage, 70%+ classification on sensitive sources, 100% PII-classified assets linked to owner. Report monthly in a governance committee.
+
+## ⚡ Cheat Sheet
+
+**Core concepts**
+- Data Map: central graph of all assets, lineage, classifications, glossary
+- Data Catalog: searchable front-end to the Data Map
+- Data Estate Insights: pre-built reports on coverage, classification, lineage gaps
+- Collections: organizational hierarchy; access control boundary
+
+**Scanning**
+```
+Source registration → Scan definition → Scan ruleset (what to classify) →
+Trigger (manual / schedule) → Scan runs → Assets appear in catalog
+```
+- Managed IR: for Azure sources (ADLS, SQL, Synapse) within Microsoft network
+- Self-hosted IR: for on-prem or private VNet sources (same as ADF IR)
+- Incremental scan: only scans changed assets since last scan; faster/cheaper
+
+**Classification**
+- System: 200+ built-in (SSN, credit card, email, IP address via regex + pattern)
+- Custom: define regex + sample data; assign to scan ruleset
+- Classification ≠ sensitivity label: classification = what it is; label = how to protect it
+
+**Sensitivity labels (via Microsoft Purview Information Protection)**
+- Labels flow from M365: Confidential, Public, Internal, Restricted
+- Applied automatically based on classification; requires P1/P2 license
+
+**Lineage sources**
+- Native: ADF, Synapse Pipelines, Azure Data Share (auto-captured)
+- dbt: `dbt-azure-purview` package pushes lineage on `dbt run`
+- Spark: Apache Atlas hooks or custom OpenLineage plugin
+- Custom: REST API `POST /atlas/v2/relationship` for manual lineage injection
+
+**Access control**
+- Collection-level roles: Data Reader, Data Curator, Data Source Admin, Collection Admin
+- No column-level ACL (use Azure SQL/Synapse/Databricks for enforcement)
+
+**Key numbers**
+- Max assets: 10M per account
+- Scan throughput: ~250M objects/scan
+- Pricing: $0.42/asset-unit/month (Data Map); $0.50/vCore-hour (scanning)

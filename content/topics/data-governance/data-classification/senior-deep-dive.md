@@ -240,3 +240,45 @@ def validate_pipeline_classification(
 > **Tip 2:** "How do you handle classification inheritance?" — When silver.orders (internal) feeds gold.orders and includes a new column from a restricted source, the output classification should inherit the highest sensitivity level of any input. Implement sensitivity propagation in lineage-aware classification: walk upstream lineage, take the max sensitivity level.
 
 > **Tip 3:** "What is a data classification policy gate?" — A CI/CD check that prevents deploying a pipeline if classification requirements aren't met. Examples: blocked merge if new columns aren't classified; blocked deployment if a restricted input flows to a public output without masking; required DPO sign-off for any pipeline that processes GDPR-sensitive data. Classification as code — policies enforced at deploy time, not discovered in audit.
+
+## ⚡ Cheat Sheet
+
+**Sensitivity taxonomy**: Public → Internal → Confidential → Restricted
+
+**PII categories**
+- Direct: full name, email, phone, SSN, passport
+- Quasi: user_id + IP + location (combinable to identify)
+- Special (GDPR Art 9): health, biometrics, sexual orientation
+- Financial: credit card, salary, bank account
+
+**Auto-classification**
+```python
+import re
+PII_PATTERNS = {
+    "email": r"^[\w._%+-]+@[\w.-]+\.[a-z]{2,}$",
+    "phone": r"^\+?[1-9]\d{7,14}$",
+    "ssn":   r"^\d{3}-\d{2}-\d{4}$",
+}
+# Combine: col name match + pattern on sample values → confidence score
+# >0.85: auto-tag; <0.85: human review queue
+```
+
+**Snowflake tags**
+```sql
+ALTER TABLE gold.customers MODIFY COLUMN email SET TAG sensitivity = 'restricted';
+ALTER TABLE gold.customers MODIFY COLUMN email SET TAG pii_type = 'email';
+```
+
+**dbt schema.yml**
+```yaml
+columns:
+  - name: email
+    meta: {sensitivity: restricted, pii_type: email}
+    tags: [pii, gdpr]
+```
+
+**Enforcement checklist**
+- Masking policy on all restricted columns
+- No PII in dev/test — use synthetic data
+- CI gate: block new PII columns without tag
+- Quarterly re-scan for drift

@@ -384,3 +384,45 @@ spark.sql("""
 4. **CDF enables efficient incremental processing** — the right tool for Bronze→Silver→Gold propagation; avoids full-table re-scans.
 5. **The transaction log is the table** — understanding JSON add/remove actions and checkpoint behavior explains why Delta reads are fast and how time travel works.
 6. **`deletedFileRetentionDuration`** controls how long you can time travel — set based on your audit and recovery SLA, not the default.
+
+## ⚡ Cheat Sheet
+
+**Z-Ordering Rules**
+- Z-order on columns used in WHERE clauses most frequently
+- Max 4 Z-order columns (diminishing returns beyond 2–3)
+- Z-order must be re-run with `OPTIMIZE` — it does NOT apply to existing files automatically
+- Z-order + partition pruning: partition on low-cardinality (date), Z-order on high-cardinality (customer_id)
+
+**OPTIMIZE & VACUUM**
+```sql
+OPTIMIZE table_name ZORDER BY (col1, col2)  -- compaction + layout
+VACUUM table_name RETAIN 168 HOURS           -- 7 days = safe minimum
+VACUUM table_name RETAIN 0 HOURS DRY RUN     -- preview what would be deleted
+```
+- Default VACUUM retention: 7 days (`delta.deletedFileRetentionDuration`)
+- VACUUM removes files not in transaction log — breaks time travel to before VACUUM
+
+**Transaction Log Key Facts**
+- `_delta_log/` contains JSON commit files (0-indexed) + Parquet checkpoint every 10 commits
+- Checkpoint = full table state snapshot; avoids replaying all JSON files
+- Max JSON files before checkpoint: 10 (configurable via `delta.checkpointInterval`)
+- `DESCRIBE HISTORY table` shows all commits with timestamp, operation, user
+
+**Change Data Feed (CDF)**
+```sql
+ALTER TABLE t SET TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')
+-- Read CDF:
+spark.read.format("delta").option("readChangeFeed","true")
+  .option("startingVersion", 5).load(path)
+-- _change_type column: insert / update_preimage / update_postimage / delete
+```
+
+**Concurrency & Isolation**
+- Delta default: Snapshot Isolation (readers never block writers)
+- Conflict resolution: last writer wins on non-overlapping files; concurrent writes to same partition = conflict
+- `optimisticTransaction().commit()` — use for custom writers
+
+**Interview Traps**
+- `VACUUM` with < 7 day retention requires `spark.databricks.delta.retentionDurationCheck.enabled=false`
+- Z-order is not a B-tree index — it's a space-filling curve layout optimization
+- DML operations (DELETE, UPDATE, MERGE) write new files + mark old as removed; file count grows without OPTIMIZE

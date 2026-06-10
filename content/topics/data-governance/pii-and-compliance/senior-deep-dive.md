@@ -278,3 +278,45 @@ class ComplianceAuditLogger:
 > **Tip 2:** "What is differential privacy and when would you use it?" — A mathematical framework that adds calibrated noise to query results so individual records can't be inferred. Used for: publishing population statistics publicly, training ML models without memorizing individual records (Apple, Google), sharing datasets with external partners. Hard to implement correctly — use vetted libraries (Google DP library, Apple's DP toolset).
 
 > **Tip 3:** "How would you design a consent management system for a data pipeline?" — Consent decisions are stored in a central consent store (user_id → [consented_purposes]). Pipelines query the consent store before processing and filter to consented users only. Consent changes trigger re-evaluation: if user withdraws marketing consent, their data is removed from the next marketing dataset run. Log all consent checks for audit.
+
+## ⚡ Cheat Sheet
+
+**Masking techniques**
+| Technique | Use case | Reversible |
+|---|---|---|
+| Hashing (SHA-256) | Join-compatible anonymization | No |
+| Tokenization | Referential integrity preserved; vault holds real value | Yes |
+| Encryption (AES) | Must retrieve original value | Yes |
+| Redaction | Display only; no analytics possible | No |
+| Generalization | Analytics: age→band, city→region | No |
+| Pseudonymization | GDPR-compliant; consistent fake replaces real | Yes (mapping) |
+
+**GDPR key articles for DE**
+- Art 5: Data minimization — collect only what you need
+- Art 17: Right to erasure — delete within 30 days of request
+- Art 25: Privacy by design — bake privacy into pipelines from day 1
+- Art 30: ROPA — document all data processing activities
+- Art 33: Breach notification — 72 hours to notify supervisory authority
+
+**Erasure checklist (GDPR Art 17)**
+```
+1. DSAR: find all tables via lineage graph
+2. Hard delete from operational tables
+3. Pseudonymize in analytical tables (preserve aggregates)
+4. Add to suppression list (backups retain until expiry)
+5. Notify external processors: email platform, CRM, analytics
+6. Document: who, what, when, request ID
+7. Respond to data subject within 30 days
+```
+
+**Non-prod rule**: Never copy production PII to dev/test. Use Faker, Mimesis, or Gretel.ai for synthetic data.
+
+**PII patterns**
+```python
+import re
+PATTERNS = {
+    "email": r"^[\w._%+-]+@[\w.-]+\.[a-z]{2,}$",
+    "phone": r"^\+?[1-9]\d{7,14}$",
+    "ssn":   r"^\d{3}-\d{2}-\d{4}$",
+}
+```

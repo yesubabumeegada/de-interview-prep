@@ -274,3 +274,45 @@ spark.conf.set("spark.shuffle.service.enabled", "true")
 > **Tip 2:** "Explain the small files problem and how to fix it." — "Small files (< 10MB) cause poor performance because: (1) excessive metadata operations on the storage layer (S3 listing, HDFS NameNode), (2) high parallelism overhead (too many tasks for too little data), and (3) suboptimal compression. Fix with coalesce before write, maxRecordsPerFile option, Delta Lake auto-optimize, or a compaction job that rewrites small files into larger ones."
 
 > **Tip 3:** "How does data locality work in Spark?" — "On HDFS, Spark prefers to schedule tasks where the data already lives — PROCESS_LOCAL (same JVM) is best, followed by NODE_LOCAL (same machine), RACK_LOCAL, then ANY. Spark waits up to spark.locality.wait seconds for local slots before accepting worse locality. On cloud storage (S3/GCS), there's no locality benefit since all reads go over the network regardless — there, partition count is purely about parallelism and file size."
+
+## ⚡ Cheat Sheet
+
+**Partition Count Rules**
+- Target partition size: 128–256MB (Parquet compressed)
+- Processing partitions: 2–4× total cores (for CPU utilization)
+- `spark.sql.shuffle.partitions` default = 200; tune to data size (too high = too many small tasks)
+- Post-shuffle: `advisoryPartitionSizeInBytes=64MB` with AQE to auto-coalesce
+
+**Partitioning APIs**
+```python
+df.repartition(n)               # hash partition, causes shuffle, even distribution
+df.repartition(n, "col")        # hash by column, used before joins
+df.repartitionByRange(n, "col") # range partition, good for sorted writes/bucketed joins
+df.coalesce(n)                  # reduce only, no shuffle (may create uneven partitions)
+```
+
+**Write-Time Partitioning**
+```python
+df.write.partitionBy("date", "region").parquet(path)
+# Creates directory structure: date=2024-01-01/region=US/part-0000.parquet
+# Rule: partition column cardinality × files per partition × file size = total files
+# Too many partitions = small files problem; target 1-5 files per partition directory
+```
+
+**Bucketing**
+- `bucketBy(N, "col")` — must use `saveAsTable()` (not `write.parquet()`)
+- Bucket count N: choose power of 2, consistent across joining tables
+- Benefits: eliminates shuffle on joins AND sorts on aggregations by the bucket key
+- `spark.sql.sources.bucketing.enabled=true` (default) — disable only if debugging
+
+**Small Files Problem**
+| Cause | Symptom | Fix |
+|-------|---------|-----|
+| Over-partitioned writes | Millions of tiny files | Coalesce before write, use AQE coalesce |
+| Streaming micro-batches | File accumulation | Delta OPTIMIZE on schedule |
+| Too many `partitionBy` columns | Explosion of directories | Reduce to 1–2 partition columns |
+
+**Interview Traps**
+- `partitionBy("date")` at write time is for storage layout, NOT in-memory partitioning
+- Changing `spark.sql.shuffle.partitions` mid-job has no effect on already-planned stages
+- Bucket join requires exact same N buckets on BOTH sides — different bucket counts = shuffle happens anyway

@@ -255,3 +255,43 @@ glue.create_security_configuration(
 > **Tip 2:** "How do you handle schema evolution in Glue?" — "DynamicFrame handles mixed types gracefully (resolveChoice for ambiguous columns). For catalog schema updates: crawlers detect new columns automatically, or manually add columns with ALTER TABLE. For downstream compatibility: only add columns (backward compatible), never remove or rename without versioning."
 
 > **Tip 3:** "Describe a production Glue pipeline" — "Schedule triggered by EventBridge (when upstream data is ready). Job reads from catalog with partition pushdown. Bookmarks ensure incremental processing. DynamicFrame reads, converts to DataFrame for transforms. Quality checks (DQDL rules) validate output. Write to Iceberg table in curated zone. Catalog auto-updated. CloudWatch alerts on failure."
+
+## ⚡ Cheat Sheet
+
+**Worker Types & Cost**
+| Worker | vCPU | Memory | Price/DPU-hr |
+|---|---|---|---|
+| Standard | 4 | 16 GB | $0.44 |
+| G.1X | 4 | 16 GB | $0.44 |
+| G.2X | 8 | 32 GB | $0.88 |
+| G.4X | 16 | 64 GB | $1.76 |
+- Auto-scaling (Glue 3.0+): set `NumberOfWorkers=2` (min) + `MaxCapacity=50`; pay only for DPU-time used
+
+**Bookmark Gotchas**
+- Works on: S3 file modification time, JDBC monotonic timestamp column
+- Does NOT work on: overwritten files, sources without monotonic keys
+- Reset bookmark to reprocess: `glue.reset_job_bookmark(JobName='...')`
+- Custom high-water mark in DynamoDB for per-partition or per-date control
+
+**Glue vs Alternatives**
+| | Glue | EMR | Lambda | Athena CTAS |
+|---|---|---|---|---|
+| Max duration | 48 hr | Unlimited | 15 min | Query timeout |
+| Best for | Med ETL (GB–TB) | TB+, custom tools | Small transforms | SQL transforms |
+| Cost model | DPU-hr | EC2-hr | Per invocation | Per TB scanned |
+
+**Common Failures & Fixes**
+- `OutOfMemoryError` → upgrade to G.2X or add workers
+- `Connection refused` (JDBC) → Glue connection must have self-referencing SG rule (ALL TCP from itself)
+- `S3 Access Denied` → check Glue IAM role (needs `s3:GetObject`, `s3:PutObject`, `s3:ListBucket`)
+- `Schema mismatch` → use `DynamicFrame.resolveChoice()` or update catalog with `ALTER TABLE`
+
+**Iceberg Integration (Glue 4.0)**
+- Read: `create_dynamic_frame.from_catalog(..., "useSparkDataSourceFormat": True)`
+- Write: `spark.sql("MERGE INTO ... USING ... WHEN MATCHED ... WHEN NOT MATCHED ...")`
+- Time travel: `SELECT * FROM table FOR SYSTEM_TIME AS OF '2024-01-15 10:00:00'`
+
+**Security Best Practices**
+- Always use `SecurityConfiguration` with SSE-KMS for S3, CloudWatch, and bookmarks
+- VPC connection for private data sources: subnet + SG with self-referencing rule + NAT GW or VPC endpoint for S3
+- Triggered by EventBridge (data-ready event) > fixed schedule (avoids wasted runs)

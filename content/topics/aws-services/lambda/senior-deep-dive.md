@@ -308,3 +308,40 @@ scenarios = {
 > **Tip 2:** "How do you handle partial failures in Kinesis-triggered Lambda?" — "Enable ReportBatchItemFailures in the event source mapping. The handler returns a list of failed sequence numbers. Lambda only retries those specific records instead of the entire batch. Combined with BisectBatchOnFunctionError, this prevents one poison message from blocking an entire shard."
 
 > **Tip 3:** "When does Lambda become more expensive than containers?" — "Lambda cost scales linearly with invocations and duration. At roughly 50% continuous utilization or 1M+ daily invocations with long durations (>5s), Fargate becomes cheaper. The crossover depends on memory and duration — run the math for your specific workload. Lambda's value is zero cost at idle and instant scaling, not raw compute efficiency."
+
+## ⚡ Cheat Sheet
+
+**Cold Start Phases & Reduction**
+1. Download code (50–200 ms) → smaller package
+2. Runtime init (100–500 ms) → ARM64 is 10–20% faster
+3. Module-level init (variable) → lazy imports for heavy libs (pandas, numpy)
+4. Handler execution → no optimization needed here
+- SnapStart (Java only): eliminates phases 1–3 via Firecracker snapshot → 200–400 ms from 5–10 s
+
+**Memory → CPU Mapping**
+- 128 MB = 0.08 vCPU; 1769 MB = 1.0 vCPU; 3538 MB = 2.0 vCPU; 10240 MB = 6.0 vCPU
+- Python GIL: threading won't parallelize CPU work → use `ProcessPoolExecutor` above 3538 MB
+- I/O bound (API calls): 256–512 MB sufficient; CPU-bound (ML inference): 3008–10240 MB
+
+**Concurrency Key Numbers**
+- Account default limit: 1,000 concurrent executions (can request increase)
+- Reserved concurrency: guarantees capacity AND caps max (protects other functions)
+- Provisioned concurrency: pre-warmed instances; ~$13/month per pre-warmed 1 GB instance
+- Kinesis: 100 shards × `ParallelizationFactor=5` = 500 max concurrent → set reserved concurrency
+
+**Cost Break-Even Rules**
+- Lambda wins: sporadic/bursty, <30% continuous utilization
+- Fargate wins: steady 30–70% utilization
+- EC2 wins: >70% continuous, GPU, or custom hardware
+- Rule of thumb: if Lambda runs >50% of the time continuously, move to Fargate (2–5× cheaper)
+
+**Event Source Mapping (Kinesis/DDB Streams) Critical Settings**
+- `BisectBatchOnFunctionError: true` — splits failing batch in half to isolate bad records
+- `FunctionResponseTypes: ["ReportBatchItemFailures"]` — partial batch failure (only retry failed records)
+- `ParallelizationFactor: 1–10` — parallel batches per shard
+- `MaximumRetryAttempts: 3` + `OnFailure DLQ` — after retries exhausted, send to DLQ
+
+**Pricing (ARM64, 1 GB memory)**
+- $0.0000133334/GB-s + $0.0000002/request
+- 1M invocations × 10 s = $133.53/month; 10M = $1,335/month
+- First 1M requests/month free; first 400,000 GB-s/month free

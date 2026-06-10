@@ -215,3 +215,46 @@ Velox (Meta, open-sourced 2022):
 > **Tip 2:** "How does Trino handle queries that don't fit in memory?" — Trino spills to disk via "spilling" for hash joins and aggregations when memory is exhausted. Configure: `spill-enabled=true`, `spill-path=/data/spill`. Without spilling: Trino throws `ExceededMemoryLimitException`. With spilling: query completes but with disk I/O overhead (slower). For very large datasets: use Spark (designed for disk spilling from the start) or pre-aggregate in Spark, then serve summary results through Trino.
 
 > **Tip 3:** "When would you use Flink over Spark for batch processing?" — Rarely. Spark is the standard for batch. But: Flink's batch execution (DataSet API or Flink SQL in BATCH mode) is competitive for: jobs with large state that doesn't fit in Spark's executor memory (Flink's state backend scales to TB via RocksDB), or pipelines that need to switch seamlessly between streaming and batch (same Flink SQL logic). In practice: most teams use Spark for batch, Flink for streaming, and accept the operational cost of maintaining two runtimes.
+
+## ⚡ Cheat Sheet
+
+**Engine comparison**
+| Engine | Latency | Scale | Best for |
+|---|---|---|---|
+| Spark SQL | Minutes | PB | Large batch ETL, ML |
+| Trino/Presto | Seconds | TB | Interactive ad hoc |
+| Flink | Milliseconds | PB streaming | Stateful streaming |
+| DuckDB | Milliseconds | GB (single node) | Local dev, embedded analytics |
+| Databricks SQL | Seconds | PB | Delta Lakehouse BI |
+
+**Predicate pushdown**
+```python
+# Good — Spark pushes filter to Parquet reader (skips row groups)
+df.filter(df.order_date > "2024-01-01")
+# Bad — computed column breaks pushdown
+df.withColumn("year", year("order_date")).filter("year = 2024")
+```
+
+**Adaptive Query Execution (AQE) — Spark 3+**
+```python
+spark.conf.set("spark.sql.adaptive.enabled", "true")      # default true in Spark 3
+spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", "true")
+# AQE: repartitions mid-query based on actual data sizes; auto-broadcasts small tables
+```
+
+**Vectorized execution**
+- Databricks Photon: C++ vectorized engine, 4-10x faster than JVM for SQL workloads
+- DuckDB: columnar vectorized from ground up
+- Apache Arrow: in-memory columnar format enabling zero-copy between engines
+
+**Cost-based optimizer (CBO)**
+```sql
+ANALYZE TABLE gold.orders COMPUTE STATISTICS FOR ALL COLUMNS;
+-- CBO uses min/max/null counts to choose join order and strategy
+```
+
+**Key interview points**
+- MPP: each worker processes a data shard; coordinator merges results
+- Federation: Trino can join Snowflake + S3 + PostgreSQL in one SQL query
+- Broadcast join: replicate small table to all workers (avoids shuffle)
+- Partition pruning: filter on partition column → skip entire partitions

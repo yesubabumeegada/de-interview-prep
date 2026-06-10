@@ -205,3 +205,72 @@ dbt test --record-timing-info timing.json
 ```
 
 Tests that take > 30 seconds suggest missing indexes or poor query design — investigate and optimize.
+
+## ⚡ Cheat Sheet
+
+**Built-in generic tests**
+```yaml
+columns:
+  - name: order_id
+    tests:
+      - not_null
+      - unique
+      - accepted_values:
+          values: ['pending', 'shipped', 'delivered', 'cancelled']
+      - relationships:
+          to: ref('dim_customers')
+          field: customer_id
+```
+
+**Custom singular test**
+```sql
+-- tests/assert_positive_revenue.sql
+-- Test fails if this query returns any rows
+SELECT order_id, revenue
+FROM {{ ref('fct_orders') }}
+WHERE revenue < 0
+```
+
+**Custom generic test**
+```sql
+-- tests/generic/is_positive.sql
+{% test is_positive(model, column_name) %}
+SELECT {{ column_name }} FROM {{ model }} WHERE {{ column_name }} < 0
+{% endtest %}
+-- Usage: tests: [is_positive]
+```
+
+**dbt-expectations package**
+```yaml
+tests:
+  - dbt_expectations.expect_column_values_to_be_between:
+      min_value: 0
+      max_value: 1000000
+  - dbt_expectations.expect_table_row_count_to_be_between:
+      min_value: 1000
+  - dbt_expectations.expect_column_proportion_of_unique_values_to_be_between:
+      min_value: 0.99  # 99% unique
+```
+
+**Test severity and thresholds**
+```yaml
+tests:
+  - not_null:
+      config:
+        severity: warn      # warn | error (default: error)
+        error_if: ">100"    # fail if >100 rows fail
+        warn_if: ">10"      # warn if >10 rows fail
+```
+
+**Test selection**
+```bash
+dbt test --select my_model          # tests on single model
+dbt test --select source:app_db     # source freshness + column tests
+dbt test --select test_type:generic # all generic tests
+dbt build --select +my_model        # run + test model + all upstream
+```
+
+**CI test strategy**
+- PR: `dbt build --select state:modified+` — only changed models + downstream
+- Nightly: full `dbt build` on production dataset
+- Severity: `not_null` + `unique` on PKs → error; distribution tests → warn

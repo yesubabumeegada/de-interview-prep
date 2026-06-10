@@ -328,3 +328,37 @@ stateDiagram-v2
 > **Tip 2:** For system design questions involving connection pools, describe the context manager interface as the API contract. Explain why `with pool.acquire() as conn` is superior to manual `conn = pool.get()` / `pool.release(conn)` — it eliminates an entire class of resource leak bugs caused by forgotten releases in error paths.
 
 > **Tip 3:** Know the difference between reusable and single-use context managers. A `@contextmanager` generator is single-use (generator exhausts), while a class-based CM can be reused. This matters when designing pipeline components that need to be invoked multiple times across DAG tasks.
+
+## ⚡ Cheat Sheet
+
+**Protocol Contract**
+- `__enter__` → acquires resource, returns value bound to `as` variable
+- `__exit__(exc_type, exc_val, exc_tb)` → always called; return `True` to suppress exception
+- `@contextmanager` generator: `yield` = `__enter__` point; code after `yield` = `__exit__`
+- `@contextmanager` is single-use (generator exhausts); class-based CM can be reused
+
+**Connection Pool Pattern**
+- `Queue(maxsize=N)` as pool storage — `get(timeout=T)` blocks until connection available
+- `_is_healthy(conn)`: call `ping()` / `SELECT 1` before yielding; replace dead connection
+- Pool exhausted → `TimeoutError` with clear message (better than silent hang)
+- `finally: pool.put(conn)` — always return connection, even on exception
+
+**Transaction / Savepoint**
+- Outer `with tm.transaction()` → `BEGIN` / `COMMIT` or full `ROLLBACK`
+- Nested `with tm.transaction()` → `SAVEPOINT` / `RELEASE` or `ROLLBACK TO SAVEPOINT`
+- Check `conn.in_transaction` to detect nesting level
+
+**ExitStack (Composable Resources)**
+- `ExitStack.enter_context(cm)` — register any CM; all cleaned up when stack exits
+- `ExitStack.callback(fn, *args)` — register plain functions as cleanup steps
+- Use `PipelineContext` wrapping `ExitStack` for named resource access by key
+
+**Testing Context Managers**
+- Mock `__enter__` / `__exit__` on `MagicMock()` — `return_value.__enter__ = MagicMock()`
+- Access unwrapped function via `func.__wrapped__` (set by `@functools.wraps`)
+- Test timeout path: use `timeout=0.1` and hold the pool exhausted in a nested `with`
+
+**Key Rules**
+- Always use `with` (never manual acquire/release) — eliminates resource leaks in error paths
+- `__exit__` is called even if `__enter__` raises — design accordingly
+- Class-based CM needed if: reusable, needs state between enter/exit, or used as decorator

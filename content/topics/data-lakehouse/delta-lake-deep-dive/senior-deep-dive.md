@@ -219,3 +219,47 @@ spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
 > **Tip 2:** "What are deletion vectors and when do they outperform COW rewrites?" — DVs are bitmaps marking deleted/updated row positions, stored as tiny files alongside Parquet. They outperform COW when: deletes are sparse (scattered across many files), files are large (128MB+ — expensive to rewrite), and read traffic is manageable (reads must apply DV filter). DVs are like Iceberg V2 row-level deletes. The rule: for high-frequency targeted row deletions, DVs or MOR are faster than COW; for bulk partition-level deletes, COW (partition overwrite) is still fastest.
 
 > **Tip 3:** "Explain UniForm and why it matters for the lakehouse ecosystem." — UniForm writes Delta and automatically generates Iceberg (and optionally Hudi) metadata from the same physical Parquet files. This means: one copy of data, readable by Spark (Delta native), Trino (via Iceberg connector), Flink (via Iceberg connector), and Athena (via Iceberg on Glue). It ends the "format wars" for Databricks users — you commit to Delta internally but expose an Iceberg interface to the rest of the ecosystem. This significantly reduces the "buy Databricks or lose portability" tension.
+
+## ⚡ Cheat Sheet
+
+**Transaction log**: `_delta_log/000...000.json` per commit; checkpointed to `.parquet` every 10 commits
+
+**Upsert (MERGE)**
+```python
+from delta.tables import DeltaTable
+dt = DeltaTable.forPath(spark, "s3://bucket/orders")
+dt.alias("t").merge(updates.alias("s"), "t.order_id = s.order_id") \
+    .whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
+```
+
+**Time travel**
+```python
+spark.read.format("delta").option("versionAsOf", 5).load(path)
+spark.read.format("delta").option("timestampAsOf", "2024-01-15").load(path)
+```
+
+**Optimize and Z-order**
+```python
+dt.optimize().executeCompaction()
+dt.optimize().executeZOrderBy("customer_id", "order_date")
+dt.vacuum(retentionHours=168)  # default 7 days
+```
+
+**Schema evolution**
+```python
+# Enforced by default; enable evolution with:
+df.write.format("delta").option("mergeSchema", "true").mode("append").save(path)
+```
+
+**Change Data Feed (CDF)**
+```sql
+ALTER TABLE orders SET TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true');
+SELECT * FROM table_changes('orders', 2, 5);
+-- _change_type: insert | update_preimage | update_postimage | delete
+```
+
+**Key interview points**
+- ACID via optimistic concurrency: conflicts on overlapping writes
+- Z-ordering: data skipping by co-locating values — not a sort, not partitioning
+- Delta = Parquet + transaction log + column statistics
+- Auto-optimize (Databricks): auto-compacts small files on write

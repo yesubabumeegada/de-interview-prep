@@ -171,3 +171,59 @@ EOF
 ```
 
 Mart models with no exposure are candidates for deprecation — they may be unused.
+
+## ⚡ Cheat Sheet
+
+**Exposure YAML**
+```yaml
+exposures:
+  - name: revenue_dashboard
+    type: dashboard          # dashboard | notebook | analysis | ml | application
+    maturity: high           # low | medium | high
+    url: https://...
+    description: "..."
+    depends_on:
+      - ref('fct_orders')
+      - ref('dim_customers')
+    owner:
+      name: Revenue Team
+      email: revenue@company.com
+```
+
+**Why exposures matter**
+- `dbt ls --select +exposure:revenue_dashboard`: find ALL upstream models feeding a dashboard
+- Impact analysis: change a model → check which exposures are affected before deploying
+- `dbt docs generate`: exposures appear in lineage graph with downstream context
+
+**MetricFlow (dbt 1.6+)**
+```yaml
+metrics:
+  - name: revenue
+    type: simple
+    label: "Total Revenue"
+    type_params:
+      measure:
+        name: order_amount
+        fill_nulls_with: 0
+    filter: "{{ Dimension('order__status') }} = 'completed'"
+```
+
+**Semantic layer query**
+```python
+# dbt Cloud semantic layer API
+from dbt_sl_sdk import SemanticLayerClient
+results = client.query(metrics=["revenue"], group_by=["metric_time__week"])
+```
+
+**Metric types**
+| Type | Formula | Example |
+|---|---|---|
+| `simple` | Single measure | total revenue |
+| `ratio` | numerator / denominator | conversion rate |
+| `cumulative` | Running total | YTD revenue |
+| `derived` | Expression over other metrics | gross margin % |
+
+**Key governance value**
+- Exposures: document the "last mile" so engineers know blast radius before changes
+- MetricFlow: single metric definition → consistent numbers across all BI tools
+- Combine: exposure → metric → dimension = full semantic contract from source to dashboard

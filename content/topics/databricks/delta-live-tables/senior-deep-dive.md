@@ -305,3 +305,47 @@ ORDER BY timestamp DESC;
 > **Tip 2:** "How does DLT handle failures in production?" — Automatic retry for transient failures (network, API). For persistent failures: pipeline stops, alert fires, you fix the issue, re-run (picks up from last checkpoint). For data quality failures: `expect_or_drop` quarantines bad rows without stopping. `expect_or_fail` stops only on critical violations.
 
 > **Tip 3:** "DLT performance optimization?" — Enable Photon (2-8x faster), use streaming tables for incremental processing, configure auto-compact and optimize-write (prevent small files), Z-ORDER on frequently filtered columns, and right-size the cluster (auto-scale with appropriate min/max). Monitor via event log: duration trends show if optimization is needed.
+
+## ⚡ Cheat Sheet
+
+**Table types**
+| Type | Decorator | Materialized | Recompute |
+|---|---|---|---|
+| Streaming table | `@dlt.table` + `read_stream` | Yes (Delta) | Incremental |
+| Materialized view | `@dlt.table` + `read` | Yes (Delta) | On refresh |
+| View | `@dlt.view` | No | Each query |
+
+**Expectations (data quality)**
+```python
+@dlt.expect("valid_id", "id IS NOT NULL")           # warn only
+@dlt.expect_or_drop("valid_id", "id IS NOT NULL")   # drop failing rows
+@dlt.expect_or_fail("valid_id", "id IS NOT NULL")   # fail pipeline
+@dlt.expect_all({"rule1": "col > 0", "rule2": "col < 1000"})
+```
+
+**Pipeline modes**
+- Triggered: runs once on schedule; processes new data only (streaming tables)
+- Continuous: low-latency streaming; keeps cluster running
+- Development mode: skips retries; faster iteration; no production use
+
+**Change data capture**
+```python
+dlt.apply_changes(
+    target="target_table",
+    source="cdc_feed",
+    keys=["id"],
+    sequence_by="timestamp",
+    apply_as_deletes=expr("op = 'DELETE'"),
+    stored_as_scd_type="2"   # or "1"
+)
+```
+
+**Lineage and observability**
+- Auto lineage: DLT tracks source → target in Unity Catalog
+- Event log: `SELECT * FROM event_log(TABLE(pipeline_id))` — quality metrics per batch
+- `expectations` in event log: pass/fail counts per rule per update
+
+**Cost rules**
+- DLT pipelines: priced at DBU × tier (core/pro/advanced); advanced required for SCD Type 2
+- Use triggered mode for batch; continuous only when latency < 5 minutes matters
+- Cluster policies: apply at pipeline settings to cap instance types

@@ -321,3 +321,39 @@ dynamodb_client.create_backup(
 > **Tip 2:** "How do you handle hot partitions in DynamoDB?" — "Three approaches: (1) Write sharding — append a random suffix to the hot key, then scatter-gather on reads. (2) DAX cache — absorb read spikes in-memory. (3) On-demand capacity mode — handles bursts up to double previous peak automatically. DynamoDB also has built-in adaptive capacity that redistributes throughput to hot partitions. For extreme cases, redesign the key to distribute load more evenly."
 
 > **Tip 3:** "DynamoDB cost optimization at high scale?" — "The biggest lever is switching from on-demand to provisioned with auto-scaling (4-7x savings at steady traffic). Add reserved capacity for another 23% off. Use ProjectionExpression to read only needed attributes. TTL old data automatically. DAX reduces read cost for repeated access patterns. At 50K+ RPS, the difference between on-demand and provisioned is tens of thousands of dollars monthly."
+
+## ⚡ Cheat Sheet
+
+**Key Design Rules**
+- Define ALL access patterns before designing keys — key design is immutable
+- Generic PK/SK with prefix notation: `PK=ENTITY#id`, `SK=TYPE#timestamp`
+- Composite SK enables range queries within a partition for free (strongly consistent)
+- GSI: flexible but eventually consistent, costs extra throughput — limit to 3–5 per table
+
+**Hot Partition Solutions**
+- Write sharding: append `#SHARD#N` suffix (0–9) to hot PK; scatter-gather on read
+- Adaptive capacity: DynamoDB auto-redistributes throughput to hot partitions (built-in)
+- DAX: absorb read spikes in-memory; minimum 3 nodes at ~$0.27/hr each
+
+**DAX Fit Check**
+- Good: read:write >10:1, same items repeatedly read, microsecond latency required
+- Bad: write-heavy, every read unique, low-traffic table (overkill)
+
+**Cost Levers (biggest first)**
+1. On-Demand → Provisioned + auto-scaling: 4–7× savings at steady traffic
+2. Reserved Capacity (1-yr): additional 23% off provisioned
+3. TTL: auto-delete old records → reduces storage cost
+4. ProjectionExpression: read only needed attributes (reduces RCU)
+5. DAX: reduces read cost for repeated patterns
+
+**Key Numbers**
+- On-demand: $0.25/million reads, $1.25/million writes
+- Provisioned: $0.00013/RCU-hr, $0.00065/WCU-hr
+- PITR: $0.20/GB/month, 35-day retention, restores to new table
+- Global Tables: replicated write = 1 WCU × N regions (plan for 3× write cost)
+- Item max size: 400 KB
+
+**Streams + Lambda**
+- StreamViewType: `NEW_AND_OLD_IMAGES` for full before/after diff
+- Use sequence number as dedup key in DynamoDB (conditional `attribute_not_exists`) for exactly-once
+- Fan out from stream → EventBridge + Kinesis + S3 for downstream systems

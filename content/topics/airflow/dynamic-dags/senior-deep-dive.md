@@ -338,3 +338,55 @@ Config management:
 > **Tip 2:** "How do you test a dynamic DAG?" — "Three levels: (1) parse test — load the DAG via DagBag and assert no import errors; (2) structure test — verify task IDs, dependencies, and trigger rules are correct for a known config input (mock the config source); (3) function test — test the discovery/mapping functions independently, ensuring they return the correct data format for expand()."
 
 > **Tip 3:** "What happens if a config changes while a DAG run is in progress?" — "Airflow uses the task structure that was valid when the DAG run was created. Mid-run config changes to loop-based DAGs can cause confusion in the UI (tasks may appear as 'removed'). For dynamic task mapping, the mapped instances are determined when the upstream task completes — so a config change mid-run only affects runs that start after the change. The safest pattern is to snapshot the config at the start of each DAG run via XCom, so all downstream tasks work from the same snapshot."
+
+## ⚡ Cheat Sheet
+
+**Parse Cycle Numbers**
+- Default `min_file_process_interval` = 30s → every DAG file parsed **2,880 times/day**
+- `dag_file_processor_timeout` = 50s → parse killed if longer
+- Target: parse time **< 1 second**; > 30s risks missed schedules
+- Verify: `time python /opt/airflow/dags/my_dag.py`
+
+**What's Safe vs Dangerous at Module Level**
+| Code | Safety | Why |
+|---|---|---|
+| `open('config.json')` | ✅ OK | Filesystem is fast |
+| `Variable.get('tables')` | ✅ Acceptable | Airflow caches Variables |
+| `requests.get('http://api/...')` | ❌ Dangerous | HTTP call × 2,880/day |
+| `db_cursor.execute('SELECT...')` | ❌ Very dangerous | DB query × 2,880/day |
+
+**Eager vs Lazy Task Generation**
+| | Eager (loop at parse) | Lazy (dynamic task mapping) |
+|---|---|---|
+| Task objects at parse | N per parse cycle | 2 (fixed) |
+| DB queries/day | N × 2,880 | ~runs_per_day |
+| Config change | Requires re-parse | Evaluated at runtime |
+| Airflow version | All | 2.3+ |
+
+**Dynamic Task Mapping Pattern**
+```python
+discover = PythonOperator(task_id='get_list', python_callable=get_list)
+process = PythonOperator.partial(task_id='process', python_callable=fn).expand(
+    op_kwargs=discover.output.map(lambda t: {'item': t})
+)
+```
+
+**Production Checklist**
+- ☐ No DB/HTTP calls at module level
+- ☐ Parse time < 1s (`time python dag_file.py`)
+- ☐ Task IDs unique (tested via DagBag)
+- ☐ Task count < 250 per DAG (or use mapping)
+- ☐ `max_active_tis_per_dag` set on mapped tasks
+- ☐ Config is versioned (not mutable in place)
+
+**Config Snapshot Pattern (Safe Mid-Run Changes)**
+```python
+# First task snapshots config → returns via XCom
+# All downstream tasks use XCom snapshot, not live config file
+# Config change mid-run only affects runs that start AFTER the change
+```
+
+**Testing Dynamic DAGs — Three Levels**
+1. **Parse test**: `DagBag.import_errors == 0`
+2. **Structure test**: task IDs, dependency ordering, trigger rules — with mocked config
+3. **Function test**: discovery/mapping functions return correct format for `expand()`

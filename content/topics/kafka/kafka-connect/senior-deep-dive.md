@@ -254,3 +254,46 @@ With `auto.register.schemas=true`, the connector registers schema changes automa
 > **Tip 4:** For Debezium connectors, the offset stored is the binlog position (MySQL) or WAL LSN (PostgreSQL) — not a Kafka offset. This is why resetting is complex: you're resetting the CDC cursor, not a Kafka consumer offset.
 
 > **Tip 5:** The three Connect internal topics (`connect-configs`, `connect-offsets`, `connect-status`) are the cluster's brain. Losing them without backup means losing all connector configs. In production, these must have replication factor 3 and regular backups.
+
+## ⚡ Cheat Sheet
+
+**Task Lifecycle Contract**
+- `taskConfigs(maxTasks)` → how source connector splits work; return N config maps for N tasks
+- `poll()` → must embed `sourcePartition + sourceOffset` in each `SourceRecord`; no side effects before flush
+- `flush(offsets)` → ONLY place to commit to external system (S3 close, DB ack); called after successful Kafka publish
+
+**Internal Topic Requirements (Required RF=3)**
+| Topic | Purpose |
+|---|---|
+| `connect-configs` | Connector/task configs (RF=3, compacted) |
+| `connect-offsets` | Source connector offsets (RF=3, compacted, 25 partitions) |
+| `connect-status` | Task/connector states (RF=3, compacted) |
+- Underprovision RF → connector can't start or loses offset state
+
+**Debezium Offset Meaning**
+- MySQL: `binlog.file + binlog.position` (or GTID)
+- PostgreSQL: WAL LSN value
+- MongoDB: resume token (oplog timestamp + resume position)
+- On restart: connector resumes from stored offset; no re-read if offset topic intact
+
+**SMT (Single Message Transform) Performance Rules**
+- SMTs run synchronously in the task thread → complex chains slow throughput
+- Heavy transforms (regex, external lookups) → push to Streams/consumer instead
+- ExtractField, MaskField, ReplaceField: cheap → fine in SMT chain
+- Flatten (nested STRUCT): moderate; limit nesting depth
+
+**Converters Decision**
+- `JsonConverter` with `schemas.enable=false`: compact, no schema evolution
+- `AvroConverter`: Schema Registry required; full evolution; best for production
+- `ByteArrayConverter`: pass-through for binary; use for custom serialization
+
+**Sink Connector Error Handling**
+```json
+{
+  "errors.tolerance": "all",
+  "errors.log.enable": true,
+  "errors.log.include.messages": true,
+  "errors.deadletterqueue.topic.name": "connector-dlq",
+  "errors.deadletterqueue.topic.replication.factor": 3
+}
+```

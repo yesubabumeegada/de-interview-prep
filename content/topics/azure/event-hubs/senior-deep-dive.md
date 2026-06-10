@@ -203,3 +203,45 @@ async def high_throughput_producer(events: list, namespace: str, eventhub: str):
 > **Tip 2:** "What's Event Hubs Federation and when would you use it?" — Federation is active-active replication between Event Hubs namespaces in different regions using Azure Functions as the replication task. Unlike Geo-DR (which only replicates namespace metadata, not events), Federation replicates the actual event stream. Use cases: (a) multi-region latency optimization (producers write to nearest region, events replicated to all regions), (b) disaster recovery with full event data (RPO ~ seconds instead of "all events since failover"), (c) consolidation (aggregate events from multiple regions into one central namespace for global analytics). Cost: Azure Functions compute + cross-region egress bandwidth.
 
 > **Tip 3:** "When should you use Event Hubs Premium over Standard tier?" — Standard tier is sufficient for: moderate throughput (<100 MB/sec), up to 32 partitions, 7-day retention. Choose Premium when: (a) throughput >100 MB/sec (Premium is drastically cheaper per MB at scale), (b) retention >7 days (up to 90 days in Premium), (c) need Schema Registry (included in Premium, add-on for Standard), (d) compliance requiring dedicated compute isolation, (e) large consumer count (Premium supports 100+ consumer groups vs Standard's 20). The pricing crossover: above ~50 TUs, Premium PUs become cheaper per MB/sec.
+
+## ⚡ Cheat Sheet
+
+**Pricing tiers**
+| Tier | Partitions | Retention | Capture | Throughput |
+|---|---|---|---|---|
+| Basic | 32 | 1 day | No | 1 TU = 1 MB/s in, 2 MB/s out |
+| Standard | 32 | 7 days | Yes ($0.028/hr) | 1 TU = 1 MB/s in, 2 MB/s out |
+| Premium | 100 | 90 days | Yes | Processing units (PU), dedicated |
+| Dedicated | Unlimited | 90 days | Yes | Capacity units (CU) |
+
+**Partitions and consumer groups**
+- Partition count: set at creation; immutable; determines max parallelism
+- Consumer group: independent read cursor per namespace; up to 20 per Event Hub (Standard)
+- Partition key: same key → same partition; ensures ordering for that key
+- Parallel consumers: max 1 consumer per partition per consumer group
+
+**Capture to ADLS/Blob**
+```
+Event Hubs Capture → Avro files every N minutes or M MB
+Path pattern: {Namespace}/{EventHub}/{PartitionId}/{Year}/{Month}/{Day}/{Hour}/{Minute}/{Second}
+```
+
+**Kafka compatibility**
+- Event Hubs Standard+ exposes Kafka endpoint (port 9093)
+- No code change needed — set bootstrap server to `<namespace>.servicebus.windows.net:9093`
+- SASL/OAUTHBEARER: use connection string as password
+- Partition count maps 1:1 with Kafka partitions
+
+**Offset management**
+- Checkpoint: consumer saves offset to ADLS/Blob; recovery resumes from last checkpoint
+- EventProcessorClient: handles load balancing + checkpointing automatically
+- StartPosition: `Earliest` (from start), `Latest` (new only), specific offset/timestamp
+
+**Throughput units (TU) sizing**
+- 1 TU = 1 MB/s ingress + 2 MB/s egress + 1M events/day
+- Auto-inflate: automatically increases TU up to max; never decreases (set max carefully)
+- Throttling: `ServerBusyException` → increase TU or use Premium/Dedicated
+
+**Event Hubs vs Service Bus**
+- Event Hubs: high-volume telemetry, log streaming, event sourcing → multiple consumers
+- Service Bus: transactional messaging, ordered delivery, dead-letter, sessions → single consumer

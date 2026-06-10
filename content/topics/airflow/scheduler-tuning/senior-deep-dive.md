@@ -237,3 +237,48 @@ with DAG('priority_demo', ...) as dag:
 > **Tip 2:** The HA scheduler (Airflow 2.0+) uses `SELECT FOR UPDATE SKIP LOCKED` — a PostgreSQL and MySQL feature. This means HA schedulers require a database that supports row-level locking. SQLite (used in dev) cannot run HA mode. Always ask about the metadata DB when discussing scheduler performance in interviews.
 
 > **Tip 3:** Zombie detection is a common source of unexpected task failures in production. If your cluster is under high load, tasks can miss their heartbeat window even though the worker is still alive. Tune `scheduler_zombie_task_threshold` to be significantly higher than `execution_timeout` to avoid false-positive zombie detection.
+
+## ⚡ Cheat Sheet
+
+**Three-Phase Scheduler Loop**
+1. **Parse**: spawn `DagFileProcessor` subprocesses (up to `parsing_processes`); parse every file every `min_file_process_interval` seconds
+2. **Critical section**: DB lock → evaluate deps, queue tasks (bound by `max_dagruns_per_loop_to_schedule` × `max_tis_per_query`)
+3. **Executor sync**: update task states from executor
+
+**Key Scheduler Config Parameters**
+```ini
+[scheduler]
+parsing_processes = 4              # concurrent DAG file parsers
+dag_file_processor_timeout = 50   # kill parser after 50s
+min_file_process_interval = 30    # reparse every 30s minimum
+scheduler_heartbeat_sec = 5       # main loop interval
+zombie_detection_interval = 10    # check for zombies every 10s
+scheduler_zombie_task_threshold = 300  # 5min no heartbeat = zombie
+```
+
+**HA Scheduler Requirements**
+- Requires **PostgreSQL or MySQL** — uses `SELECT FOR UPDATE SKIP LOCKED`
+- SQLite does NOT support HA mode (no row-level locking)
+- Run 2-3 scheduler pods; they coordinate via DB, no message passing
+
+**Zombie Task — Detection and Prevention**
+- Zombie: state = `running` in DB, but worker process died (no heartbeat)
+- Detected when `last_heartbeat_at < now - zombie_task_threshold`
+- Action: `retries_remaining > 0` → `up_for_retry`; else → `failed`
+- False positives: under high load, healthy workers miss heartbeat window
+  → set `zombie_task_threshold >> execution_timeout` to avoid false-positive kills
+
+**Metadata DB Performance Rules**
+- Scheduler perf is directly coupled to DB query latency (target < 100ms per loop)
+- Use **pgBouncer** in transaction pooling mode in front of PostgreSQL
+- Critical index: `CREATE INDEX ON task_instance (dag_id, run_id, state)`
+- Pool settings: `pool_size=5`, `max_overflow=20`; size for `N_schedulers × (pool_size + overflow)`
+
+**Parsing Bottleneck vs Critical Section Bottleneck**
+- **Parsing bottleneck**: new DAGs take minutes to appear; high `dag_processing.total_parse_time`
+- **Critical section bottleneck**: scheduling lag even when workers are idle; high `critical_section_duration`
+
+**Triggerer (Deferrable Operators)**
+- Separate asyncio event loop process — handles 1000s of triggers concurrently
+- Config: `triggerer.default_capacity = 1000`; scale by running multiple triggerer instances
+- Triggers stored in `trigger` table; triggerer owns them via `triggerer_id`

@@ -228,3 +228,110 @@ LAYER_RECONCILIATION_CHECKS = {
 > **Tip 4:** Automated reconciliation should run as a pipeline step, not a separate cron job. A pipeline that succeeds without reconciling is incomplete. The reconciliation result determines whether downstream consumers are unblocked.
 
 > **Tip 5:** Know the difference between automated reconciliation (catches technical pipeline issues) and manual reconciliation (required for regulatory audits). Both exist in production financial systems — they serve complementary purposes.
+
+## ⚡ Cheat Sheet
+
+**ETL vs ELT**
+```
+ETL: transform before loading → good for strict schema targets (DW)
+ELT: load raw then transform → good for data lakes (Spark/dbt on raw data)
+Modern default: ELT (storage cheap; compute on demand; raw data preserved)
+```
+
+**Idempotency patterns**
+```python
+# Write-if-not-exists (partition-level)
+if not partition_exists(output_path, date=run_date):
+    write_partition(data, output_path, date=run_date)
+
+# Overwrite idempotent partition (Delta)
+df.write.format("delta").mode("overwrite") \
+    .option("replaceWhere", f"dt = '{run_date}'").save(path)
+
+# Watermark-based incremental load
+SELECT * FROM source WHERE updated_at > (SELECT MAX(updated_at) FROM target)
+```
+
+**CDC (Change Data Capture) patterns**
+```
+Log-based CDC: reads DB transaction log (Debezium → Kafka → Lakehouse)
+  + Low impact on source DB
+  + Captures deletes + updates
+Query-based:   polls source table for new/changed rows (watermark)
+  - Misses deletes; higher DB load
+  
+Debezium event fields: op (c=create, u=update, d=delete, r=read/snapshot)
+                        before, after, source metadata
+```
+
+**Backfill strategy**
+```python
+# Generate backfill date range
+from datetime import date, timedelta
+backfill_dates = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+
+# Run in parallel (limit concurrency to avoid source DB overload)
+from concurrent.futures import ThreadPoolExecutor
+with ThreadPoolExecutor(max_workers=4) as pool:
+    pool.map(run_etl_for_date, backfill_dates)
+```
+
+**SCD2 (dbt snapshot)**
+```yaml
+# snapshots/customer_snapshot.sql
+{% snapshot customer_snapshot %}
+{{
+    config(
+        target_schema='snapshots',
+        unique_key='customer_id',
+        strategy='check',
+        check_cols=['name', 'city', 'email'],
+        invalidate_hard_deletes=True,
+    )
+}}
+SELECT * FROM {{ source('raw', 'customers') }}
+{% endsnapshot %}
+```
+
+**Batch vs Streaming**
+| Dimension | Batch | Streaming |
+|---|---|---|
+| Latency | Minutes to hours | Sub-second to minutes |
+| Throughput | High (bulk) | Lower per event |
+| Complexity | Lower | Higher |
+| Use case | Daily reports, DW loads | Fraud detection, live dashboards |
+
+**Pipeline design patterns**
+```
+Fan-out:    one source → multiple downstream consumers
+Fan-in:     multiple sources → one joined output
+Watermark:  track max processed timestamp; resume from watermark
+Dead letter: failed records → separate queue for inspection/retry
+Circuit breaker: stop pipeline on DQ failure; alert + wait for fix
+```
+
+**Error handling**
+```python
+try:
+    process(record)
+except ValidationError as e:
+    dead_letter_queue.append({"record": record, "error": str(e), "ts": now()})
+    metrics.increment("dead_letter_count")
+except RetryableError as e:
+    retry_queue.append({"record": record, "retry_count": retry_count + 1})
+except Exception as e:
+    alert_oncall(f"Unexpected error: {e}"); raise
+```
+
+**Data reconciliation**
+```sql
+-- Row count comparison
+SELECT 'source' AS src, COUNT(*) FROM source.orders WHERE date = '2024-01-15'
+UNION ALL
+SELECT 'target', COUNT(*) FROM gold.orders WHERE dt = '2024-01-15';
+
+-- Sum comparison
+SELECT ABS(s.total - t.total) AS discrepancy
+FROM (SELECT SUM(amount) AS total FROM source.orders WHERE date = '2024-01-15') s
+CROSS JOIN (SELECT SUM(amount) AS total FROM gold.orders WHERE dt = '2024-01-15') t;
+```

@@ -214,3 +214,59 @@ find /tmp/markers -name "*_done" -mtime +7 -delete
 > **Tip 2:** "How do you manage 50+ cron jobs?" — Directory-based config files (per-domain .cron files), git-tracked, deployed via CI/CD script that combines them into one crontab. Benefits: version control, code review for schedule changes, easy rollback, team ownership per domain file.
 
 > **Tip 3:** "How do you implement job dependencies with cron?" — Marker files: Job A writes a "done" file on completion. Job B polls for the marker before starting (with timeout). Simple but effective for 2-5 step chains. For complex dependencies (10+ steps with fan-in/out): use Airflow instead (cron dependency patterns don't scale well).
+
+## ⚡ Cheat Sheet
+
+**Cron syntax**
+```
+MIN  HOUR  DAY  MONTH  WEEKDAY
+*    *     *    *      *        # every minute
+0    8     *    *      1-5      # 8am Mon-Fri
+0    0     1    *      *        # midnight 1st of month
+*/15 *     *    *      *        # every 15 minutes
+0    6,18  *    *      *        # 6am and 6pm daily
+```
+
+**Crontab best practices**
+```bash
+# Always set PATH and environment in crontab
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=alerts@company.com
+# Redirect output explicitly
+0 8 * * * /scripts/etl.sh >> /var/log/etl.log 2>&1
+# Silence cron mail for expected no-output jobs
+0 8 * * * /scripts/etl.sh > /dev/null 2>&1
+```
+
+**Prevent overlapping runs**
+```bash
+# Use flock in cron
+0 * * * * flock -n /tmp/etl.lock /scripts/etl.sh
+# Or check PID file
+[ -f /tmp/etl.pid ] && kill -0 $(cat /tmp/etl.pid) 2>/dev/null && exit 0
+echo $$ > /tmp/etl.pid; trap "rm /tmp/etl.pid" EXIT
+```
+
+**Monitoring cron jobs**
+```bash
+# Healthchecks.io / Dead Man's Snitch pattern
+0 8 * * * /scripts/etl.sh && curl -s https://hc-ping.com/UUID > /dev/null
+# Log duration
+START=$(date +%s); /scripts/etl.sh; echo "Duration: $(($(date +%s)-START))s"
+```
+
+**Systemd timers (modern alternative)**
+```ini
+# /etc/systemd/system/etl.timer
+[Timer]
+OnCalendar=*-*-* 08:00:00
+Persistent=true   # runs missed jobs after downtime
+[Install]
+WantedBy=timers.target
+```
+
+**Key gotchas**
+- Cron environment is minimal — no `~/.bashrc`; always use full paths
+- `MAILTO=""` disables email; set to alerting address in prod
+- `@reboot` runs once at boot — useful for startup scripts
+- Test with `run-parts --test /etc/cron.daily`

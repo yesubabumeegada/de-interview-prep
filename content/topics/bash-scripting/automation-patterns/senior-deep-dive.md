@@ -295,3 +295,65 @@ done
 > **Tip 2:** "Self-healing automation?" — Scripts that: detect common issues (disk full, stale locks, stopped services) → apply automated fixes → verify fix worked → alert if unfixable. Run every 5 minutes. Handles 80% of incidents without human intervention. Only pages on-call for issues that can't be auto-fixed.
 
 > **Tip 3:** "How do you test bash ETL scripts?" — Test harness: run test scripts that exercise functions with known inputs, check exit codes and outputs. Test in CI: `bash run_tests.sh` gates deployment. Test categories: library functions (unit), config loading (integration), full pipeline (smoke test on sample data). Not as rich as pytest, but catches most regressions.
+
+## ⚡ Cheat Sheet
+
+**Script header (always)**
+```bash
+#!/usr/bin/env bash
+set -euo pipefail  # e=exit on error, u=unset vars, o pipefail=pipe failures
+IFS=$'\n\t'        # safer word splitting
+```
+
+**Locking (prevent concurrent runs)**
+```bash
+LOCKFILE="/tmp/$(basename "$0").lock"
+exec 9>"$LOCKFILE"
+flock -n 9 || { echo "Already running"; exit 1; }
+trap "rm -f $LOCKFILE" EXIT
+```
+
+**Retry pattern**
+```bash
+retry() {
+    local n=0 max=3 delay=5
+    until [ $n -ge $max ]; do
+        "$@" && return 0
+        n=$((n+1)); echo "Retry $n/$max in ${delay}s"; sleep $delay; delay=$((delay*2))
+    done
+    return 1
+}
+retry aws s3 cp file.csv s3://bucket/
+```
+
+**Parallel execution**
+```bash
+# GNU parallel
+parallel -j4 process_file ::: *.csv
+# Background jobs with wait
+for f in *.csv; do process_file "$f" & done; wait
+# Limit concurrency
+max=4; count=0
+for f in *.csv; do
+    process_file "$f" &
+    ((count++)); [ $count -ge $max ] && wait -n && ((count--))
+done; wait
+```
+
+**Signal handling**
+```bash
+cleanup() { echo "Cleaning up..."; rm -rf "$TMPDIR"; }
+trap cleanup EXIT INT TERM
+TMPDIR=$(mktemp -d)
+```
+
+**Idempotency patterns**
+- Write to temp file, then `mv` (atomic rename)
+- Check output exists before processing: `[ -f output.parquet ] && continue`
+- Watermark files: `touch .processed_${DATE}` after success
+
+**Key decision rules**
+- `[[ ]]` over `[ ]` — supports regex, no word splitting
+- `"$var"` always quoted — prevents glob expansion and word splitting
+- `local` in functions — prevent variable leakage
+- Log to stderr: `echo "ERROR: ..." >&2`

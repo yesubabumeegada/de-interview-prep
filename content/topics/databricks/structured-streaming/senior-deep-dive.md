@@ -288,3 +288,48 @@ def write_with_external(batch_df, batch_id):
 > **Tip 2:** "RocksDB vs default state backend?" — Default (HashMap): state in JVM heap, simple, fast for small state (<100 MB). RocksDB: state on local SSD, off-heap, handles millions of keys, incremental checkpointing. Use RocksDB for production with: dedup on high-cardinality keys, long watermarks, or stream-stream joins. It's the standard choice for any stateful streaming beyond development.
 
 > **Tip 3:** "How do you handle backpressure in streaming?" — Three layers: (1) Limit input rate (maxOffsetsPerTrigger/maxFilesPerTrigger) — prevents OOM but increases lag, (2) Scale compute (more workers for parallel processing) — reduces lag, (3) Optimize processing (native functions, broadcast joins, avoid UDFs) — more throughput per worker. Monitor: input rate vs processing rate — if input consistently exceeds processing, you need more compute or optimization.
+
+## ⚡ Cheat Sheet
+
+**Source characteristics**
+| Source | Ordering | Replay | Offset type |
+|---|---|---|---|
+| Kafka | Per-partition | Yes | offset per partition |
+| Delta table | Commit order | Yes | `_delta_log` version |
+| Auto Loader | Arrival order | Yes | file list checkpoint |
+| Rate | Synthetic | N/A | rows/sec |
+
+**Trigger modes**
+```python
+trigger(processingTime="10 seconds")  # micro-batch every 10s
+trigger(availableNow=True)            # process all backlog, stop
+trigger(continuous="1 second")        # experimental; row-level latency
+# No trigger = default micro-batch (as fast as possible)
+```
+
+**Watermarks and late data**
+```python
+.withWatermark("event_time", "10 minutes")  # discard events >10min late
+.groupBy(window("event_time", "5 minutes"))  # tumbling window
+# Watermark = max(event_time seen) - threshold
+# Stateful ops REQUIRE watermark to bound state size
+```
+
+**Output modes**
+- `append`: only new rows; requires watermark for aggregations
+- `complete`: all result rows each trigger; only for aggregations; watch for memory growth
+- `update`: only changed rows; most common for stateful aggregations
+
+**Checkpointing**
+- Location: cloud storage (S3/ADLS/GCS); never local; unique per stream
+- Contains: source offsets + state store + schema info
+- Never share between streams; delete only to restart from scratch
+
+**Stateful processing sizes**
+- RocksDB state store (default since DBR 8): spills to disk; handles TB-scale state
+- In-memory state: bounded by executor memory; use only for small state
+- `mapGroupsWithState` / `flatMapGroupsWithState`: arbitrary stateful logic per key
+
+**Exactly-once**
+- Kafka source + Delta sink: exactly-once (Delta ACID + Kafka offset tracking)
+- Non-idempotent sinks: at-least-once; make sink idempotent or use `foreachBatch`

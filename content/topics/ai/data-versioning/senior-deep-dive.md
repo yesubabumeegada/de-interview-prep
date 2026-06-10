@@ -349,3 +349,49 @@ def load_features_backward_compatible(
 > **Tip 3:** "How do you handle schema evolution when retraining a model?" — "Two approaches: (1) Strict — fail if schema changes, require explicit version bump and model retraining. (2) Flexible — use backward-compatible feature loading: if a new column appears, ignore it; if an old column disappears, fill with a default. The second approach is more practical but risks silently using incorrect defaults. Delta Lake's mergeSchema option supports non-breaking schema evolution."
 
 > **Tip 4:** "When would you use Delta Lake over DVC for data versioning?" — "Delta Lake: when data is large (100GB+), stored in a data lakehouse (Databricks, AWS EMR), updated continuously (streaming or frequent batch), and needs ACID transactions and time-travel queries. DVC: when data is smaller, stored as files (parquet/CSV), updated infrequently, and you need tight git integration with code versioning. Most ML teams at scale use Delta Lake for training data and DVC for ML-specific assets (model checkpoints, embeddings)."
+
+## ⚡ Cheat Sheet
+
+**Delta Lake Time Travel — Key Syntax**
+```python
+# By version
+spark.read.format("delta").option("versionAsOf", 42).load(path)
+# By timestamp
+spark.read.format("delta").option("timestampAsOf", "2024-01-01").load(path)
+# View history
+DeltaTable.forPath(spark, path).history(10).show()
+```
+
+**Delta Lake vs DVC — Decision Rule**
+| Criterion | Use Delta Lake | Use DVC |
+|---|---|---|
+| Data size | 100 GB+ | < 100 GB |
+| Storage | S3/GCS/ADLS (lakehouse) | Any filesystem |
+| Update frequency | Streaming or frequent batch | Infrequent |
+| Need ACID | Yes | No |
+| Git integration | No | Yes |
+
+**Data Contract Validation — What to Check**
+- Schema: missing columns = violation; extra columns = warning (if `backwards_compatible=True`)
+- Column-level: nullability, value ranges (`min_value`/`max_value`), allowed values, regex
+- Volume: `min_row_count` / `max_row_count` bounds
+- Duplicates: `max_duplicate_rate` (default 1%)
+- Freshness: `max_staleness_hours` (e.g., 24h)
+
+**Schema Evolution Rules**
+- Adding nullable column: **non-breaking** — safe to merge with `mergeSchema=True`
+- Removing column: **breaking** — bump contract version, require consumer updates
+- Renaming column: **breaking** — treat as delete + add
+- Changing type: **breaking** — explicit migration required
+- Safe backfill approach: `replaceWhere` to overwrite only the affected partition
+
+**MLflow + Delta Lineage Pattern**
+- Log `delta_version`, `delta_timestamp`, `row_count` as MLflow params at training time
+- Reproduce training data: `versionAsOf = version_info["delta_version"]`
+- Audit trail: Delta transaction log (`_delta_log/`) is immutable; files never deleted within retention period
+
+**Data Contract Lifecycle**
+1. Producer publishes contract YAML/code → committed to repo
+2. Consumer CI runs `DataContractValidator.validate(df)` on each pipeline run
+3. Breaking change → new contract version → coordinated migration
+4. `backwards_compatible=True` allows additive changes without version bump

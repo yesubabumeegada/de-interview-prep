@@ -198,3 +198,70 @@ ps aux | awk '$8 ~ /Z/ {print}'  # Find zombie processes
 > **Tip 2:** "How do you implement checkpointing in a bash pipeline?" — Save progress to a file after each successful batch (offset/timestamp). On restart: read the checkpoint file and resume from that point. Combined with graceful shutdown (trap SIGTERM → finish current batch → save → exit): gives you exactly-once semantics with any signal/restart scenario.
 
 > **Tip 3:** "How do you prevent resource exhaustion from runaway ETL jobs?" — Multiple layers: (1) `timeout` (kill if exceeds time limit), (2) `ulimit` (memory/file-size limits), (3) systemd-run with cgroup limits (CPU/memory hard caps), (4) Docker containers (full isolation). For production: prefer Docker (isolation + reproducibility). For quick scripts: `timeout` + `ulimit` is sufficient.
+
+## ⚡ Cheat Sheet
+
+**Background jobs**
+```bash
+cmd &           # background; inherits stdin/stdout
+cmd &>/dev/null & # background; no output
+PID=$!          # capture PID of last background job
+wait $PID       # wait for specific PID
+wait            # wait for all background jobs
+```
+
+**Signal handling**
+```bash
+# Common signals
+kill -TERM $PID  # graceful stop (15)
+kill -KILL $PID  # force stop (9)
+kill -HUP  $PID  # reload config (1)
+kill -USR1 $PID  # custom signal (10)
+
+# Trap signals in script
+trap 'echo "SIGTERM received"; cleanup; exit 0' TERM
+trap 'echo "SIGINT received"; exit 130' INT
+```
+
+**Process groups and job control**
+```bash
+# Kill entire process group (all children too)
+kill -TERM -$PID  # negative PID = process group
+# Disown (keep running after terminal closes)
+cmd &; disown $!
+# nohup (immune to hangup signal)
+nohup long_running_cmd > output.log 2>&1 &
+```
+
+**Monitoring children**
+```bash
+# Wait with timeout
+timeout 3600 long_cmd || { echo "Timed out after 1hr"; kill $!; }
+# Track multiple children
+pids=()
+for task in "${tasks[@]}"; do
+    run_task "$task" & pids+=($!)
+done
+failed=0
+for pid in "${pids[@]}"; do
+    wait "$pid" || ((failed++))
+done
+[ $failed -gt 0 ] && die "$failed tasks failed"
+```
+
+**PID files**
+```bash
+PIDFILE=/var/run/myservice.pid
+echo $$ > "$PIDFILE"
+trap "rm -f $PIDFILE" EXIT
+# Check if already running
+[ -f "$PIDFILE" ] && kill -0 "$(cat $PIDFILE)" 2>/dev/null && die "Already running"
+```
+
+**Resource limits**
+```bash
+ulimit -v $((4*1024*1024))  # limit virtual memory (4 GB)
+ulimit -t 3600               # CPU time limit (1 hour)
+nice -n 10 heavy_cmd         # lower priority (10 = nicer)
+ionice -c 3 io_heavy_cmd     # idle IO priority
+```

@@ -334,3 +334,35 @@ class DataLakeStack(Stack):
 > **Tip 2:** "How do you manage infrastructure across 20+ AWS accounts?" — "StackSets with Organization deployment targets. Define templates once (data lake foundation, IAM roles, VPC endpoints), deploy to all accounts in an OU automatically. New accounts get the standard infrastructure on creation (AutoDeployment: Enabled). MaxConcurrentPercentage controls blast radius. FailureTolerancePercentage allows partial failures without rolling back everything."
 
 > **Tip 3:** "CloudFormation custom resources — when and how?" — "When CloudFormation doesn't support what you need: create Athena tables, run Glue crawlers, configure Lake Formation permissions, seed DynamoDB data. Lambda-backed with cfnresponse library. Critical: handle Create, Update, AND Delete events. Always return SUCCESS or FAILED (stack hangs if Lambda doesn't respond). Set a timeout to prevent indefinite stack operations. Use for one-time setup that should be part of the infrastructure lifecycle."
+
+## ⚡ Cheat Sheet
+
+**Custom Resources — Must-Know Rules**
+- Lambda must respond with `cfnresponse.SUCCESS` or `cfnresponse.FAILED` — stack hangs indefinitely if no response
+- Handle all three request types: `Create`, `Update`, `Delete`
+- Set Lambda timeout generously (300 s); stack waits up to 3× timeout before failing
+- Common uses: create Athena/Iceberg tables, run Glue crawlers, configure Lake Formation, seed DynamoDB
+
+**Stack Update Safety Checklist**
+- `DeletionPolicy: Retain` on ALL data resources (S3 buckets, RDS, DynamoDB)
+- `UpdateReplacePolicy: Retain` prevents data loss when resource must be replaced
+- Use Change Sets — always review before executing (especially in production)
+- StackPolicy to prevent updates/deletes on stateful resources
+
+**StackSets Key Config**
+- `SERVICE_MANAGED` + `AutoDeployment.Enabled: true` — new accounts get infra automatically
+- `MaxConcurrentPercentage: 25` — deploy 25% of accounts at a time (limits blast radius)
+- `FailureTolerancePercentage: 10` — allow up to 10% failure without global rollback
+
+**CI/CD Deploy Pattern**
+1. cfn-lint (static validation) → 2. Change set to staging → 3. Manual approval → 4. Execute change set → 5. Integration tests → 6. Manual approval → 7. Deploy to prod
+
+**CDK vs Raw CloudFormation**
+- CDK: Python/TS loops and conditions native, IDE autocomplete, L2 constructs with sensible defaults
+- Raw CFN: no build step, portable, maps directly to AWS documentation
+- CDK synthesizes to CloudFormation — same rollback, drift detection, change set mechanics
+
+**Resource Import**
+- `--change-set-type IMPORT` to bring manually-created resources under CFN management
+- Requires `DeletionPolicy: Retain` on the resource before importing
+- Import uses resource identifier (e.g., `BucketName`) not the ARN

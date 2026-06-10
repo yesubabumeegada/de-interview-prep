@@ -357,3 +357,54 @@ airflow celery inspect active_queues
 > **Tip 2:** "How does the scheduler determine which queued task to schedule next?" — "The scheduler queries task instances in `queued` state ordered by `priority_weight` descending. For each candidate, it checks whether the pool has enough open slots. The first task that fits gets transitioned to `scheduled`, which signals to a worker to start executing it. This happens in a single DB transaction to prevent double-scheduling in HA mode."
 
 > **Tip 3:** "How would you handle a Snowflake maintenance window operationally?" — "I'd use a maintenance DAG or a CI/CD pipeline step that runs `airflow pools set snowflake_pool 0` before the window, which queues all Snowflake-pool tasks without failing them. After maintenance, restore the slot count. Tasks drain naturally — running tasks finish, new tasks queue. No manual intervention needed per-task."
+
+## ⚡ Cheat Sheet
+
+**Pool Storage and Behavior**
+- Pools live in the **metadata DB** (`slot_pool` table), not config files
+- Changes take effect within next scheduler heartbeat (~5s)
+- Reducing slots below running count: running tasks keep slots; only new acquisitions limited
+- HA schedulers share pool state via the same DB — no coordination needed
+
+**Task State Sequence for Slot Acquisition**
+`queued` → (slot available + priority wins) → `scheduled` → (worker picks up) → `running`
+- `scheduled` is transient: slot allocated but not yet executing
+- Single DB transaction per slot acquisition to prevent double-scheduling in HA
+
+**Pool-Induced Deadlock — Classic Scenario**
+```
+Pool: 3 slots
+Stage 1 tasks: hold all 3 slots while waiting on external resource
+Stage 2 tasks: queued, can't get slots
+→ Stage 1 waits on Stage 2, Stage 2 can't run → deadlock
+```
+- **Prevention**: separate pools per pipeline stage (`extract_pool`, `transform_pool`)
+- **Safety net**: `dagrun_timeout=timedelta(hours=4)` breaks stuck runs
+- **Emergency**: `airflow pools set my_pool 0` → queues all tasks without failing them
+
+**Pool Sizing Formulas**
+```
+DB connection pool: min(db_conn_limit × 0.7, worker_count × concurrency × 0.5)
+API pool: floor(rate_limit_per_min / (60 / avg_task_duration_sec))
+Compute pool: floor(total_vcpus / vcpus_per_job × 0.8)
+```
+
+**SLA-Aware Priority Pattern**
+```python
+sla_task = PythonOperator(..., pool='shared_pool', priority_weight=100, weight_rule='absolute')
+bg_task  = PythonOperator(..., pool='shared_pool', priority_weight=1, weight_rule='absolute')
+# SLA tasks claim slots first even in the same pool
+```
+
+**Celery Queue Key Facts**
+- Queue = message queue in Redis/RabbitMQ broker; scheduler publishes, workers consume
+- No worker subscribed to a queue → tasks pile up indefinitely in broker
+- Worker crash → unacked messages return after visibility timeout
+- Monitor with: `redis-cli LLEN airflow.default` or `airflow celery flower`
+
+**Maintenance Window Pattern**
+```bash
+airflow pools set snowflake_pool 0 "Maintenance window"
+# Tasks queue cleanly (not fail) during maintenance
+airflow pools set snowflake_pool 8 "Restored"
+```

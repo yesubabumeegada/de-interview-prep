@@ -223,3 +223,46 @@ Production HTAP query optimization:
 > **Tip 2:** "How does Cosmos DB handle the CAP theorem?" — Cosmos DB chooses CP or AP depending on consistency level: Strong consistency → prioritizes consistency (C) over availability (A) during partitions. Eventual consistency → prioritizes availability (A) over consistency (C). Session, Bounded Staleness, Consistent Prefix → intermediate tradeoffs. Unique to Cosmos: it offers 5 granular choices on the consistency spectrum rather than binary C vs A. In practice: multi-master configurations lean toward A (any region can accept writes, conflicts resolved after); strong consistency with single master leans toward C (write must reach quorum).
 
 > **Tip 3:** "What is the 20GB per logical partition limit and how do you work around it?" — Each logical partition (all documents with the same partition key value) is limited to 20GB. If a single partition key value (e.g., tenant_id = "BigCorp") accumulates >20GB of data, you'll get throttling/errors on that partition. Solutions: (a) More granular partition key: change `tenant_id` → `user_id` (spreads BigCorp's data across many partitions), (b) Hierarchical partition key: `(tenant_id, user_id)` allows prefix queries while splitting storage by user, (c) Synthetic partition key: append a bucket suffix (e.g., `BigCorp_0` to `BigCorp_9`) and fan out writes/reads across buckets, (d) Archive old data: move items older than N months to a separate container or ADLS.
+
+## ⚡ Cheat Sheet
+
+**API choice**
+| API | Best for | Notes |
+|---|---|---|
+| NoSQL (Core) | Document, key-value | Native; best SLA; all features |
+| MongoDB | MongoDB migration | Wire-compatible |
+| Cassandra | Wide-column / IoT | CQL-compatible |
+| Gremlin | Graph traversal | Tinkerpop-compatible |
+| Table | Azure Table Storage migration | Key-value |
+
+**Consistency levels (ordered strong → weak)**
+1. `Strong` — linearizable reads; highest latency; single-region or write region only
+2. `BoundedStaleness` — lag by K operations or T time; useful for global reads
+3. `Session` (default) — consistent within session; best balance for most apps
+4. `ConsistentPrefix` — no out-of-order reads; lighter than session
+5. `Eventual` — lowest latency; no ordering guarantees
+
+**Partition key selection rules**
+- High cardinality: avoid hot partitions (max 20 GB + 10K RU/s per logical partition)
+- Even distribution: uniform read/write across partitions
+- Include in most queries: avoids cross-partition scatter
+- Good: `userId`, `deviceId`, `/id` — Bad: `country`, `status`, `boolean`
+
+**RU/s (Request Units)**
+- 1 RU = cost to read 1 KB document
+- Write = ~5× read cost; cross-partition query = N × point-read cost
+- Autoscale: set max RU/s; auto-scales 10%–100% of max; charged at max reached
+- Serverless: charged per actual RUs; good for <1K RU/s average
+
+**Change feed**
+```python
+# Change feed = ordered log of all writes + deletes (if enabled)
+# Use for: event sourcing, materialized views, ETL fan-out
+container.query_items_change_feed(is_start_from_beginning=True)
+# Azure Functions trigger: auto-checkpoint; scales with partition count
+```
+
+**Key Cosmos DB DE patterns**
+- Analytical store (HTAP): auto-sync to columnar format; query with Synapse Serverless SQL — no RU charge for reads
+- Multi-region writes: conflict resolution via LWW (last-write-wins) or custom stored procedure
+- TTL: automatic document expiry; `"ttl": 3600` on document or container default

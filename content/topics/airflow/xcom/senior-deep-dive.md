@@ -415,3 +415,60 @@ def extract():
 > **Tip 2:** "Why is passing a DataFrame through XCom dangerous?" — "DataFrames serialize to pickle, potentially hundreds of MB. This goes into the BYTEA column in the metadata DB, which is shared infrastructure. Large TOAST reads add latency to every subsequent pull, and the DB I/O competes with scheduler operations. At scale this can cause scheduler heartbeat delays, zombie task detection, and cascading failures. The fix is to write the DataFrame to S3 and XCom only the path."
 
 > **Tip 3:** "How would you design XCom usage for a team of 10 data engineers?" — "Establish a convention: XCom for metadata only (paths, counts, IDs, statuses). All actual data goes through S3 with date-partitioned paths. Use a custom S3 XCom backend to automatically handle any values that exceed 48 KB. Add a maintenance DAG to purge XCom entries older than 7 days. Add a monitoring query that alerts on any XCom entry > 10 KB so we catch violations early."
+
+## ⚡ Cheat Sheet
+
+**XCom Internals**
+- Stored in `xcom` table: composite PK `(dag_run_id, task_id, map_index, key)`
+- `value` = BYTEA (arbitrary bytes); default backend: JSON → bytes
+- No TTL; no size enforcement; persists until explicitly deleted
+- Each `xcom_push` = synchronous DB write; each `xcom_pull` = DB read
+- PostgreSQL TOAST: values > 8 KB stored externally → adds read latency
+
+**XCom Size Rules**
+| Size | What to Do |
+|---|---|
+| < 1 KB (IDs, paths, counts) | Fine in default DB backend |
+| 1–48 KB | Consider custom backend |
+| > 48 KB | Must use custom backend (S3 pointer) or S3 paths pattern |
+| DataFrames (MBs) | **Never** XCom a DataFrame → use S3 path |
+
+**Three XCom Alternative Patterns**
+1. **S3 paths as interface**: write data to S3 in task, XCom only the ~60-byte path
+2. **Control table**: write metadata to a DB table; works cross-DAG, survives reruns
+3. **Airflow Variables**: global config/flags only; NOT for runtime pipeline data
+
+**S3 Path Pattern**
+```python
+@task
+def extract(ds: str) -> str:
+    df = fetch_data(ds)
+    path = f"s3://pipeline/raw/dt={ds}/data.parquet"
+    df.to_parquet(path)
+    return path  # 60-byte string in XCom
+
+@task
+def transform(input_path: str) -> str: ...  # read from path, write transformed
+```
+
+**Custom S3 XCom Backend Logic**
+1. `serialize_value()`: JSON-encode → if size < threshold → store in DB; else → put to S3, store `__s3_xcom__:s3://...` pointer in DB
+2. `deserialize_value()`: detect S3 marker → fetch from S3; else → JSON-parse DB value
+3. `purge()`: delete S3 objects before deleting DB rows
+
+**Detecting XCom Abuse**
+```sql
+SELECT dag_id, task_id, key,
+       pg_column_size(value)/1024.0 AS size_kb
+FROM xcom
+WHERE pg_column_size(value) > 10240  -- > 10 KB
+ORDER BY pg_column_size(value) DESC LIMIT 50;
+```
+
+**XCom and Retries**
+- Failed attempt XCom values persist; new push on retry **overwrites** (upsert by PK)
+- If task A is re-run after task B already used its XCom → clear B too for consistency
+
+**Key Decision: XCom vs S3**
+- XCom: metadata only — paths, counts, status flags, job IDs, timestamps
+- S3: all actual data — DataFrames, large lists, file contents

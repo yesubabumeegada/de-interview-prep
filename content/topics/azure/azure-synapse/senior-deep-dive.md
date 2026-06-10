@@ -198,3 +198,51 @@ Synapse Spark vs Databricks Spark:
 > **Tip 2:** "What is an Ordered Clustered Columnstore Index and when would you use it?" — Normal CCI inserts rows in any order within each row group (1M rows). With Ordered CCI, Synapse sorts data by the specified columns before compressing into row groups, so all rows for 'January 2024' are in the same row groups. Queries with `WHERE order_date = '2024-01-15'` can skip entire row groups vs scanning them. The trade-off: 20-40% slower INSERT/CTAS because of sorting. Use it when the table is loaded in bulk (infrequent large loads) and queries consistently filter on the same columns.
 
 > **Tip 3:** "How does Synapse Link compare to traditional ETL from Cosmos DB?" — Traditional ETL: Cosmos DB → ADF pipeline → Synapse (15-minute to hourly latency, uses Cosmos DB RUs for reads, requires pipeline maintenance). Synapse Link: Cosmos DB transactional store → automatic sync to analytical store → Synapse queries run against analytical store (2-5 min latency, zero RU consumption for analytics, no pipeline needed). Synapse Link enables HTAP: the same data supports both millisecond OLTP reads and multi-second analytical queries simultaneously.
+
+## ⚡ Cheat Sheet
+
+**Synapse components**
+| Component | Engine | Use case |
+|---|---|---|
+| Dedicated SQL Pool | MPP (PDW-based) | Large-scale DW, BI |
+| Serverless SQL Pool | On-demand | Ad-hoc queries on ADLS |
+| Apache Spark Pool | Spark | ETL, ML, data engineering |
+| Data Explorer Pool | Kusto | Log/time-series analytics |
+| Synapse Pipelines | ADF-compatible | Orchestration |
+
+**Dedicated SQL Pool distribution**
+| Strategy | When |
+|---|---|
+| `HASH(col)` | Large tables joined on `col` |
+| `ROUND_ROBIN` | Staging/temp tables; uniform distribution |
+| `REPLICATE` | Small dims (<60 MB compressed) |
+
+**Dedicated SQL Pool indexes**
+| Index | When |
+|---|---|
+| Clustered Columnstore (CCI) | Default for all large tables (>1M rows) |
+| Clustered Rowstore | Singleton lookup tables |
+| Non-clustered | Selective equality filters |
+
+**Serverless SQL Pool**
+```sql
+-- Query ADLS directly (no data loading)
+SELECT * FROM OPENROWSET(
+    BULK 'https://account.dfs.core.windows.net/container/path/*.parquet',
+    FORMAT = 'PARQUET'
+) AS r
+WHERE r.region = 'US'
+-- Partition pruning: path must match partition pattern year=*/month=*/
+```
+
+**Performance tuning (Dedicated)**
+- Row group health: target 1M rows/row group; use `DBCC SHOWCONTIG` to check
+- Statistics: `CREATE STATISTICS` on join/filter columns; auto-update unreliable in Synapse
+- Result set cache: `SET RESULT_SET_CACHING ON` — caches identical queries up to 1 TB
+- Workload management: `CREATE WORKLOAD GROUP` + `CLASSIFIER` for SLA isolation
+
+**Key numbers**
+- Max table size: 60 TB (CCI); 2 TB per distribution (60 distributions)
+- Max DWU: DW30000c = 30,000 DWUs
+- Pause/resume: ~5 min; paused = storage cost only
+- Serverless: $5/TB scanned; first 10 TB/month free

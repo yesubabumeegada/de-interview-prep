@@ -257,3 +257,41 @@ def test_silver_to_gold():
 > **Tip 2:** "Lakehouse vs Snowflake — which would you choose?" — Depends on workload mix. Lakehouse wins for: ML-heavy orgs (native MLflow, direct data access), streaming (Structured Streaming), complex ETL (PySpark), and cost-sensitive large data (cheap S3). Snowflake wins for: SQL-centric teams, simpler ops, excellent BI query performance. Many companies use both (lakehouse for engineering, Snowflake for analytics).
 
 > **Tip 3:** "How do you implement incremental processing?" — Delta Change Data Feed (CDF): enables downstream tables to read ONLY changed rows from upstream. Pattern: enable CDF on silver tables, gold tables MERGE only the changes. Result: gold refresh goes from "recompute 1B rows" to "process 100K changed rows" — 1000x faster. Alternative: watermark-based filtering on _loaded_at timestamp.
+
+## ⚡ Cheat Sheet
+
+**Medallion layers**
+| Layer | Format | Owner | Consumers |
+|---|---|---|---|
+| Bronze | Delta (raw) | DE team | Silver jobs only |
+| Silver | Delta (cleaned) | DE team | Gold jobs, ML, analysts |
+| Gold | Delta (aggregated) | Domain teams | BI, dashboards, APIs |
+
+**Unity Catalog hierarchy**
+```
+metastore (1 per region per account)
+  └── catalog (prod / dev / staging)
+        └── schema (bronze / silver / gold / domain)
+              └── table / view / function / volume
+```
+
+**Key Unity Catalog features**
+- Column masking: `CREATE FUNCTION mask_email(e STRING) ... ; ALTER TABLE t ALTER COLUMN email SET MASK mask_email`
+- Row filters: `ALTER TABLE t SET ROW FILTER filter_fn ON (col)`
+- Lineage: auto-captured for Spark/SQL; requires OpenLineage for external pipelines
+- External locations: `CREATE EXTERNAL LOCATION` → maps cloud path to UC-managed credential
+
+**Delta performance**
+- File size target: 128 MB–1 GB; OPTIMIZE compacts; Predictive Optimization auto-runs
+- ZORDER: reorder within files for better data skipping (1–3 cols max)
+- Liquid clustering: replaces static partitioning; auto-rebalances without ZORDER
+
+**Photon engine**
+- On: vectorized C++ operators for scan/filter/join/agg in SQL and DataFrame
+- Off: Python UDFs, RDD operations, pandas UDFs (non-arrow)
+- 2–3× faster for SQL-heavy workloads; no extra cost (same DBU)
+
+**Decision rules**
+- Managed vs external: managed → Databricks owns lifecycle (drop table = drop data); external → you own storage
+- Streaming vs batch: <5 min latency → DLT continuous; >5 min → triggered DLT or Workflows
+- DLT vs Workflows: DLT for transform pipelines with DQ; Workflows for orchestrating diverse tasks

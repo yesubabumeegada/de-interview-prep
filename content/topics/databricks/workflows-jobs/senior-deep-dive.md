@@ -295,3 +295,52 @@ class WorkflowSLAMonitor:
 > **Tip 2:** "How do you handle idempotency in workflows?" — Every task must be safe to re-run. Pattern: OVERWRITE (not append) with `replaceWhere` for partitioned tables, MERGE with deduplication keys for upserts. If a task fails mid-run and is retried, it produces the same result without duplicates.
 
 > **Tip 3:** "How do you optimize workflow costs?" — (1) Job clusters not all-purpose (60% cheaper), (2) Spot instances with fallback (70% savings), (3) Right-size by analyzing actual executor utilization vs configured max, (4) Shared cluster across sequential tasks (avoids cluster start per task), (5) Auto-terminate — cluster dies immediately after job, no idle cost.
+
+## ⚡ Cheat Sheet
+
+**Task types**
+| Task type | When to use |
+|---|---|
+| Notebook | Interactive + legacy code |
+| Python script | Packaged production code (preferred) |
+| DLT pipeline | When DLT pipeline is the work unit |
+| dbt | dbt project runs |
+| SQL | Databricks SQL queries/dashboards |
+| Spark JAR / Python wheel | Library-packaged jobs |
+
+**Dependencies and branching**
+```python
+# Conditional task execution
+task_b.depends_on = [{"task_key": "task_a", "outcome": "SUCCESS"}]
+task_c.depends_on = [{"task_key": "task_a", "outcome": "FAILED"}]
+# outcome: SUCCESS | FAILED | ALL_DONE (runs regardless)
+```
+
+**Task values (cross-task data)**
+```python
+# Producer task
+dbutils.jobs.taskValues.set(key="row_count", value=df.count())
+# Consumer task
+count = dbutils.jobs.taskValues.get(taskKey="task_a", key="row_count", default=0)
+```
+
+**Repair runs**
+- Re-run only failed/skipped tasks; preserves successful task outputs
+- Requires job run to be in `FAILED` or `TERMINATED` state
+- Repair keeps same `run_id`; original task value outputs available to repaired tasks
+
+**Cluster strategies**
+- Job clusters (new cluster per run): isolation, reproducible; 5-min startup cost
+- Existing clusters: fast start; shared state = risk of interference
+- Instance pools: pre-warmed → reduce startup to ~30s; use for latency-sensitive jobs
+- Cluster policy: enforce instance types, autoscaling bounds, spot usage
+
+**Scheduling**
+- Quartz cron: `"0 0 8 * * ?"` = 8am daily; `"0 0/15 * * * ?"` = every 15min
+- File-arrival trigger: trigger on S3/ADLS file arrival via EventBridge/Event Grid
+- `max_concurrent_runs=1` prevents overlap; set `queue_duration` for backpressure
+
+**Monitoring**
+- Job run duration: alert if `p95 > threshold` via Databricks alerts or CloudWatch/Azure Monitor
+- Repair needed: `GET /api/2.1/jobs/runs/get?run_id=X` → check `state.result_state`
+- Cost: `cluster_instance.dbu_hours` per run in job run history

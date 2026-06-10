@@ -283,3 +283,45 @@ if skew > 3.0:
 > **Tip 2:** "Explain narrow vs wide transformations and their impact." — "Narrow transformations like map and filter process each input partition independently into exactly one output partition — they pipeline together in a single stage with no network I/O. Wide transformations like reduceByKey and join require data from multiple input partitions to produce output, causing a shuffle — data is written to disk, transferred over the network, and deserialized. Each wide transformation creates a stage boundary in the DAG."
 
 > **Tip 3:** "When and why would you checkpoint an RDD?" — "Checkpoint when running iterative algorithms where lineage grows with each iteration. Without checkpointing, a failure at iteration 90 means recomputing from iteration 0. Checkpointing materializes the RDD to reliable storage (HDFS/S3) and truncates the lineage. I typically checkpoint every N iterations. The tradeoff is additional write cost versus reduced recomputation on failure. For short-lived jobs, localCheckpoint is faster but doesn't survive executor failures."
+
+## ⚡ Cheat Sheet
+
+**RDD vs DataFrame Decision**
+- Use DataFrame/Dataset API for 99% of cases (Catalyst optimization, Tungsten, type safety)
+- Use RDD when: custom partitioning logic, graph processing, iterative ML not covered by MLlib, low-level control needed
+- RDD→DataFrame: `rdd.toDF(schema)` or `spark.createDataFrame(rdd, schema)`
+- DataFrame→RDD: `df.rdd` (returns Row objects; expensive, bypasses Tungsten)
+
+**Narrow vs Wide Transformations**
+| Narrow (no shuffle) | Wide (shuffle) |
+|--------------------|----------------|
+| map, filter, flatMap | groupByKey, reduceByKey |
+| mapPartitions | sortBy, distinct |
+| union | join (without co-partitioning) |
+| coalesce | repartition, cogroup |
+
+**Key Operations**
+```python
+rdd.mapPartitions(func)     # process entire partition at once (less Python overhead vs map)
+rdd.mapPartitionsWithIndex  # same + partition index
+rdd.glom()                  # collect each partition into array (debug partition sizes)
+rdd.getNumPartitions()      # check current partition count
+rdd.toDebugString()         # print lineage DAG as string
+```
+
+**Checkpointing**
+- `rdd.cache()` — keeps lineage; evicted data recomputed from lineage
+- `rdd.checkpoint()` — breaks lineage; saves to HDFS/S3; use for long iterative jobs
+- Must call `sc.setCheckpointDir(path)` before `checkpoint()`
+- `checkpoint()` is lazy — requires an action to trigger
+
+**Persistence Storage Levels**
+- `MEMORY_ONLY` — default; evicted partitions recomputed
+- `MEMORY_AND_DISK` — spills to disk; no recomputation on eviction
+- `OFF_HEAP` — use with Alluxio/Tachyon; avoids GC
+- `_SER` suffix — serialized (smaller footprint, more CPU)
+
+**Interview Traps**
+- `groupByKey` shuffles ALL values to reducer — prefer `reduceByKey`/`aggregateByKey` (combine locally first)
+- Lineage grows with each transformation — checkpoint long chains (> 20 hops) to avoid recomputation overhead
+- `rdd.collect()` pulls everything to driver — use `take(n)` or `saveAsTextFile()` for large data

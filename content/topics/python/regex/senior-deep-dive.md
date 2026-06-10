@@ -313,3 +313,62 @@ flowchart TD
 > **Tip 2:** "When would you choose regex over a parser library?" — "Regex for flat, single-line, predictable text: log lines, key=value pairs, simple field extraction. Parser libraries (lark, pyparsing) for nested structures, recursive grammars, or formats with complex escaping. If you catch yourself writing a regex longer than one line, or if it handles nested brackets/quotes, switch to a proper parser."
 
 > **Tip 3:** "How would you use regex in PySpark?" — "Two main functions: `regexp_extract(column, pattern, group_index)` to pull named fields from semi-structured columns, and `regexp_replace(column, pattern, replacement)` for cleaning. Key difference from Python `re`: PySpark uses Java regex syntax (mostly the same but some edge cases differ). Always test patterns on a sample before running on the full dataset."
+
+## ⚡ Cheat Sheet
+
+**Compile vs inline**
+```python
+# Compile when reusing pattern multiple times (faster)
+pattern = re.compile(r'(\d{4}-\d{2}-\d{2})', re.MULTILINE)
+# One-shot: re.search/match/findall directly
+```
+
+**Match vs Search vs Fullmatch**
+```python
+re.match(r'\d+', '123abc')   # matches at START only → Match('123')
+re.search(r'\d+', 'abc123')  # first match ANYWHERE → Match('123')
+re.fullmatch(r'\d+', '123')  # ENTIRE string must match
+re.findall(r'\d+', 'a1b2c3') # all non-overlapping → ['1','2','3']
+re.finditer(r'\d+', 'a1b2')  # iterator of Match objects
+```
+
+**Groups**
+```python
+m = re.search(r'(\d{4})-(\d{2})-(\d{2})', '2024-01-15')
+m.group(0)   # full match: '2024-01-15'
+m.group(1)   # first group: '2024'
+m.groups()   # all groups: ('2024', '01', '15')
+# Named groups
+m = re.search(r'(?P<year>\d{4})-(?P<month>\d{2})', '2024-01')
+m.group('year')    # '2024'
+m.groupdict()      # {'year': '2024', 'month': '01'}
+```
+
+**Substitution**
+```python
+re.sub(r'\s+', ' ', text)                    # collapse whitespace
+re.sub(r'(\w+)@(\w+)', r'[REDACTED]@\2', s) # mask usernames
+re.sub(r'(\d{3})\d{6}(\d{4})', r'\1***\2', s) # mask SSN
+re.subn(r'foo', 'bar', s)  # returns (new_string, count_replaced)
+```
+
+**Lookahead/lookbehind**
+```python
+re.findall(r'\d+(?= USD)', '100 USD 200 GBP')   # → ['100'] (lookahead)
+re.findall(r'(?<=\$)\d+', '$100 $200')           # → ['100', '200'] (lookbehind)
+re.findall(r'\d+(?! USD)', '100 USD 200 GBP')   # → ['200'] (negative lookahead)
+```
+
+**Flags**
+```python
+re.IGNORECASE  # case-insensitive
+re.MULTILINE   # ^ and $ match start/end of each line
+re.DOTALL      # . matches newline too
+re.VERBOSE     # allow whitespace and comments in pattern
+```
+
+**Performance rules**
+- Avoid catastrophic backtracking: never `(a+)+` or `(.*)(.*)` on same input
+- Use `re.compile()` for patterns used >3 times in a loop
+- `re.fullmatch` > `re.match(r'pattern$', ...)` — cleaner and slightly faster
+- Possessive quantifiers / atomic groups: use `regex` library for `(?>...)`

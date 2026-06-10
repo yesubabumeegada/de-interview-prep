@@ -265,3 +265,52 @@ from airflow.providers.mycompany.operators.data_load_operator import DataLoadOpe
 > **Tip 2:** The Hook + Operator + Plugin architecture is the right answer to "how do you scale custom operator development across teams." Hooks encapsulate connection logic, operators encapsulate task logic, and plugins register them into the Airflow system. Teams share hooks via internal Python packages.
 
 > **Tip 3:** When discussing custom operators in interviews, always mention `template_fields`. It's a subtle but important detail — if you forget to list a field, users can't use Jinja templating in it, which silently breaks expected behaviour. Senior engineers understand this and always document which fields support templating.
+
+## ⚡ Cheat Sheet
+
+**Operator Architecture — Three-Layer Rule**
+- **Hook**: connection/auth logic, independently testable, reusable across operators
+- **Operator**: orchestration logic, calls hook, defines `template_fields`
+- **Plugin**: registers hook + operator into Airflow UI/system
+
+**Deferrable Operator — How It Works**
+1. `execute()` submits job → gets async ID → `raise TaskDeferred(trigger=..., method_name='execute_complete')`
+2. Worker slot freed; trigger serialized to metadata DB
+3. Triggerer process (asyncio loop) polls asynchronously
+4. On completion: `yield TriggerEvent(...)` → scheduler re-queues task
+5. Worker slot re-acquired; `execute_complete(context, event)` called
+
+**Worker Slot Comparison**
+| Pattern | Slots During Wait |
+|---|---|
+| Standard operator (blocking) | 1 slot held entire duration |
+| Sensor poke mode | 1 slot held entire duration |
+| Sensor reschedule mode | Released between polls |
+| Deferrable operator | ~0 slots (re-acquired on completion) |
+
+**Trigger Serialization Requirement**
+```python
+def serialize(self) -> tuple:
+    return ('mymodule.MyTrigger', {'query_id': self.query_id, 'conn_id': self.conn_id})
+    # Must be JSON-serializable — stored in DB between polls
+```
+
+**`template_fields` — Critical Detail**
+- Every field that should support Jinja must be listed in `template_fields`
+- Forgetting a field: `{{ ds }}` in that field renders as a literal string (silent bug)
+- Files with `.sql` extension also rendered if listed in `template_ext`
+
+**Provider Package Structure**
+```
+apache-airflow-providers-mycompany/
+├── airflow/providers/mycompany/
+│   ├── hooks/myapi_hook.py
+│   ├── operators/data_load_operator.py
+│   └── sensors/file_ready_sensor.py
+└── provider.yaml  # connection-types, operators, sensors declared here
+```
+
+**OpenLineage Integration**
+- Implement `get_openlineage_facets_on_start()` → declare inputs/outputs
+- Implement `get_openlineage_facets_on_complete(ti)` → add row counts, stats
+- Enables automatic data lineage tracking without code changes in consumers
