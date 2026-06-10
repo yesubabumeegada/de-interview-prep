@@ -341,3 +341,42 @@ The cross-region data transfer cost dominates. Mitigations: compress aggressivel
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the most impactful producer settings for throughput optimization?**
+A: `batch.size` (larger batches = fewer requests), `linger.ms` (wait time to fill batches before sending), `compression.type` (snappy/lz4 reduces network and disk I/O), and `buffer.memory` (total memory for buffering). These settings trade latency for throughput.
+
+**Q: How does increasing partition count improve Kafka throughput?**
+A: More partitions enable more parallel producers writing and more parallel consumers reading. Each partition is handled by one broker leader and consumed by one consumer in a group. More partitions increase parallelism but add overhead: more open file handles, more replication traffic, and longer leader election time.
+
+**Q: What is the impact of replication factor on performance?**
+A: Each additional replica adds write latency because producers with `acks=all` must wait for all ISRs to acknowledge. Higher replication increases fault tolerance but increases broker network I/O and disk usage. The default of 3 balances durability and performance for most workloads.
+
+**Q: How does `acks` setting affect producer performance and durability?**
+A: `acks=0` is fastest (fire and forget, data loss possible), `acks=1` waits for leader acknowledgment (leader failure may lose data), `acks=all` (-1) waits for all ISRs (highest durability, highest latency). Choose based on your data loss tolerance.
+
+**Q: What is log compaction and how does it affect performance?**
+A: Log compaction removes older records with the same key, retaining only the latest value. It reduces disk usage for changelog-style topics but adds background I/O for the compaction process. Compaction threads compete with normal I/O — tune `log.cleaner.threads` to balance.
+
+**Q: How does consumer fetch tuning improve throughput?**
+A: Increase `fetch.min.bytes` and `fetch.max.wait.ms` so consumers fetch larger batches less frequently, reducing per-request overhead. Increase `max.partition.fetch.bytes` to allow larger per-partition fetches. These settings reduce network round trips at the cost of slightly higher latency.
+
+**Q: What is page cache and why is it critical to Kafka performance?**
+A: Kafka relies heavily on the OS page cache for read performance — brokers write to disk sequentially and consumers typically read recent data still in the page cache, avoiding disk reads entirely. Dedicated Kafka brokers should have ample RAM for page cache, and data on disk should not exceed page cache size for hot topics.
+
+**Q: How do you diagnose and resolve a slow broker in Kafka?**
+A: Check under-replicated partitions (ISR shrink signals the slow broker), broker disk I/O saturation, network throughput, GC pause times (JVM), and request handler thread pool saturation. Remediate by rebalancing partitions off the hot broker, tuning JVM heap, or adding capacity.
+
+---
+
+## 💼 Interview Tips
+
+- Know the producer batching triangle: batch.size + linger.ms + compression.type together control producer throughput. Tuning one in isolation is less effective than understanding how they interact.
+- Be ready to discuss the partition count trade-off: more partitions = more parallelism but also more overhead. The "10x your consumer count" rule of thumb is a starting point, not a formula — show you'd benchmark your specific workload.
+- Page cache is Kafka's most underappreciated performance lever — mentioning it proactively shows you understand Kafka's I/O architecture, not just configuration knobs.
+- Discuss acks in terms of the durability/latency trade-off explicitly — never recommend `acks=0` without acknowledging data loss risk. Senior interviewers want to see you connect settings to their operational consequences.
+- For senior roles, discuss partition rebalancing with kafka-reassign-partitions.sh — knowing how to move partitions to relieve a hot broker without downtime demonstrates operational maturity.
+- Avoid saying "just add more brokers" as a first response to performance issues — diagnose the bottleneck (network, disk, CPU, consumer lag) before prescribing infrastructure changes.

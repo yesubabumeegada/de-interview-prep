@@ -1224,3 +1224,41 @@ class IncrementalReChunker:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is chunking in the context of RAG systems?**
+A: Chunking is the process of splitting large documents into smaller, manageable pieces before embedding them into a vector store. The goal is to create chunks that are semantically coherent so retrieved context is relevant and fits within LLM context windows.
+
+**Q: What is the difference between fixed-size and semantic chunking?**
+A: Fixed-size chunking splits text at a set token or character count regardless of content boundaries, which can break sentences or ideas mid-thought. Semantic chunking uses NLP techniques to split at natural boundaries like sentences, paragraphs, or topic shifts, producing more coherent chunks.
+
+**Q: What is chunk overlap and why is it used?**
+A: Chunk overlap means adjacent chunks share some tokens from their boundaries. It prevents losing context that spans a chunk boundary—if a key sentence falls at the end of one chunk, the next chunk still captures it, improving retrieval recall.
+
+**Q: How does chunk size affect RAG performance?**
+A: Smaller chunks increase retrieval precision but may lack enough context for the LLM to generate a good answer. Larger chunks provide more context but may dilute relevance scores and consume more of the LLM's context window. The optimal size depends on document type and query patterns.
+
+**Q: What is hierarchical chunking?**
+A: Hierarchical chunking creates multiple levels of granularity—for example, document-level summaries, section-level chunks, and sentence-level chunks. Retrieval can start at a coarse level and drill down, balancing broad context with fine-grained precision.
+
+**Q: What is the "small-to-big" chunking strategy?**
+A: Small-to-big retrieves small, precise chunks for similarity matching but then expands context by returning the surrounding parent chunk to the LLM. This gives high retrieval precision while providing the LLM enough surrounding text to generate a coherent answer.
+
+**Q: How do you evaluate whether your chunking strategy is effective?**
+A: Use retrieval metrics like recall@k and MRR to see if relevant chunks are being retrieved. Also measure end-to-end answer quality with faithfulness and relevancy scores (e.g., using RAGAS). If retrieval recall is low, chunks may be too large or poorly bounded.
+
+**Q: What chunking considerations apply to structured data like tables or code?**
+A: Tables and code blocks should not be split mid-structure—they lose meaning when fragmented. Treat each table or function as an atomic chunk, potentially adding metadata (e.g., column names, function signatures) to improve retrieval and LLM comprehension.
+
+---
+
+## 💼 Interview Tips
+
+- When discussing chunking, always connect your strategy choice to the downstream retrieval and generation quality—interviewers want to see end-to-end thinking, not just "I used 512 tokens."
+- Avoid saying "I just used the default chunk size." Senior engineers experiment with chunk sizes and measure retrieval metrics; show that you iterate based on data.
+- Senior interviewers want to hear about trade-offs: smaller chunks vs. larger chunks, overlap vs. no overlap, and how you validated your choices with actual metrics.
+- Mention document-type awareness—chunking a legal PDF is different from chunking a code repository or a FAQ page. Showing this nuance signals production experience.
+- Be ready to discuss how metadata enrichment (adding titles, section headers, or document IDs to each chunk) improves retrieval even when chunk content alone is ambiguous.

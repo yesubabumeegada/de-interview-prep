@@ -339,3 +339,41 @@ AS MERGE INTO silver.orders USING orders_stream ...;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Snowpipe and what problem does it solve?**
+A: Snowpipe is Snowflake's continuous data ingestion service that automatically loads files from a stage as soon as they arrive, eliminating the need to schedule bulk COPY INTO jobs. It enables near-real-time data availability (typically seconds to minutes latency) from cloud object stores.
+
+**Q: How does Snowpipe detect new files to load?**
+A: Snowpipe uses cloud event notifications—SNS/SQS for S3, Azure Event Grid for Blob Storage, and Pub/Sub for GCS—to trigger file loading when new files land in the external stage. Alternatively, you can call the Snowpipe REST API directly to trigger loads programmatically.
+
+**Q: What is the difference between Snowpipe and a COPY INTO statement?**
+A: COPY INTO is a bulk load operation that you run manually or on a schedule inside a virtual warehouse—billed as warehouse compute. Snowpipe uses Snowflake-managed compute (cloud services) billed per file/byte loaded, is event-driven, and is designed for continuous micro-batch loading rather than periodic bulk loads.
+
+**Q: How does Snowpipe handle duplicate files?**
+A: Snowpipe maintains a metadata store of previously loaded file names and timestamps (configurable retention, default 64 days). If the same file path is submitted again, it is skipped. This provides at-least-once delivery semantics for new files; however, it does not deduplicate duplicate records within different files.
+
+**Q: What is the load history for Snowpipe and how do you query it?**
+A: Load history is stored in `INFORMATION_SCHEMA.LOAD_HISTORY` or `SNOWFLAKE.ACCOUNT_USAGE.LOAD_HISTORY`. It records each file loaded—file name, row count, error count, and timestamp. This is essential for monitoring pipeline completeness and debugging failed loads.
+
+**Q: What are Snowpipe Streaming (SDK-based) and how does it differ from file-based Snowpipe?**
+A: Snowpipe Streaming uses a Snowflake SDK (Java/Python) to push rows directly to Snowflake channels without staging files first, achieving sub-second latency. It is suited for high-frequency streaming from Kafka or application event streams. File-based Snowpipe suits batch file workflows; Snowpipe Streaming suits true streaming.
+
+**Q: How do you monitor Snowpipe for failures and latency?**
+A: Monitor `COPY_HISTORY` and `LOAD_HISTORY` views for error counts. Set up cloud-side alerting (e.g., CloudWatch on SQS queue depth) to detect if the notification queue is backing up. Track ingestion latency by comparing file creation time to load timestamp. Snowflake also emits alerts via Notification Integrations.
+
+**Q: What are the cost components of Snowpipe?**
+A: Snowpipe billing includes: compute cost per credit for processing (separate from virtual warehouse credits), plus standard cloud storage costs. For Snowpipe Streaming, there's an additional charge per row inserted. Compare this against the cost of running a scheduled COPY INTO on a virtual warehouse to choose the most cost-effective approach for your file volume.
+
+---
+
+## 💼 Interview Tips
+
+- Distinguish file-based Snowpipe from Snowpipe Streaming clearly—they target very different latency regimes and use cases. Conflating them signals you haven't worked with both.
+- Always discuss monitoring and error handling alongside Snowpipe setup. In production, knowing when files fail to load (and why) is as important as getting the happy path working.
+- Mention deduplication limitations: Snowpipe prevents the same file from loading twice but doesn't deduplicate records across different files. Senior interviewers will probe whether your downstream tables handle record-level deduplication.
+- Be ready to discuss the trade-off between Snowpipe (near-real-time, managed compute) and scheduled COPY INTO (simpler, warehouse compute, higher latency). Quantify the latency and cost difference for a given file volume.
+- Senior interviewers at streaming-heavy companies will ask about Snowpipe Streaming + Kafka Connector integration. Knowing the end-to-end architecture (Kafka → Kafka Connector → Snowpipe Streaming → Snowflake table) shows production-level depth.

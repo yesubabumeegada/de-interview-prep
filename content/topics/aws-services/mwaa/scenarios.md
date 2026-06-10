@@ -213,3 +213,42 @@ def failover_to_eu():
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Amazon MWAA and what does it manage?**
+A: MWAA (Managed Workflows for Apache Airflow) is a fully managed service that handles the deployment, scaling, and maintenance of Apache Airflow environments on AWS. It manages the Airflow scheduler, web server, workers, and metadata database — you only write DAGs and manage plugins and requirements.
+
+**Q: How do you deploy DAGs to an MWAA environment?**
+A: DAGs are deployed by uploading Python files to the MWAA-designated S3 bucket (the `dags/` folder). MWAA automatically syncs DAGs from S3 to the Airflow environment within about a minute. Plugins and Python requirements are similarly managed via S3 with a version update triggering environment refresh.
+
+**Q: What is the difference between MWAA environment classes?**
+A: MWAA environment classes (mw1.small, mw1.medium, mw1.large, mw1.xlarge, mw1.2xlarge) determine the compute resources for the Airflow scheduler and web server. Worker capacity scales separately via the `min_workers` and `max_workers` settings — the environment class affects the control plane, not worker auto-scaling.
+
+**Q: How does MWAA handle worker auto-scaling?**
+A: MWAA workers run on AWS Fargate and scale automatically between `min_workers` and `max_workers` based on queued task count. Each worker is a Fargate container running the Airflow Celery worker. Scaling is reactive — it responds to queue depth changes.
+
+**Q: How do you manage Python dependencies in MWAA?**
+A: Add dependencies to a `requirements.txt` file stored in the MWAA S3 bucket. Updating the file version in the MWAA environment configuration triggers a rolling update of the environment. For custom packages or binary dependencies, use custom plugins packaged as a ZIP file.
+
+**Q: What IAM permissions does MWAA require?**
+A: MWAA needs an execution role that grants access to the DAG S3 bucket, CloudWatch Logs for Airflow log groups, KMS for encryption, Secrets Manager for Airflow connections and variables, and the Airflow API. Task-level AWS access uses the same execution role or task-specific IAM roles passed via operators.
+
+**Q: How do you use Secrets Manager with MWAA for Airflow connections?**
+A: Configure MWAA to use Secrets Manager as the Airflow secrets backend. Store Airflow connections as secrets with the naming convention `airflow/connections/<connection_id>`. MWAA automatically retrieves and injects these connections at runtime, keeping credentials out of the metadata database and DAG code.
+
+**Q: What are the key differences between self-hosted Airflow and MWAA?**
+A: MWAA removes the burden of managing Airflow infrastructure (scheduler HA, worker scaling, metadata DB, upgrades) but constrains you to MWAA-supported Airflow versions and the Celery executor. Self-hosted Airflow on EKS (with KubernetesExecutor) offers more flexibility, custom resource allocation per task, and faster version upgrades.
+
+---
+
+## 💼 Interview Tips
+
+- Frame MWAA's value as eliminating Airflow infrastructure management, not just "hosted Airflow" — mention scheduler HA, automatic worker scaling, managed upgrades, and integrated CloudWatch logging as the specific operational burdens it removes.
+- Senior interviewers probe the MWAA vs. self-hosted trade-off: MWAA is faster to get started and operationally simpler; self-hosted on EKS with KubernetesExecutor enables pod-per-task isolation, custom resource requests, and faster adoption of new Airflow versions.
+- Mention the S3 sync delay for DAG deployment as a key operational consideration — MWAA is not instant; allow up to 1-2 minutes for DAGs to appear after S3 upload, and use versioning + CI/CD pipelines for controlled deployments.
+- Demonstrate security depth: describe using Secrets Manager for connections, VPC private endpoints for MWAA, and task-level IAM roles (via `aws_conn_id` and role assumption) to limit blast radius of compromised credentials.
+- Know the worker memory limit: MWAA workers have fixed memory per Fargate task. For memory-intensive tasks, offload heavy compute to Glue, EMR, or Batch via operators — Airflow is an orchestrator, not an execution engine.
+- Avoid treating MWAA as a solution for sub-minute scheduling: Airflow's scheduler operates at minute-level granularity. For event-driven, sub-minute triggers, EventBridge or Lambda is more appropriate.

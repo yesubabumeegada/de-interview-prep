@@ -353,3 +353,41 @@ END;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are Snowflake Dynamic Tables and how do they differ from regular views?**
+A: Dynamic Tables are materialized query results that Snowflake automatically refreshes on a defined lag schedule. Unlike regular views (which re-execute on every query), dynamic tables store results and are incrementally maintained, giving you materialized view semantics with automatic orchestration—no separate pipeline needed.
+
+**Q: What is the "target lag" parameter in a Dynamic Table?**
+A: Target lag defines the maximum acceptable staleness of a dynamic table's data relative to its source tables. Snowflake's automatic refresh engine schedules refreshes to meet this lag. A target lag of "1 minute" means the table should never be more than 1 minute behind its sources.
+
+**Q: How do Dynamic Tables handle incremental refresh?**
+A: Snowflake analyzes the dynamic table's query and, where possible, computes only the rows affected by upstream changes since the last refresh (incremental processing). For queries that don't support incremental computation (e.g., certain aggregations), it falls back to a full refresh automatically.
+
+**Q: What is the difference between Dynamic Tables and Streams + Tasks?**
+A: Streams + Tasks require you to manually write the incremental logic and orchestrate refresh scheduling. Dynamic Tables abstract away both—Snowflake determines what changed and when to refresh automatically. Dynamic Tables are simpler to maintain but offer less control; Streams + Tasks are more flexible for complex CDC patterns.
+
+**Q: Can Dynamic Tables be chained, and what does that enable?**
+A: Yes. A dynamic table can be defined on top of other dynamic tables, forming a dependency graph. Snowflake automatically orchestrates the refresh order, ensuring upstream tables are refreshed before downstream ones. This enables declarative definition of multi-hop transformation pipelines without explicit orchestration code.
+
+**Q: What are the limitations of Dynamic Tables?**
+A: Dynamic Tables don't support every SQL construct—certain window functions or non-deterministic functions may prevent incremental refresh and force full refresh. They also require Snowflake Enterprise or above for some features. You cannot update or delete rows manually; the content is fully controlled by the query definition.
+
+**Q: How do you monitor Dynamic Table refresh status and lag?**
+A: Use `INFORMATION_SCHEMA.DYNAMIC_TABLE_REFRESH_HISTORY` or the `DYNAMIC_TABLES` view to inspect refresh timestamps, durations, and errors. Snowflake also surfaces lag metrics in the UI. You should alert when actual lag exceeds the target lag to detect processing backlogs.
+
+**Q: When would you choose a Dynamic Table over a dbt model?**
+A: Dynamic Tables are best for always-on, low-latency continuous refresh scenarios within Snowflake. dbt models are better when you need transformation logic across multiple warehouse targets, rich testing, documentation generation, or complex orchestration with Airflow/Dagster. dbt also has a broader open-source ecosystem for governance and lineage.
+
+---
+
+## 💼 Interview Tips
+
+- Emphasize that Dynamic Tables represent a shift toward declarative pipelines—you define the query and the lag, Snowflake handles the rest. This simplicity reduces operational overhead and is a strong selling point for platform simplification.
+- Always compare Dynamic Tables to the alternatives (Streams + Tasks, dbt, materialized views) and articulate why you'd choose each—showing you can match tool to use case is what senior interviewers look for.
+- Mention monitoring and lag alerting proactively—in production, knowing when your dynamic tables are falling behind is as important as setting them up.
+- Be honest about limitations: not all queries support incremental refresh, and full refresh can be expensive for large tables. Demonstrating awareness of the cost model shows maturity.
+- Senior interviewers may ask about chained dynamic table pipelines—know that Snowflake resolves the dependency graph automatically, but also understand this can make debugging harder when an upstream table has a schema change.

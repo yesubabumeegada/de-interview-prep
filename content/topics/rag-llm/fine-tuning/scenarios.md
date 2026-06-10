@@ -1153,3 +1153,41 @@ OPTIMIZATION_PLAN = {
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: When should you fine-tune an LLM vs. relying solely on RAG?**
+A: Use RAG when the knowledge base changes frequently or is too large to bake into weights. Use fine-tuning when you need the model to learn a specific style, format, or reasoning pattern that can't be achieved through prompting alone. They are complementary—fine-tuning teaches "how to respond," RAG provides "what to respond with."
+
+**Q: What is LoRA and why is it popular for fine-tuning LLMs?**
+A: LoRA (Low-Rank Adaptation) injects trainable low-rank matrices into frozen model weights, drastically reducing the number of trainable parameters. This lowers GPU memory requirements and training time while achieving performance close to full fine-tuning, making it practical for teams without massive compute budgets.
+
+**Q: What data do you need for instruction fine-tuning?**
+A: Instruction fine-tuning requires prompt-completion pairs where the prompt is a user instruction and the completion is the desired model response. For RAG-specific fine-tuning, you'd include context passages in the prompt and train the model to generate answers grounded in that context.
+
+**Q: What is catastrophic forgetting and how do you mitigate it?**
+A: Catastrophic forgetting occurs when fine-tuning on new data causes the model to lose capabilities learned during pretraining. Mitigations include using LoRA (which leaves base weights frozen), mixing in general-purpose examples with domain-specific ones, and evaluating on a broad benchmark after fine-tuning.
+
+**Q: What is RLHF and how does it differ from supervised fine-tuning?**
+A: RLHF (Reinforcement Learning from Human Feedback) trains a reward model on human preference rankings, then uses RL (PPO) to optimize the LLM to maximize that reward. Supervised fine-tuning directly trains on labeled examples. RLHF is better at shaping open-ended behavior like helpfulness or safety but is more complex to implement.
+
+**Q: How do you evaluate a fine-tuned model for a RAG use case?**
+A: Evaluate on a held-out set using RAG-specific metrics: faithfulness (does it stay grounded?), answer relevancy, and task-specific accuracy (e.g., exact match for extractive QA). Also run regression tests against the base model on general benchmarks to detect capability degradation.
+
+**Q: What is QLoRA and how does it differ from LoRA?**
+A: QLoRA combines LoRA with 4-bit quantization of the base model, further reducing GPU memory. The base model is quantized to 4-bit (NF4 format) and kept frozen, while LoRA adapters are trained in higher precision. This enables fine-tuning large models (e.g., 70B) on consumer-grade GPUs.
+
+**Q: What are the risks of fine-tuning on proprietary or sensitive data?**
+A: Fine-tuned models can memorize and reproduce training data, creating privacy and compliance risks if that data contains PII or trade secrets. Mitigations include differential privacy training, data deduplication and scrubbing, and careful access controls on the fine-tuned model itself.
+
+---
+
+## 💼 Interview Tips
+
+- Always frame fine-tuning as one tool in a broader toolkit—leading with "should we fine-tune or use better prompting/RAG?" shows mature judgment over jumping straight to training.
+- Be specific about parameter-efficient methods (LoRA, QLoRA) and why they matter in practice—cost and infrastructure constraints are real, and interviewers at data-intensive companies will probe your awareness of them.
+- Senior interviewers want to hear about your evaluation strategy before and after fine-tuning, not just training details. Showing you measure capability regressions demonstrates production readiness.
+- Avoid conflating instruction fine-tuning with RLHF—know when each is appropriate and what human annotation requirements differ between them.
+- Bring up data quality as the most critical factor. A small, high-quality dataset almost always beats a large noisy one for fine-tuning—this insight signals experience over theory.

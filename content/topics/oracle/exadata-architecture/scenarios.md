@@ -161,3 +161,40 @@ Evaluate on three axes: *control vs operations*, *economics at your data scale*,
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Oracle Exadata and what makes it different from a standard Oracle database server?**
+A: Exadata is an engineered system combining database servers, Smart Storage Servers (cells), and an InfiniBand interconnect optimized for Oracle workloads. Its key differentiator is Smart Scan—offloading filtering, column projection, and decompression to storage cells, dramatically reducing data transferred to database nodes.
+
+**Q: What is Smart Scan and when does it activate?**
+A: Smart Scan is Exadata's storage-layer offloading feature that executes predicate filtering and column projection in the storage cell, returning only matching rows/columns to the database node. It activates for full segment scans (full table scans, fast full index scans) over direct-path reads—it does NOT fire for single-block (index range scan) access.
+
+**Q: What is Hybrid Columnar Compression (HCC) and what are its compression tiers?**
+A: HCC stores data in a columnar format within Oracle blocks, achieving far higher compression ratios than OLTP compression. Tiers: Query Low/High (balanced compression for analytics), Archive Low/High (maximum compression for infrequently accessed data). HCC requires Exadata or certain Oracle Cloud storage.
+
+**Q: What is the InfiniBand network used for in Exadata?**
+A: The internal InfiniBand fabric provides ultra-low-latency, high-bandwidth connectivity between database nodes and storage cells. It carries iDB (Intelligent Database) protocol traffic (Smart Scan results, RDMA I/O) and RAC Cache Fusion interconnect traffic, all on the same high-speed fabric.
+
+**Q: What is Storage Index and how does it accelerate queries?**
+A: A Storage Index is an in-memory data structure maintained in each storage cell that records the min/max values of frequently predicate-filtered columns per 1 MB storage region. If a query predicate falls outside a region's range, that region is skipped entirely—providing index-like benefit without actual index maintenance.
+
+**Q: How does Exadata handle I/O Resource Management (IORM)?**
+A: IORM allows administrators to allocate I/O bandwidth to different database services or consumer groups via DBRM plans. This prevents one workload (e.g., a runaway batch job) from saturating storage I/O and starving OLTP queries—critical in consolidated multi-tenant Exadata deployments.
+
+**Q: What is the difference between Exadata X8 database servers and storage cells?**
+A: Database servers (compute nodes) run Oracle Database instances, host the SGA, and execute SQL. Storage cells (Smart Storage Servers) run the Exadata Storage Server Software (CELLSRV), manage flash and disk, execute Smart Scan offloading, and serve I/O requests via iDB protocol. The two tiers communicate over InfiniBand.
+
+**Q: How does Exadata improve RAC performance compared to commodity hardware?**
+A: Exadata's InfiniBand interconnect provides ~40 Gb/s with microsecond latency for Cache Fusion traffic, vastly outperforming standard 10 GbE. Smart Scan reduces the volume of data nodes must transfer over the interconnect. Together, they make inter-node block shipping in RAC far more efficient.
+
+---
+
+## 💼 Interview Tips
+
+- Interviewers test whether you know Smart Scan's activation conditions—not every query benefits. State clearly: Smart Scan requires full segment scan + direct-path read. Index-based access does not use it.
+- When discussing HCC, always pair it with the DML caveat: HCC-compressed blocks must be decompressed before row-level DML, making it unsuitable for hot OLTP tables but ideal for historical/archival data.
+- Senior Exadata questions often involve diagnosing why Smart Scan is not firing. Walk through the checklist: direct-path reads enabled? predicate pushdown supported? storage cell software version compatible? table in non-default storage?
+- Demonstrate IORM knowledge for multi-workload scenarios—if a DW query is impacting OLTP latency, IORM is the lever, not just killing the query.
+- Connect Exadata to cloud: Oracle Exadata Cloud Service (ExaCS) and Exadata Cloud@Customer are common paths. Showing awareness of the cloud deployment model is a differentiator for 2024+ roles.

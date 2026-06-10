@@ -475,3 +475,42 @@ MIGRATION_PLAN = {
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Databricks Lakeflow and what is its purpose?**
+A: Lakeflow is Databricks' unified data engineering product that brings together ingestion (Lakeflow Connect), pipeline development (Lakeflow Pipelines / Delta Live Tables), and orchestration (Lakeflow Jobs / Databricks Workflows) under a single governed platform.
+
+**Q: What is Lakeflow Connect and how does it simplify data ingestion?**
+A: Lakeflow Connect provides managed, no-code connectors for ingesting data from SaaS applications and databases (Salesforce, Workday, databases via CDC) into Delta Lake. It handles schema evolution, incremental loading, and delivery guarantees without custom connector code.
+
+**Q: How does Lakeflow Pipelines relate to Delta Live Tables?**
+A: Lakeflow Pipelines is the product name for what was previously known as Delta Live Tables (DLT). The underlying technology is the same — a declarative ETL framework — but the Lakeflow branding positions it within the broader Lakeflow data engineering suite.
+
+**Q: What governance capabilities does Lakeflow integrate with?**
+A: Lakeflow integrates natively with Unity Catalog, providing automatic lineage tracking for all pipeline inputs and outputs, centralized access control, data discovery, and audit logging — all without additional configuration beyond Unity Catalog setup.
+
+**Q: How does Lakeflow differ from a traditional ETL tool like Informatica or Talend?**
+A: Lakeflow is cloud-native, code-first (SQL/Python), and tightly integrated with the Databricks Lakehouse stack (Delta Lake, Unity Catalog, Spark). Traditional ETL tools are often GUI-driven, proprietary, and require separate infrastructure. Lakeflow offers more flexibility for complex transformations but requires coding skills.
+
+**Q: What is the role of Lakeflow Jobs in the Databricks ecosystem?**
+A: Lakeflow Jobs is the orchestration layer (Databricks Workflows) that schedules and sequences data pipelines, notebook runs, DLT pipeline updates, and dbt jobs. It supports complex dependencies, retry logic, conditional branching, and event-based triggers.
+
+**Q: How do you monitor Lakeflow pipeline health in production?**
+A: Use the Databricks pipeline UI for run history and quality metrics, query the DLT event log (`system.event_log`) for detailed metrics, set up Databricks Workflows alerts for job failures, and export metrics to external monitoring tools (Datadog, PagerDuty) via the REST API or system tables.
+
+**Q: What makes Lakeflow suitable for enterprise data engineering teams?**
+A: Lakeflow provides end-to-end coverage from ingestion to serving within a single governed platform, reducing the number of tools to manage. Unity Catalog integration ensures consistent governance, and the managed infrastructure reduces operational overhead compared to self-managed open-source stacks.
+
+---
+
+## 💼 Interview Tips
+
+- Position Lakeflow as an emerging product family — show awareness that it represents Databricks' strategic move to consolidate data engineering under one roof.
+- Know that Lakeflow Pipelines = Delta Live Tables under a new name — don't be confused by branding changes in interviews.
+- Be ready to discuss when Lakeflow makes sense vs. a mixed-tool approach (Airbyte + dbt + Airflow) — the key differentiators are governance integration and platform consolidation.
+- Senior interviewers at Databricks-heavy organizations will ask about Unity Catalog integration — lineage and governance are key selling points of the Lakeflow platform.
+- Show awareness that Lakeflow Connect positions Databricks to compete with tools like Fivetran and Airbyte in the managed connector space.
+- Common mistake: treating Lakeflow as a single tool — it is a suite of capabilities, and knowing the distinction between Connect, Pipelines, and Jobs shows architectural maturity.

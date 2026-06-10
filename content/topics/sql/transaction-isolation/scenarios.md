@@ -522,3 +522,41 @@ $$;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the four standard SQL transaction isolation levels?**
+A: READ UNCOMMITTED (can see uncommitted changes from other transactions—dirty reads possible), READ COMMITTED (sees only committed data, but non-repeatable reads possible), REPEATABLE READ (same rows return same data within a transaction, but phantom reads possible), and SERIALIZABLE (full isolation—transactions behave as if sequential, no anomalies).
+
+**Q: What is a dirty read and which isolation level prevents it?**
+A: A dirty read occurs when transaction A reads data modified by transaction B before B commits. If B rolls back, A read data that never existed. READ COMMITTED and above prevent dirty reads by only showing committed data.
+
+**Q: What is a non-repeatable read and when does it occur?**
+A: A non-repeatable read happens when transaction A reads a row, transaction B updates and commits that row, and transaction A reads the same row again and gets a different value. READ COMMITTED allows this; REPEATABLE READ and SERIALIZABLE prevent it.
+
+**Q: What is a phantom read and how is it different from a non-repeatable read?**
+A: A phantom read occurs when transaction A executes a range query, transaction B inserts (or deletes) rows that match the range and commits, and transaction A re-executes the range query and sees different rows. A non-repeatable read affects an existing row's values; a phantom read affects the set of rows returned. SERIALIZABLE prevents phantoms; REPEATABLE READ (in most implementations) does not.
+
+**Q: What is MVCC (Multi-Version Concurrency Control) and how does it reduce locking?**
+A: MVCC maintains multiple versions of each row, allowing readers to see a consistent snapshot of data as of their transaction start time without blocking writers. Writers create new row versions rather than modifying in place. This enables high read concurrency with minimal locking—PostgreSQL and Snowflake both use MVCC-based approaches.
+
+**Q: What is a deadlock and how do databases handle it?**
+A: A deadlock occurs when two transactions each hold a lock the other needs, causing circular waiting. Databases detect deadlocks (by checking the wait-for graph) and resolve them by killing one transaction (the victim) and rolling it back. Applications must handle the resulting error and retry the transaction.
+
+**Q: What is the default isolation level in PostgreSQL and why is it commonly used?**
+A: PostgreSQL defaults to READ COMMITTED—transactions see only committed data from other transactions, but each statement within the transaction sees the latest committed state. It's widely used because it avoids dirty reads while being less prone to serialization failures (transaction rollbacks) than REPEATABLE READ or SERIALIZABLE.
+
+**Q: What is a SELECT FOR UPDATE and when do you use it?**
+A: SELECT FOR UPDATE locks the selected rows for the duration of the transaction, preventing other transactions from modifying them until the lock is released at COMMIT or ROLLBACK. It's used to implement pessimistic locking patterns—for example, reserving inventory rows before updating them to prevent overselling.
+
+---
+
+## 💼 Interview Tips
+
+- Know all four isolation levels and their anomalies cold—this is a fundamental topic that appears in DE, backend, and data platform interviews at every seniority level.
+- Frame isolation levels as a trade-off: higher isolation = fewer anomalies but more lock contention and potentially more transaction rollbacks. Show you understand the operational implications, not just the definitions.
+- When discussing MVCC, connect it to Snowflake's Time Travel—both use version history to allow point-in-time reads without blocking writers. Drawing this connection shows cross-system depth.
+- Be ready to design a locking strategy for a specific scenario (e.g., double-booking prevention, inventory reservation)—SELECT FOR UPDATE and SERIALIZABLE are the main tools and senior interviewers will probe which you'd choose and why.
+- Mention that SERIALIZABLE is rarely the default in production systems because of its performance overhead. Knowing when to escalate to SERIALIZABLE (e.g., financial transactions where correctness is paramount) vs. accepting READ COMMITTED with application-level idempotency is a key senior judgment call.

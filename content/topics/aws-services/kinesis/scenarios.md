@@ -199,3 +199,42 @@ kinesis.update_stream_mode(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the main Kinesis services and how do they differ?**
+A: Kinesis Data Streams (KDS) is a real-time streaming storage service for custom consumers. Kinesis Data Firehose is a fully managed delivery service that loads streaming data into S3, Redshift, or OpenSearch without consumer code. Kinesis Data Analytics (now Amazon Managed Service for Apache Flink) enables real-time SQL or Flink processing on streams.
+
+**Q: What is a Kinesis shard and how does it affect throughput?**
+A: A shard is the base unit of capacity in Kinesis Data Streams. Each shard supports 1 MB/s ingest (1,000 records/s) and 2 MB/s read throughput. To scale, you add more shards — a stream with 10 shards handles 10 MB/s ingest. Throughput is partitioned across shards by partition key.
+
+**Q: What is the difference between Kinesis enhanced fan-out and standard consumers?**
+A: Standard consumers share the 2 MB/s per-shard read limit across all consumers using polling (GetRecords). Enhanced fan-out gives each registered consumer a dedicated 2 MB/s per-shard throughput using HTTP/2 push delivery, enabling multiple high-throughput consumers without sharing bandwidth.
+
+**Q: How long does Kinesis Data Streams retain records?**
+A: Default retention is 24 hours, extendable to 7 days, and with extended retention up to 365 days (at additional cost). Retention determines how far back consumers can replay records.
+
+**Q: What is the at-least-once delivery guarantee in Kinesis and how do you handle duplicates?**
+A: Kinesis guarantees at-least-once delivery — a record may be delivered more than once in rare failure scenarios. Consumers must implement idempotent processing using a unique record identifier (sequence number or a business key) to detect and discard duplicates.
+
+**Q: What is Kinesis Data Firehose and when should you use it instead of Kinesis Data Streams?**
+A: Firehose is a fully managed, zero-consumer-code delivery service that batches, compresses, and delivers data to S3, Redshift, OpenSearch, or HTTP endpoints. Use Firehose when you need simple delivery without custom consumer logic. Use KDS when you need real-time processing, multiple consumers, or replay capabilities.
+
+**Q: How do you handle hot shards in Kinesis?**
+A: Hot shards occur when too many records hash to the same shard due to a low-cardinality partition key. Solutions include: using high-cardinality partition keys (UUID, user_id), adding a random prefix to partition keys (shard spreading), and using shard-level CloudWatch metrics to detect imbalance.
+
+**Q: How does Kinesis integrate with Lambda?**
+A: Lambda has a native Kinesis trigger (Event Source Mapping) that polls shards, batches records, and invokes Lambda with up to 10,000 records per batch. Lambda processes records in shard order; failures retry the batch until the record expires. You can configure bisect-on-error and destination on failure (SQS DLQ) for error handling.
+
+---
+
+## 💼 Interview Tips
+
+- Know when NOT to use Kinesis: for very high throughput (millions of events/second), MSK (Kafka) is more cost-effective. For simple data delivery to S3 without real-time processing, Firehose is sufficient. Articulating this distinction signals strong architectural judgment.
+- Senior interviewers expect a deep understanding of ordering: records are ordered within a shard by sequence number, not across shards. If cross-shard ordering matters, you need a single shard or a different architecture.
+- Mention the partition key selection as a critical design decision — it's the most common source of hot shard problems in production. Always use high-cardinality keys and verify distribution with shard-level metrics.
+- Demonstrate cost awareness: Kinesis charges per shard-hour plus PUT payload units. Firehose charges per GB ingested. For variable-workload streaming, compare costs against MSK carefully.
+- Show end-to-end pipeline thinking: describe a Kinesis → Lambda → DynamoDB real-time leaderboard pattern, or Kinesis → Firehose → S3 → Athena analytics pipeline.
+- Mention the iterator age metric (`GetRecords.IteratorAgeMilliseconds`) as the key operational metric — high iterator age means consumers are falling behind producers, which is the primary Kinesis scaling signal.

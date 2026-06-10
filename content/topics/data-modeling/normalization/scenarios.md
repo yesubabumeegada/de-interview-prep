@@ -505,3 +505,42 @@ GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12;
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the first three normal forms and what anomaly does each eliminate?**
+A: 1NF eliminates repeating groups by ensuring atomic values. 2NF eliminates partial dependencies (non-key attributes depending on part of a composite key). 3NF eliminates transitive dependencies (non-key attributes depending on other non-key attributes).
+
+**Q: What is denormalization and when is it appropriate in data engineering?**
+A: Denormalization intentionally introduces redundancy to improve read performance by reducing joins. It is appropriate in OLAP systems, data warehouses, and analytical query layers where query speed matters more than write efficiency or storage cost.
+
+**Q: What is BCNF (Boyce-Codd Normal Form) and how does it differ from 3NF?**
+A: BCNF is a stricter version of 3NF: every determinant must be a candidate key. A table can be in 3NF but not BCNF when there are overlapping candidate keys. BCNF eliminates all remaining functional dependency anomalies but can require more table splits.
+
+**Q: What are update, insert, and delete anomalies in an unnormalized schema?**
+A: Update anomalies occur when changing a value requires updating multiple rows. Insert anomalies occur when you cannot insert one fact without another. Delete anomalies occur when deleting one fact accidentally removes unrelated information — all caused by storing multiple concerns in one table.
+
+**Q: How does normalization affect OLTP vs. OLAP systems differently?**
+A: OLTP systems benefit from normalization because writes are frequent and consistency is critical — normalized schemas minimize redundancy and lock contention. OLAP systems prefer denormalization because analytical queries join many tables, making fewer joins more important than write efficiency.
+
+**Q: What is a functional dependency?**
+A: A functional dependency A → B means that knowing the value of A uniquely determines the value of B. Understanding functional dependencies is the foundation of normalization — each normal form progressively eliminates problematic dependency patterns.
+
+**Q: What is 4NF and when would you encounter it?**
+A: 4NF eliminates multi-valued dependencies — when one attribute independently determines multiple values of two other attributes. It is relevant when a table has two independent one-to-many relationships, which should be stored in separate tables to avoid spurious combinations.
+
+**Q: How do you decide the right level of normalization for a data model?**
+A: Consider the primary workload: normalize for write-heavy transactional systems to ensure consistency; denormalize for read-heavy analytical systems. In data engineering, the raw/staging layer often mirrors normalized source systems, while the serving layer is deliberately denormalized for performance.
+
+---
+
+## 💼 Interview Tips
+
+- Be able to identify normalization violations given a sample table in an interview — this is a common hands-on whiteboard exercise.
+- Frame normalization decisions in terms of tradeoffs, not rules: know when to break normal forms deliberately and be able to justify the decision.
+- Avoid over-normalizing analytical models — interviewers in DE roles want to see that you understand the serving layer needs denormalization.
+- Connect normalization to practical problems: explain how unnormalized source data causes downstream pipeline bugs and metric inconsistencies.
+- Know that most modern cloud data warehouses (BigQuery, Snowflake, Redshift) are optimized for wide, denormalized tables — columnar storage makes joins expensive relative to storage.
+- Senior interviewers want to hear about schema evolution: how normalization choices made early affect how hard it is to change the schema later as business requirements shift.

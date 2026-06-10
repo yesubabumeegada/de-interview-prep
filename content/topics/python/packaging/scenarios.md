@@ -467,3 +467,41 @@ jobs:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Python package vs. a module?**
+A: A module is a single `.py` file. A package is a directory containing an `__init__.py` file (which may be empty) and one or more modules or sub-packages. The `__init__.py` marks the directory as a Python package and controls what is exposed when users `import package_name`.
+
+**Q: What is `pyproject.toml` and why is it replacing `setup.py`?**
+A: `pyproject.toml` is the modern, PEP 517/518-compliant project configuration file that declares build system requirements and project metadata. It replaces `setup.py` + `setup.cfg` with a single, declarative, tool-agnostic format supported by pip, Poetry, Hatch, and flit. It separates build-time dependencies from runtime dependencies cleanly.
+
+**Q: What is the difference between `dependencies` and `optional-dependencies` in `pyproject.toml`?**
+A: `dependencies` are required for the package to function—always installed. `optional-dependencies` (extras) are installed only when explicitly requested with `pip install mypackage[dev]`. Use extras for development tools (`pytest`, `black`), documentation (`sphinx`), and optional integrations (`mypackage[spark]` for PySpark-specific features).
+
+**Q: What is a virtual environment and why is it essential for Python development?**
+A: A virtual environment is an isolated Python installation with its own site-packages directory. It prevents dependency conflicts between projects (Project A needs `pandas==1.5`, Project B needs `pandas==2.0`) and ensures reproducibility. `python -m venv .venv` or `conda create` are the standard creation methods.
+
+**Q: What is the difference between `pip install -r requirements.txt` and a lock file?**
+A: `requirements.txt` specifies constraints (e.g., `pandas>=1.5`), which may install different versions on different machines as new releases appear. A lock file (`pip-compile` → `requirements.lock`, or Poetry's `poetry.lock`) pins exact versions of every dependency and transitive dependency, guaranteeing identical environments across machines and CI runs.
+
+**Q: What is `__all__` in a Python module and what does it control?**
+A: `__all__` is a list of names that should be exported when `from module import *` is used. It also serves as an explicit public API declaration—documentation tools and IDEs use it to determine the module's public interface. Without `__all__`, `import *` exports all names not starting with underscore.
+
+**Q: How do you structure a data engineering Python package for a DE team?**
+A: Common layout: `src/` layout (PEP 517 recommended) with `src/mypackage/` containing `extractors/`, `transformers/`, `loaders/`, `utils/`, `config/`, and `models/`. Tests in `tests/` mirroring the source tree. `pyproject.toml` at root. Separate extras for `[dev]` (pytest, black, mypy) and `[spark]` (pyspark). This structure prevents test code from being importable in production.
+
+**Q: What is semantic versioning and how does it apply to DE packages?**
+A: Semantic versioning uses `MAJOR.MINOR.PATCH`. PATCH for backward-compatible bug fixes, MINOR for backward-compatible new features, MAJOR for breaking API changes. For internal DE packages shared across pipelines, strict semver prevents unintended breaking changes from propagating—pipelines pin to `>=1.2,<2.0` to get bug fixes without breaking changes.
+
+---
+
+## 💼 Interview Tips
+
+- Know `pyproject.toml` deeply—setup.py is legacy. If you still use setup.py, explain why (legacy constraint) and show you know the modern alternative.
+- Lock files are a production requirement, not optional. Describe a real incident or scenario where lack of a lock file caused a CI/prod environment divergence to show the stakes.
+- Senior interviewers ask about internal package distribution for DE teams: PyPI private registries (AWS CodeArtifact, JFrog Artifactory, Nexus) for sharing common DE utilities across teams. Walk through the publish workflow.
+- `src/` layout prevents the classic "import from the project root instead of the installed package" bug—explain why it forces correct install-then-import workflows and catches packaging errors early.
+- Connect packaging to DE platform work: a shared `de-common` package with reusable extractors, retry utilities, and schema validation is a senior DE contribution. Demonstrate you think about packaging as a platform capability, not just an artifact.

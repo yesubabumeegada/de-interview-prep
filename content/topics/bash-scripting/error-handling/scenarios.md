@@ -224,3 +224,42 @@ echo "Pipeline complete: $row_count rows loaded"
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What does `set -e` do and what are its limitations?**
+A: `set -e` causes the script to exit immediately when any command returns a non-zero exit code. Its limitation is that it does not apply inside `if` conditions, `while` test expressions, or commands preceded by `!`, so errors in those contexts are silently ignored.
+
+**Q: How do you use `trap` to clean up resources on script exit?**
+A: Define a cleanup function and register it: `trap cleanup EXIT`. This ensures the function runs whether the script exits normally, on an error, or when it receives a signal. Use `trap cleanup INT TERM EXIT` to also catch interrupts.
+
+**Q: What is the difference between exit codes 0, 1, and 127?**
+A: Exit code 0 means success. Exit code 1 is a general error (the convention for "something went wrong"). Exit code 127 specifically means "command not found," typically indicating a missing binary or a PATH issue.
+
+**Q: How do you capture the exit code of the last command?**
+A: The special variable `$?` holds the exit code of the most recently executed foreground command. Check it immediately after the command, as any subsequent command will overwrite it.
+
+**Q: How do you implement retry logic in bash?**
+A: Use a loop with a counter and `sleep` for backoff: iterate up to a max attempts limit, run the command, break on success, and sleep between retries. Exponential backoff (`sleep $((2**attempt))`) is preferred for external API calls.
+
+**Q: What is `pipefail` and why does it matter for error handling?**
+A: Without `pipefail`, a pipeline like `cmd1 | cmd2` returns the exit code of `cmd2` only — a failure in `cmd1` is hidden. `set -o pipefail` makes the pipeline return the exit code of the first failing command, ensuring pipeline errors are not silently swallowed.
+
+**Q: How do you log an error message and exit with a non-zero code?**
+A: Write to stderr and exit: `echo "ERROR: something failed" >&2; exit 1`. Writing to stderr keeps error messages separate from normal output and allows callers to distinguish the two streams.
+
+**Q: How do you handle errors differently in interactive vs non-interactive scripts?**
+A: Interactive scripts can prompt the user to retry or confirm. Non-interactive scripts (run by cron or orchestrators) should log the error, clean up, send an alert, and exit with a non-zero code so the calling system knows to take action.
+
+---
+
+## 💼 Interview Tips
+
+- Open with `set -euo pipefail` when asked to write any production script — it immediately signals maturity and saves you from a follow-up "what if a command fails?" question.
+- Demonstrate `trap` usage for cleanup; forgetting to remove temp files or release locks is a classic junior mistake that senior interviewers specifically probe for.
+- Distinguish between transient and permanent errors when discussing retry logic — transient errors (network timeouts) warrant retries; permanent errors (bad config) should fail fast.
+- Show awareness of exit code conventions: returning meaningful non-zero codes makes scripts composable and easier to monitor in orchestration tools.
+- Senior interviewers want to hear about observability — mention shipping error events to a logging platform or triggering alerts, not just writing to a local log file.
+- Avoid using `|| true` to suppress errors unless you genuinely intend to ignore failure; be ready to explain exactly why you are suppressing a specific error if you do use it.

@@ -654,3 +654,42 @@ ranking was better, but the absolute calibration was wrong.
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between batch inference and online inference, and when would you choose each?**
+A: Batch inference processes large datasets asynchronously on a schedule — ideal for pre-computed recommendations, risk scores, or reporting where low latency isn't required. Online inference serves predictions in real-time (milliseconds to seconds) — required for user-facing features, fraud detection, and content ranking.
+
+**Q: What is model serving latency and what are the main contributors to it?**
+A: Total latency includes: network round-trip time, preprocessing/feature retrieval, model forward pass, and postprocessing. For deep learning models, the model forward pass often dominates. Feature retrieval from a remote store can be a major bottleneck in online serving.
+
+**Q: What is a canary deployment for ML models and what does it protect against?**
+A: A canary deployment routes a small percentage of traffic (e.g., 5-10%) to the new model while the rest continues hitting the production model. It protects against bad model deployments by limiting blast radius — if the new model degrades, only a fraction of users are affected before rollback.
+
+**Q: What is model quantization and how does it affect serving performance?**
+A: Quantization reduces model weight precision (e.g., float32 → int8), shrinking model size and speeding up inference — often 2-4x with minimal accuracy loss. It's especially impactful on edge devices and CPUs. Tradeoff: small accuracy degradation and potential precision loss for certain numerical outputs.
+
+**Q: What is the difference between TensorFlow Serving, Triton Inference Server, and TorchServe?**
+A: TF Serving is optimized for TensorFlow models with gRPC/REST APIs and versioning built in. Triton (NVIDIA) supports multiple frameworks (TF, PyTorch, ONNX) with GPU optimization and concurrent model execution. TorchServe is PyTorch-native with handler customization and multi-model serving.
+
+**Q: What is a model ensemble in serving and what are the latency challenges?**
+A: An ensemble combines predictions from multiple models (averaging, stacking, voting) for improved accuracy. Serving challenges include: running multiple inference calls serially adds latency, or parallel calls require orchestration. Optimize with async fan-out and caching of base model outputs where possible.
+
+**Q: How do you handle model version rollback in production?**
+A: Keep previous model versions active in the serving infrastructure (multi-version support in TF Serving, SageMaker endpoints). Maintain a traffic routing layer (API Gateway or load balancer) that can instantly shift 100% of traffic back to the previous version. Automate rollback triggers on metric degradation alerts.
+
+**Q: What is ONNX and what problem does it solve for model serving?**
+A: ONNX (Open Neural Network Exchange) is an open format for representing ML models across frameworks. It solves framework portability — a model trained in PyTorch can be exported to ONNX and served via any ONNX-compatible runtime (e.g., ONNX Runtime), enabling framework-agnostic serving infrastructure.
+
+---
+
+## 💼 Interview Tips
+
+- Always distinguish the serving pattern (batch vs. real-time vs. streaming) before discussing infrastructure — the right stack is entirely dependent on latency requirements and throughput.
+- Mention the three optimization levers for serving: hardware (GPU vs. CPU, instance type), model optimization (quantization, pruning, ONNX export), and serving infrastructure (batching, caching, async). Senior candidates know all three.
+- When discussing deployment strategies, go beyond "blue-green" and "canary" — explain how you'd define success criteria and rollback triggers, not just the mechanics of traffic splitting.
+- Feature retrieval latency is often the hidden bottleneck in online serving — mentioning the online feature store and its p99 latency requirements shows you've operated production ML systems.
+- Avoid describing serving as just "deploy a Docker container with the model." Discuss autoscaling policies, cost vs. latency tradeoffs, and multi-model serving for efficiency.
+- Senior interviewers care about the gap between offline and online performance — be ready to explain how you validate that a model serving via REST/gRPC gives the same predictions as the training-time evaluation.

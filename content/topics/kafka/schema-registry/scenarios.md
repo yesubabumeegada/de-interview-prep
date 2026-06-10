@@ -210,3 +210,42 @@ graph LR
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Schema Registry and why is it needed?**
+A: Schema Registry is a centralized repository for managing and enforcing schemas for Kafka messages. It ensures that producers and consumers agree on message structure, prevents schema changes from breaking consumers, and enables schema evolution with compatibility guarantees.
+
+**Q: How does Schema Registry work with Kafka producers?**
+A: A producer serializes a message using a schema (Avro, Protobuf, or JSON Schema), registers the schema with Schema Registry (or retrieves the existing schema ID), and prepends the schema ID (4 bytes) to the serialized message bytes. Consumers use this ID to fetch and deserialize with the correct schema.
+
+**Q: What are the schema compatibility modes in Schema Registry?**
+A: BACKWARD (new schema can read old data), FORWARD (old schema can read new data), FULL (both), NONE (no compatibility enforced). BACKWARD is the default and the most common production setting — it allows consumers to upgrade before producers without breaking.
+
+**Q: How does BACKWARD compatibility work in practice?**
+A: With BACKWARD compatibility, adding a new field with a default value is allowed (old consumers ignore it or use the default). Removing a field without a default is rejected. Renaming or changing field types is rejected. This ensures new schema versions can always deserialize messages written with the old schema.
+
+**Q: What is schema ID caching and why does it matter?**
+A: Kafka clients cache schema ID-to-schema mappings locally after the first fetch from Schema Registry. This avoids a Schema Registry lookup on every message, reducing latency and preventing Schema Registry from becoming a bottleneck in high-throughput pipelines.
+
+**Q: What happens if Schema Registry is unavailable?**
+A: Producers with `auto.register.schemas=true` fail when Schema Registry is unreachable for new schemas. Consumers with cached schemas can continue deserializing previously-seen schema IDs. This means Schema Registry availability is critical for new producers but less critical for steady-state consumers with warm caches.
+
+**Q: How do you handle a schema evolution that would break compatibility?**
+A: Options include: deprecate the old topic and create a new topic with the new schema (clean break), use NONE compatibility temporarily (risky), or design schemas upfront with extensibility in mind (e.g., using `additionalProperties` in JSON Schema or optional fields in Avro/Protobuf).
+
+**Q: What is the difference between Avro, Protobuf, and JSON Schema in Schema Registry?**
+A: Avro is schema-dependent, compact binary format — schemas must accompany data; good for Hadoop/Spark ecosystem. Protobuf is a compact binary format with strong typing and native support for field addition/removal; good for multi-language environments. JSON Schema validates JSON documents; human-readable but larger than binary formats.
+
+---
+
+## 💼 Interview Tips
+
+- Know the compatibility modes and their practical meaning — interviewers test whether you can say "BACKWARD means new readers can read old data" with a concrete example of an allowed vs. rejected schema change.
+- Explain the schema ID wire format (magic byte + 4-byte schema ID + payload) — this detail shows you understand how Schema Registry integrates at the binary level, not just the conceptual level.
+- Discuss Schema Registry availability as a dependency risk — it's a production consideration that separates candidates who've operated Kafka from those who've only built small demos.
+- Be ready to recommend Avro vs. Protobuf with reasoning: Avro for Hadoop ecosystem integration and simpler tooling; Protobuf for polyglot environments and RPC-style schemas. Avoid "it depends" without specifics.
+- For senior roles, discuss schema governance: who owns schemas, approval workflows for schema changes, and how to prevent multiple teams from creating incompatible schema versions for shared topics.
+- Mention that Schema Registry is not exclusive to Confluent — AWS Glue Schema Registry provides a managed alternative, relevant for AWS-centric data platforms.

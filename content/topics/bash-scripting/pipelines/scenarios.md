@@ -213,3 +213,42 @@ rm -f "$METRICS"
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Unix pipeline and how does it work?**
+A: A pipeline connects the stdout of one command to the stdin of the next using the `|` operator. Commands run concurrently in separate processes, with the kernel managing the buffer between them, allowing large data streams to be processed without loading everything into memory.
+
+**Q: What does `set -o pipefail` do and why should you always use it?**
+A: By default, a pipeline's exit code is the exit code of the last command only. `set -o pipefail` makes the pipeline return the exit code of the first command that failed, ensuring errors mid-pipeline are not silently hidden.
+
+**Q: How do you save both the output and the exit code of a pipeline?**
+A: Capture output with `output=$(cmd1 | cmd2)`. With `pipefail` set, `$?` after this line reflects any pipeline failure. Without `pipefail`, check `${PIPESTATUS[@]}` which holds each command's individual exit code.
+
+**Q: When would you use `tee` in a pipeline?**
+A: `tee` reads from stdin and writes to both stdout and a file simultaneously. Use it to save intermediate pipeline output for debugging while still passing it to the next stage: `cmd1 | tee intermediate.log | cmd2`.
+
+**Q: How do you process a large file efficiently without loading it into memory?**
+A: Stream it through a pipeline: `cat largefile.csv | grep "pattern" | awk -F',' '{print $3}' | sort | uniq -c`. Each tool processes one line (or chunk) at a time, keeping memory usage constant regardless of file size.
+
+**Q: What is process substitution and when is it useful?**
+A: Process substitution (`<(cmd)`) treats the output of a command as a file. It is useful when a tool requires file arguments rather than stdin: `diff <(sort file1) <(sort file2)` compares sorted versions without creating temp files.
+
+**Q: How do you run two commands in parallel and wait for both to finish?**
+A: Background both with `&` and then `wait`: `cmd1 & cmd2 & wait`. Capture PIDs with `$!` if you need to check individual exit codes: `cmd1 & p1=$!; cmd2 & p2=$!; wait $p1; wait $p2`.
+
+**Q: What is the difference between a named pipe (FIFO) and an anonymous pipe?**
+A: An anonymous pipe (`|`) exists only for the duration of the pipeline and connects processes with a parent-child relationship. A named pipe (`mkfifo mypipe`) exists as a filesystem entry and allows unrelated processes to communicate through it persistently.
+
+---
+
+## 💼 Interview Tips
+
+- Show that you think about memory efficiency when discussing pipelines — the ability to stream terabytes through `awk`/`grep`/`sort` without loading data into RAM is a key DE skill.
+- Mention `pipefail` proactively; many candidates do not know about it and failing to catch mid-pipeline errors is a real production risk.
+- For data engineering roles, connect shell pipelines to the broader concept of streaming data processing — the same philosophy applies to Kafka, Spark Streaming, and Flink.
+- Demonstrate `PIPESTATUS` knowledge when asked about error handling in pipelines — it shows you have debugged real pipeline failures, not just read about them.
+- Senior interviewers like hearing about `parallel` (GNU parallel) for CPU-bound tasks where you want to fan out pipeline stages across cores.
+- Avoid overcomplicating pipelines in a live session — a clean three-stage pipeline with clear intent beats a one-liner that is hard to read and maintain.

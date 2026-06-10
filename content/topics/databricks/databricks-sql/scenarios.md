@@ -510,3 +510,42 @@ SELECT * FROM production.gold.customer_analytics;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Databricks SQL and what is it designed for?**
+A: Databricks SQL is a serverless data warehousing layer built on top of the Databricks Lakehouse Platform. It is designed for SQL analytics workloads — running ad-hoc queries, powering BI dashboards, and supporting data exploration — using the Photon engine on Delta Lake tables.
+
+**Q: What is a SQL Warehouse in Databricks SQL and how does it differ from a cluster?**
+A: A SQL Warehouse is a managed, auto-scaling compute resource optimized specifically for SQL queries. Unlike general compute clusters, it starts faster, supports per-query scaling, is optimized for concurrent BI tool connections via JDBC/ODBC, and uses the Photon vectorized execution engine.
+
+**Q: What are the SQL Warehouse types (Classic, Pro, Serverless) and their differences?**
+A: Classic uses customer-managed VMs in the customer's cloud account. Pro adds query federation and more advanced features. Serverless runs on Databricks-managed infrastructure with near-instant startup, automatic scaling, and pay-per-query pricing — eliminating cluster management overhead.
+
+**Q: How does Databricks SQL integrate with BI tools?**
+A: Databricks SQL exposes a JDBC/ODBC endpoint that standard BI tools (Tableau, Power BI, Looker, Mode) connect to directly. Partner-built native connectors provide optimized performance. The SQL Warehouse handles concurrency and resource allocation transparently.
+
+**Q: What are Databricks SQL Alerts and how are they used?**
+A: SQL Alerts run a SQL query on a schedule and notify users (via email, Slack, PagerDuty) when the result meets a condition (e.g., row count drops below a threshold). They are a lightweight way to implement data quality monitoring and KPI tracking directly within Databricks SQL.
+
+**Q: What is query history in Databricks SQL and how is it useful?**
+A: Query history records all executed queries with duration, rows returned, user, warehouse, and execution plan. It is used for performance tuning (identifying slow queries), cost attribution (tracking heavy users), security auditing, and troubleshooting user-reported issues.
+
+**Q: How do Delta Lake features like Z-ordering and liquid clustering improve Databricks SQL performance?**
+A: Z-ordering co-locates related data on disk by multiple columns, enabling file skipping for multi-column filter queries. Liquid clustering (newer) automatically reorganizes data without full rewrites. Both reduce the data scanned per query, directly improving SQL query latency and warehouse cost.
+
+**Q: What is the Unity Catalog role in Databricks SQL governance?**
+A: Unity Catalog provides centralized access control, data lineage, and auditing for all Databricks SQL assets (tables, views, functions). Column-level and row-level security are enforced transparently at query time, ensuring governance policies apply regardless of which SQL Warehouse or user runs a query.
+
+---
+
+## 💼 Interview Tips
+
+- Know the SQL Warehouse types and be able to recommend Serverless for teams that want minimal management overhead and fast startup times.
+- Show awareness that Databricks SQL is not just a query tool — it is a full data warehousing layer with governance, monitoring, and BI integration.
+- Senior interviewers want to hear about performance optimization: file skipping, Z-ordering, liquid clustering, and query result caching are the key levers.
+- Be able to discuss how Databricks SQL fits into a Lakehouse architecture — it is the SQL consumption layer on top of Delta Lake, not a replacement for the pipeline layer.
+- Common mistake: treating Databricks SQL as a standalone product rather than understanding how it relates to Spark, Delta Lake, and Unity Catalog as an integrated platform.
+- Mention query history and SQL Alerts as operational tools — showing awareness of day-to-day platform management, not just querying, impresses senior interviewers.

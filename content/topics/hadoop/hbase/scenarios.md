@@ -283,3 +283,42 @@ moveTables ['events_enterprise_001','events_enterprise_002'], 'premium'
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is HBase and what problem does it solve?**
+A: HBase is a distributed, column-family NoSQL database built on top of HDFS. It solves the problem of low-latency random read/write access to massive datasets that HDFS alone cannot provide, supporting millions of rows with millisecond-level lookups by row key.
+
+**Q: How is HBase data modeled?**
+A: HBase organizes data as a sparse, multi-dimensional sorted map indexed by row key, column family, column qualifier, and timestamp. Each cell stores multiple versioned values. Data is physically grouped by column family and stored in HFiles on HDFS.
+
+**Q: What is a Region in HBase?**
+A: A Region is a contiguous range of row keys stored together on a RegionServer. As data grows, HBase automatically splits Regions to distribute load. Each Region is served by exactly one RegionServer at a time, enabling horizontal scaling.
+
+**Q: How does HBase achieve low-latency writes?**
+A: Writes go first to an in-memory MemStore and a Write-Ahead Log (WAL) for durability. Once the MemStore reaches a threshold, it is flushed to disk as an immutable HFile. This LSM-tree (Log-Structured Merge-tree) design makes writes sequential and fast.
+
+**Q: What is compaction in HBase and why does it matter?**
+A: As MemStores flush, many small HFiles accumulate per Region. Minor compaction merges a few HFiles into one. Major compaction merges all HFiles in a Region and removes deleted/expired cells. Without compaction, read performance degrades due to scanning many files.
+
+**Q: How do you design a good HBase row key?**
+A: Design row keys to distribute writes evenly across RegionServers (avoid sequential IDs that cause hotspotting), and to support your primary access pattern (range scans vs. point lookups). Common techniques include salting, hashing, or reversing timestamp-based keys.
+
+**Q: What is the difference between HBase and Cassandra?**
+A: Both are wide-column NoSQL stores, but HBase runs on HDFS and integrates tightly with the Hadoop ecosystem, favoring strong consistency. Cassandra is a standalone distributed database optimized for high write throughput and multi-datacenter replication with tunable consistency.
+
+**Q: When would you choose HBase over a relational database?**
+A: Choose HBase for workloads requiring: very high write throughput at massive scale (billions of rows), sparse data with many null columns, time-series data with row-key-based range scans, or tight integration with Hadoop/Spark batch processing on the same data.
+
+---
+
+## 💼 Interview Tips
+
+- Row key design is the most common HBase interview topic — be ready to explain hotspotting, salting, and how to design keys for both your write distribution and read access patterns.
+- Distinguish HBase from HDFS clearly: HDFS is a file system for batch I/O; HBase adds a database layer for random access. Many candidates blur this distinction.
+- Mention the LSM-tree write path (MemStore → WAL → HFile) — understanding the write path demonstrates you know why HBase is fast for writes but requires compaction for read efficiency.
+- Be honest about HBase's operational complexity — it requires ZooKeeper for coordination, tuning of compaction policies, and careful Region pre-splitting at scale. Senior interviewers appreciate realistic assessments.
+- Know when NOT to use HBase: avoid it for complex multi-table joins, ad-hoc SQL analytics, or workloads that fit in a traditional RDBMS. Recommending the right tool matters as much as knowing HBase internals.
+- Connect HBase to cloud alternatives: on AWS, DynamoDB or Bigtable (GCP) serve similar use cases as managed services with less operational overhead — showing awareness of cloud equivalents is expected in 2024+ interviews.

@@ -130,3 +130,42 @@ for i, event in enumerate(event_stream):
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Kafka producer and what are its main responsibilities?**
+A: A Kafka producer is a client that publishes messages to Kafka topics. It serializes data, determines the target partition (using a partitioner), buffers records in batches, handles retries on failure, and manages acknowledgment from brokers.
+
+**Q: How does Kafka determine which partition a message goes to?**
+A: By default, messages with a key use a hash of the key (murmur2) modulo partition count to select a partition consistently. Messages without a key use a sticky partitioner (batch to one partition, then rotate). Custom partitioners can implement any routing logic.
+
+**Q: What is the role of the producer's internal buffer and how does it affect throughput?**
+A: Producers buffer records in memory (controlled by `buffer.memory`, default 32MB) into batches per partition before sending. Larger batches (`batch.size`) and longer wait times (`linger.ms`) increase throughput by amortizing network overhead across more records per request.
+
+**Q: How does a producer handle broker failures?**
+A: On send failure, the producer retries up to `retries` times with an internal backoff. With `enable.idempotence=true`, retries are safe — the broker deduplicates messages using producer ID and sequence numbers. Without idempotence, retries may produce duplicates.
+
+**Q: What is the difference between synchronous and asynchronous producer sends?**
+A: Asynchronous send (default) dispatches the record to the buffer and returns immediately, invoking a callback on completion. Synchronous send calls `future.get()` blocking until the broker acknowledges. Async maximizes throughput; sync is used when immediate error handling per record is required.
+
+**Q: What happens when the producer buffer is full?**
+A: If the buffer fills faster than records are sent (e.g., broker is slow), the `send()` call blocks for up to `max.block.ms` waiting for space. After this timeout, a `TimeoutException` is thrown. This is a backpressure mechanism signaling the application to slow down production.
+
+**Q: How do you guarantee message ordering in Kafka producers?**
+A: Messages to the same partition are delivered in order. To ensure ordering for a logical entity (e.g., all events for user ID 123), use a consistent partition key. With retries, set `max.in.flight.requests.per.connection=1` (or use idempotent producer which allows up to 5 in-flight safely) to prevent reordering on retry.
+
+**Q: What is a producer callback and when should you use it?**
+A: A callback is a function invoked after the broker acknowledges (or fails) a send. Use it for error logging, metrics collection, alerting on delivery failures, and dead-letter routing. Always register callbacks for production producers — fire-and-forget without callbacks makes failures invisible.
+
+---
+
+## 💼 Interview Tips
+
+- Know the key → partition → broker routing chain deeply — interviewers ask how to ensure all records for a customer go to the same partition, and the answer is consistent key-based partitioning.
+- Explain the batching model (buffer → batch per partition → send) clearly — it's the foundation of Kafka producer performance and directly connects to `batch.size` and `linger.ms` tuning.
+- Discuss idempotent producer as the recommended default, not an advanced feature — it's been stable since Kafka 0.11 and prevents duplicate-on-retry without performance penalty for most workloads.
+- Be ready to explain `max.in.flight.requests.per.connection` and ordering — the "set to 1 for ordering" advice is outdated with idempotent producers, and knowing the nuance separates senior candidates.
+- Mention callback handling proactively — production producers without delivery callbacks have silent failure modes, and knowing to implement them shows operational maturity.
+- For senior roles, discuss producer metrics to monitor: record-send-rate, record-error-rate, batch-size-avg, request-latency-avg — knowing which producer JMX metrics to track signals you've operated producers at scale.

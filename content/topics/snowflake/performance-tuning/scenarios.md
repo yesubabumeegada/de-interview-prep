@@ -200,3 +200,41 @@ ORDER BY bytes_scanned DESC LIMIT 10;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the primary levers for query performance tuning in Snowflake?**
+A: The main levers are: warehouse sizing (more nodes = more parallelism), clustering keys (improve micro-partition pruning), query result cache (free repeat query acceleration), materialized views, and rewriting queries to minimize data scanned (column projection, filter pushdown).
+
+**Q: What is a clustering key and when should you define one?**
+A: A clustering key defines the physical ordering of data within micro-partitions. It's beneficial for large tables (hundreds of GB+) that are frequently filtered on specific columns (e.g., date range queries on an event table). For smaller tables, natural clustering from insert order is usually sufficient and explicit keys add cost.
+
+**Q: How does Snowflake's automatic clustering work?**
+A: When you define a clustering key, Snowflake's Automatic Clustering service runs in the background to periodically recluster micro-partitions that have become poorly clustered due to inserts and updates. This is billed separately (Snowflake-managed compute) and maintains pruning efficiency over time.
+
+**Q: What is partition pruning and how do you verify it's happening?**
+A: Partition pruning is when the query optimizer skips micro-partitions that cannot contain relevant data based on min/max metadata. You verify it by examining the query profile in the Snowflake UI—look at "Partitions Scanned" vs. "Partitions Total." High pruning ratio (e.g., scanning 1% of partitions) means clustering is effective.
+
+**Q: What causes a query to spill to disk and how do you fix it?**
+A: Spilling to disk occurs when a query's intermediate results exceed available memory in the warehouse nodes, forcing writes to local SSD (or even remote storage). The fix is usually to scale up the warehouse to a larger size (more memory per node) or rewrite the query to reduce intermediate set size (e.g., filter earlier, avoid unnecessary joins).
+
+**Q: What is the difference between scaling up and scaling out in Snowflake?**
+A: Scaling up means using a larger warehouse size (e.g., X-Large instead of Large), adding more nodes to each cluster—better for complex, memory-intensive queries. Scaling out means adding more clusters in a multi-cluster warehouse—better for high concurrency workloads where many queries run simultaneously.
+
+**Q: How does the query result cache work and what invalidates it?**
+A: Snowflake caches query results for 24 hours. The cache is invalidated if the underlying data changes (inserts, updates, deletes), the query changes (even whitespace), or the session context changes (e.g., different warehouse or role). Identical queries on unchanged data return cached results with zero warehouse compute.
+
+**Q: What are common anti-patterns that hurt Snowflake query performance?**
+A: Using `SELECT *` when only a few columns are needed (wastes columnar I/O), applying functions to filter columns preventing pruning (e.g., `WHERE YEAR(date_col) = 2024` instead of `WHERE date_col BETWEEN ...`), massive UNION ALL without filtering, and running heavy transforms on XS warehouses causing excessive spill.
+
+---
+
+## 💼 Interview Tips
+
+- When asked about performance tuning, structure your answer as a systematic process: check query profile first, identify the bottleneck (scanning, spilling, queuing), then apply the appropriate fix. This approach signals engineering rigor over guessing.
+- Always discuss the cost dimension alongside performance—scaling up a warehouse 8x fixes spill but also 8x's the compute cost. Senior interviewers expect you to optimize for the right trade-off, not just max performance.
+- Know the query profile deeply: partition pruning stats, bytes spilled, join type (hash vs. merge), and remote IO vs. local IO. Being able to read a query profile is a practical senior skill.
+- Bring up clustering key cost: Automatic Clustering is billed continuously and can be significant for large, frequently updated tables. You should validate the savings in query cost exceed the clustering cost before enabling it.
+- Mention that many performance issues are actually data model issues—a poorly designed schema or missing filters in upstream views can't always be fixed with warehouse tuning. Showing you look at both layers demonstrates seniority.

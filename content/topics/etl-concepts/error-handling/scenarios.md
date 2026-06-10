@@ -541,3 +541,42 @@ ORDER BY r.asset_class, t.transmitted_at;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the main categories of errors in ETL pipelines?**
+A: Transient errors (network timeouts, API rate limits) that warrant retry, data errors (malformed records, schema mismatches) that require quarantine, and infrastructure errors (disk full, OOM) that require escalation and human intervention.
+
+**Q: How do you implement retry logic in an ETL pipeline?**
+A: Use exponential backoff with jitter to avoid thundering herd — start with a short delay, double it on each retry up to a maximum, and add random jitter. Set a max retry count; after exhaustion, move the record to a dead-letter queue and alert.
+
+**Q: What is a dead-letter queue and why is it important?**
+A: A dead-letter queue (DLQ) is a holding area for records that failed processing after all retries are exhausted. It preserves the original record for manual review, reprocessing, or root cause analysis without blocking the main pipeline.
+
+**Q: How do you handle schema validation errors in ETL?**
+A: Validate schema at ingestion before any transformation. On mismatch, route the record to a quarantine table with error metadata (timestamp, error type, raw payload), alert the data owner, and continue processing valid records so schema errors don't halt the entire pipeline.
+
+**Q: What is the difference between fail-fast and fail-safe error handling strategies?**
+A: Fail-fast stops the pipeline immediately on the first error, preventing potentially corrupt data from propagating — ideal for critical financial pipelines. Fail-safe logs the error, skips the bad record, and continues processing — suitable when partial results are better than no results.
+
+**Q: How do you ensure errors in one pipeline run don't corrupt data from a previous successful run?**
+A: Write output transactionally — use atomic partition overwrites or staging tables with swap, never appending directly to production tables. This ensures a failed run leaves the last successful state intact.
+
+**Q: How do you monitor and alert on ETL errors in production?**
+A: Emit structured error metrics (error count, error type, affected records) to a monitoring system (CloudWatch, Datadog, Prometheus). Set threshold-based alerts and create dashboards for error rate trends. Include correlation IDs in logs for traceability.
+
+**Q: What is circuit breaker pattern and when would you use it in ETL?**
+A: A circuit breaker stops calling a failing downstream system after a threshold of consecutive failures, preventing resource exhaustion and cascading failures. In ETL, it's useful when writing to a flaky API sink — after N failures, open the circuit and route to DLQ instead.
+
+---
+
+## 💼 Interview Tips
+
+- Always differentiate error types (transient vs. data vs. infrastructure) before describing handling strategy — a single "retry everything" answer signals junior thinking.
+- Mention dead-letter queues unprompted — it's a litmus test for production experience; engineers who haven't operated real pipelines rarely think of it.
+- Discuss the operational loop: error captured → alert fired → runbook executed → reprocessing triggered. Interviewers want to see you think about on-call workflows, not just code.
+- Avoid atomic overwrites as an afterthought — frame data integrity guarantees as a first-class design requirement from the start.
+- Be ready to explain how you'd reprocess records from a DLQ without duplicating successfully processed records — this tests your understanding of idempotency under error recovery.
+- Senior interviewers ask about error budgets and SLOs — knowing that "99.9% records processed within 5 minutes" is a measurable goal, not just "errors should be rare," sets you apart.

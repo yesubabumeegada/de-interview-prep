@@ -459,3 +459,41 @@ eu_params:
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: How does NiFi clustering work at a high level?**
+A: NiFi uses a Zero-Master clustering model where all nodes are peers and one is elected Primary Node via Apache ZooKeeper. Every node runs the full NiFi stack and processes FlowFiles independently; the Primary Node is only special for certain isolated processors and the Cluster Coordinator role.
+
+**Q: What is the role of ZooKeeper in a NiFi cluster?**
+A: ZooKeeper manages leader election (Primary Node and Cluster Coordinator), stores cluster-wide state, and provides the distributed locking used by stateful processors. Without ZooKeeper the cluster cannot form or maintain consensus.
+
+**Q: What is the Cluster Coordinator and how does it differ from the Primary Node?**
+A: The Cluster Coordinator manages cluster membership—it approves nodes joining/leaving and distributes the flow configuration to new members. The Primary Node runs processors marked "primary node only" (e.g., scheduled triggers that should fire once per cluster). Both roles can be on different nodes and can fail over automatically.
+
+**Q: How does NiFi handle node failure in a cluster?**
+A: ZooKeeper detects the heartbeat timeout and the Cluster Coordinator removes the failed node. FlowFiles that were in-flight on that node and not yet committed to the Content Repository are lost unless the node recovers. NiFi does not automatically redistribute in-flight work; designed idempotency and source re-read are the safeguards.
+
+**Q: What is Site-to-Site and how is it used in clustered deployments?**
+A: Site-to-Site (S2S) is NiFi's native inter-instance protocol for pushing/pulling FlowFiles between NiFi instances or clusters. In clustered mode a client connects to any node (cluster-aware mode) and the cluster automatically load-balances the transfer across all nodes.
+
+**Q: How do you scale a NiFi cluster horizontally?**
+A: Add a new node that points to the same ZooKeeper ensemble and the existing NiFi cluster. The Cluster Coordinator approves the join, pushes the current flow.xml, and the new node immediately starts processing. No downtime is required.
+
+**Q: What is load-balanced connection and when would you use it?**
+A: A load-balanced connection distributes FlowFiles across all cluster nodes so processing parallelism increases linearly with node count. You enable it when a single processor is a bottleneck and you want the entire cluster to share the work rather than having one node hold all queued FlowFiles.
+
+**Q: What monitoring metrics matter most for NiFi cluster health?**
+A: Queue depth per connection, JVM heap utilization per node, GC pause duration, Content Repository disk usage, and ZooKeeper session timeout count. Sustained back-pressure combined with high GC indicates the node is undersized.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the Zero-Master model—many candidates incorrectly say NiFi has a master node. Knowing that every node runs the full stack (and only the *roles* float) demonstrates depth.
+- Be specific about ZooKeeper's purpose: leader election + state store, not "coordination" in vague terms.
+- Senior interviewers often probe disaster recovery: know what data survives a node crash (Content Repository is local; WAL is local) and how to architect for minimal data loss (shared NFS or object-store Content Repository is one pattern).
+- Demonstrate operational maturity by mentioning how you'd add a node to a running cluster and verify it joined (Cluster Coordinator UI, REST `/nifi-api/cluster`).
+- Avoid conflating NiFi clustering with Kafka or Spark clustering—NiFi's model is unique (no partition-based sharding; FlowFiles are routed, not partitioned).

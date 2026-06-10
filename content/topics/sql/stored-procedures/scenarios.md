@@ -475,3 +475,41 @@ ALTER TABLE payments ADD CONSTRAINT uq_payments_idempotency_key UNIQUE (idempote
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a SQL stored procedure and what are its primary use cases?**
+A: A stored procedure is a named, pre-compiled block of SQL (and optionally procedural logic) stored in the database. Primary uses include encapsulating complex multi-step business logic, enforcing consistent data manipulation patterns, reducing round-trips from application to database, and implementing ETL transformation steps directly in the database.
+
+**Q: What are the advantages and disadvantages of stored procedures vs. application-layer logic?**
+A: Advantages: reduced network round-trips, reusable and centralized logic, can operate with elevated privileges without granting them to callers, and pre-compilation can speed up execution. Disadvantages: harder to test and version-control, tightly coupled to a specific database engine, difficult to debug, and can create a "logic sprawl" that makes the system hard to understand.
+
+**Q: What is the difference between a stored procedure and a function in SQL?**
+A: A function returns a value (scalar or table) and can be called within a SQL expression (SELECT, WHERE). A stored procedure is called with EXECUTE/CALL and can return multiple result sets or output parameters but cannot be embedded in a SQL expression. Functions are read-only in most databases; procedures can perform DML and DDL.
+
+**Q: What are output parameters in stored procedures?**
+A: Output parameters are declared with OUT or OUTPUT keyword and allow the procedure to return values back to the caller alongside or instead of result sets. For example, a procedure could return a row count or an error code through an output parameter while also returning a result set.
+
+**Q: What is error handling in stored procedures and how is it implemented?**
+A: In SQL Server, use TRY...CATCH blocks to catch exceptions, with THROW or RAISERROR to re-raise or handle them. In PostgreSQL PL/pgSQL, use EXCEPTION blocks within BEGIN...END. Good error handling includes logging the error to an audit table, rolling back partial transactions, and returning a meaningful error code to the caller.
+
+**Q: How do stored procedures interact with transactions?**
+A: A stored procedure can contain explicit transaction control (BEGIN TRANSACTION, COMMIT, ROLLBACK). In some databases (SQL Server), nested stored procedure calls share the outermost transaction—a ROLLBACK in a nested procedure rolls back the entire outer transaction. Understanding this behavior is critical for designing reliable multi-step procedures.
+
+**Q: What is the risk of SQL injection in stored procedures?**
+A: Stored procedures that construct dynamic SQL by concatenating user input are vulnerable to SQL injection. Always use parameterized queries or sp_executesql (SQL Server) with parameters instead of string concatenation. Stored procedures with static SQL and input parameters are inherently safe from SQL injection.
+
+**Q: What is parameter sniffing in SQL Server stored procedures?**
+A: Parameter sniffing is when SQL Server caches an execution plan for a stored procedure based on the parameter values used in the first execution. If subsequent executions use very different parameter values (e.g., a high-cardinality vs. low-cardinality value), the cached plan may be suboptimal. Mitigation: OPTION (RECOMPILE), OPTIMIZE FOR hints, or local variable workarounds.
+
+---
+
+## 💼 Interview Tips
+
+- When discussing stored procedures, immediately address the trade-off between database-side logic and application-side logic—most senior engineers have opinions on this, and showing you've thought through it signals experience.
+- Know error handling deeply: a stored procedure without proper error handling and transaction management is a production liability. Always discuss TRY/CATCH (or equivalent) and audit logging in your answer.
+- Mention parameter sniffing if the interview is SQL Server-focused—it's a classic production gotcha that affects many teams and knowing the symptoms and mitigations demonstrates real-world experience.
+- Be honest about the maintainability challenges: stored procedures are harder to test, harder to diff in code review, and harder to deploy through CI/CD than application code. Senior interviewers respect candidates who acknowledge this rather than overselling SP-heavy architectures.
+- Connect stored procedures to security: the owner's rights execution model (in SQL Server, EXECUTE AS) allows granting controlled access to data operations without exposing underlying tables—a legitimate use case in multi-tenant or compliance-sensitive environments.

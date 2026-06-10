@@ -486,3 +486,42 @@ with DAG('team_abc_pipeline', ...) as dag:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: When should you write a custom operator vs. using a PythonOperator?**
+A: Write a custom operator when the logic is reused across multiple DAGs, when you need clean separation of concerns (template fields, connection management), or when you want to encapsulate retries and error handling in a reusable component. Use PythonOperator for one-off logic that doesn't need to be shared.
+
+**Q: What method must every custom operator implement?**
+A: Every custom operator must implement the `execute(self, context)` method. This is called by the Airflow executor when the task runs. The `context` dict contains DagRun metadata (execution_date, task_instance, etc.) useful for dynamic behavior.
+
+**Q: What are `template_fields` in a custom operator and why do they matter?**
+A: `template_fields` is a tuple of attribute names that Airflow will render as Jinja2 templates before `execute()` is called. Declaring them allows users to pass dynamic values like `{{ ds }}` or `{{ var.value.my_var }}` to operator parameters, making operators more reusable without code changes.
+
+**Q: How do you inherit from `BaseOperator` vs. from an existing operator like `PythonOperator`?**
+A: Inherit from `BaseOperator` when building a completely new integration (custom API, service, or protocol). Inherit from an existing operator when extending its behavior — but be careful about coupling to parent class internals. Prefer composition (using a Hook inside a `BaseOperator` subclass) over deep inheritance chains.
+
+**Q: How do you write unit tests for a custom operator?**
+A: Instantiate the operator with test parameters, mock external calls (HTTP requests, database connections) using `unittest.mock`, and call `operator.execute(context={})` directly. Test that `execute()` calls the right methods with the right arguments and handles exceptions as expected.
+
+**Q: What is the `ui_color` attribute in a custom operator used for?**
+A: `ui_color` sets the background color of the task box in the Airflow UI. It's purely cosmetic but useful for visually distinguishing task types in complex DAGs — e.g., using orange for data extraction tasks and blue for transformation tasks.
+
+**Q: How do you pass output from a custom operator to downstream tasks?**
+A: Return a value from the `execute()` method — Airflow automatically pushes it to XCom under the key `return_value`. Downstream tasks can retrieve it with `ti.xcom_pull(task_ids='upstream_task')`. For large data, avoid XCom and instead write to external storage, pushing only a reference (path/URI).
+
+**Q: What is a sensor operator and how does it differ from a standard custom operator?**
+A: A sensor inherits from `BaseSensorOperator` and implements `poke(self, context)` instead of `execute()`. Airflow calls `poke()` repeatedly on an interval until it returns `True`. Sensors are designed for waiting on external conditions (file arrival, API availability, partition existence) before triggering downstream tasks.
+
+---
+
+## 💼 Interview Tips
+
+- Show you understand when NOT to write a custom operator — overengineering simple one-off logic as a custom operator is a common antipattern that senior reviewers spot immediately.
+- Always mention `template_fields` when describing custom operators — it's a critical feature that enables reuse and distinguishes purpose-built operators from hardcoded Python callables.
+- Testing operators is a common interview follow-up — be ready to describe exactly how you'd mock the Hook or external service inside an operator's `execute()` method.
+- Senior interviewers care about operator design principles: single responsibility, composing with Hooks for connection management, and clear error handling with meaningful exception messages.
+- Discuss the operator contribution pattern — well-designed operators can be contributed back to official Airflow providers, which signals community awareness and code quality standards.
+- Mention the `context` dict and what's available in it (`dag_run`, `task_instance`, `execution_date`, `conf`) — using it well shows you've written operators used in real production DAGs.

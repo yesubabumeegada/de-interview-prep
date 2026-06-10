@@ -699,3 +699,42 @@ def generate_retraining_history(model_name: str) -> list:
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is MLOps and how does it differ from DevOps?**
+A: MLOps applies DevOps principles (CI/CD, monitoring, automation) to ML systems. Key differences: ML systems have three artifacts to version (code, data, model), require continuous training (CT) not just deployment, and experience unique failure modes like silent data drift and model degradation that don't exist in traditional software.
+
+**Q: What are the maturity levels of an MLOps implementation?**
+A: Level 0 is manual, ad-hoc training and deployment. Level 1 adds automated retraining pipelines. Level 2 adds full CI/CD for pipelines themselves — new code automatically triggers pipeline testing, validation, and deployment. Most production systems aim for Level 1-2.
+
+**Q: What is the difference between model drift and data drift?**
+A: Data drift (covariate shift) is when input feature distributions change over time. Model drift (concept drift) is when the relationship between inputs and outputs changes — the model's learned patterns become stale. Data drift often precedes and causes model drift.
+
+**Q: How do you implement a model rollback strategy?**
+A: Keep all previous model versions in the model registry with their evaluation metrics. Use canary or blue-green deployments so the old version is still serving traffic until the new one is verified. On rollback trigger (metric degradation, error spike), swap traffic back to the previous version without downtime.
+
+**Q: What is a feature store and what MLOps problem does it solve?**
+A: A feature store is a centralized repository for computed, versioned feature values shared across teams. It solves training-serving skew (same features in training and production), feature reuse (avoid duplicate computation), and point-in-time correctness for historical training datasets.
+
+**Q: How would you design a model evaluation framework for automated promotion decisions?**
+A: Define a checklist: offline metrics vs. threshold, performance relative to champion model, fairness metrics, data coverage, and a shadow/canary deployment performance gate. Automate this as a pipeline stage — only models passing all gates get promoted to production.
+
+**Q: What infrastructure components make up a minimal production MLOps stack?**
+A: Experiment tracker, model registry, feature store, pipeline orchestrator, model serving infrastructure, and monitoring/alerting. Add a data validation layer and a CI/CD system for pipeline code to reach a mature state.
+
+**Q: How do you handle model governance and compliance in an MLOps workflow?**
+A: Maintain a model card for every registered model documenting intended use, training data, evaluation results, and fairness assessments. Implement approval workflows in the model registry for production promotions. Store audit logs of all model versions deployed and the business outcomes they produced.
+
+---
+
+## 💼 Interview Tips
+
+- Frame MLOps answers around the three axes — people, process, technology — not just tooling. Senior interviewers want to hear how you've driven adoption, not just what tools you've used.
+- Always mention that ML systems fail silently compared to software systems — model degradation produces no 500 errors. This motivates the entire monitoring and alerting component of MLOps.
+- Know the distinction between CI/CD and CI/CD/CT (Continuous Training) — mentioning the third "CT" dimension signals familiarity with ML-specific operational requirements.
+- When asked about your MLOps stack, explain *why* you chose each component over alternatives — tradeoffs matter more than tool names at senior levels.
+- Avoid treating MLOps as purely a data science concern — position it as a cross-functional discipline involving data engineers, ML engineers, and platform engineers working together.
+- Senior interviewers often probe organizational challenges: how do you get data scientists to follow MLOps practices? Be ready to discuss tooling that reduces friction (auto-logging, standardized templates, pre-commit hooks for experiment metadata).

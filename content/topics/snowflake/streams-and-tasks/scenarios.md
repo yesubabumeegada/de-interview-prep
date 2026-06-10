@@ -386,3 +386,41 @@ ALTER TASK orders_production_task RESUME;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Snowflake Stream and what does it capture?**
+A: A Stream is a change data capture (CDC) object that records row-level changes (INSERT, UPDATE, DELETE) made to a source table since the stream was last consumed. Querying the stream returns a delta of changes along with metadata columns: METADATA$ACTION, METADATA$ISUPDATE, and METADATA$ROW_ID.
+
+**Q: What are the types of Snowflake Streams?**
+A: Standard streams capture all DML changes (INSERT, UPDATE, DELETE). Append-only streams capture only INSERT operations—more efficient for insert-only sources like event or log tables. Insert-only streams are available for external tables. The choice affects what change data is available and processing efficiency.
+
+**Q: What is a Snowflake Task and how is it triggered?**
+A: A Task is a scheduled execution unit that runs a SQL statement or stored procedure call on a defined schedule (cron syntax) or when triggered by a predecessor task. Tasks enable lightweight orchestration of SQL-based pipelines entirely within Snowflake.
+
+**Q: How do Streams and Tasks work together for CDC pipelines?**
+A: A Task consumes a Stream's changes by running a query or procedure that reads from the stream and applies changes to a target table (MERGE or INSERT). Once consumed, the stream offset advances. The Task is typically scheduled on a regular interval (e.g., every minute) to process arriving changes incrementally.
+
+**Q: What is stream offset staleness and why does it matter?**
+A: Streams maintain a pointer to the last consumed position in the table's change history. Snowflake only retains change data for up to the Time Travel retention period (default 14 days). If a stream is not consumed within this window, it becomes stale and must be re-created, potentially missing changes. Monitoring consumption frequency is critical.
+
+**Q: What is a Task tree and how do you create one?**
+A: A Task tree is a DAG of tasks where each task can have a predecessor defined via `AFTER <predecessor_task>`. Child tasks trigger automatically when their parent succeeds. The root task is scheduled; downstream tasks are event-driven. This enables multi-step pipeline orchestration with dependencies.
+
+**Q: What is the SYSTEM$STREAM_HAS_DATA function used for?**
+A: `SYSTEM$STREAM_HAS_DATA('stream_name')` returns TRUE if the stream has unconsumed changes. It's used in Task definitions to make tasks conditional—a task only runs (and consumes compute) when there's actually new data in the stream, preventing unnecessary warehouse wake-ups.
+
+**Q: What are the limitations of Streams and Tasks for complex pipelines?**
+A: Tasks lack rich observability (no built-in lineage graph, limited failure alerting), don't support Python-based transformations natively, have limited error recovery mechanisms, and can be difficult to test. For complex multi-dependency pipelines with SLAs and rich monitoring, Airflow or Dagster is more appropriate.
+
+---
+
+## 💼 Interview Tips
+
+- Always pair Streams with Tasks in your explanation—a Stream alone is just a change log; the real power is the Stream + Task combination that enables event-driven incremental processing.
+- Bring up stream staleness proactively—it's an operational pitfall that catches teams off-guard in production, and mentioning it signals you've thought through failure modes.
+- Use `SYSTEM$STREAM_HAS_DATA` as a concrete example of cost-conscious design: conditional task execution avoids paying for warehouse compute on empty runs.
+- Compare Streams + Tasks to Dynamic Tables honestly. For simple single-hop transformations, Dynamic Tables are simpler. For complex CDC logic with MERGE statements and exception handling, Streams + Tasks offer more control.
+- Senior interviewers may ask about ordering guarantees. Streams guarantee that all changes since the last consumption are captured, but processing order within a batch depends on your MERGE logic—understanding this prevents subtle bugs in out-of-order event scenarios.

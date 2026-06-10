@@ -429,3 +429,41 @@ SELECT COUNT(*) FROM customer_data_us_row WHERE region = 'EU';
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is table partitioning in SQL databases and what are its main benefits?**
+A: Partitioning divides a large table into smaller physical segments (partitions) based on a column's values. Benefits include partition pruning (queries that filter on the partition key scan only relevant partitions), faster maintenance operations (e.g., dropping an entire partition instead of deleting rows), and improved parallelism.
+
+**Q: What are the main partitioning strategies?**
+A: Range partitioning divides data into contiguous value ranges (e.g., by month). List partitioning assigns specific values to each partition (e.g., by country code). Hash partitioning distributes rows across a fixed number of partitions by hashing the key—good for even distribution when there's no natural range or list. Composite partitioning combines strategies (e.g., range by date, hash by ID within each range).
+
+**Q: What is partition pruning and how does it work?**
+A: When a query filters on the partition key, the optimizer skips partitions that cannot contain matching rows—this is partition pruning. For example, `WHERE event_date BETWEEN '2024-01-01' AND '2024-01-31'` on a monthly-range-partitioned table scans only the January 2024 partition. Pruning only works when the filter column matches the partition key.
+
+**Q: What is a partition key and how do you choose one?**
+A: The partition key is the column used to distribute rows across partitions. Choose a column that is: (a) frequently used in WHERE clauses to enable pruning, (b) has high cardinality relative to partition count, and (c) distributes data evenly to avoid hot partitions. Date/timestamp columns are the most common choice in data warehousing.
+
+**Q: What is partition maintenance and why does it matter?**
+A: Partition maintenance includes adding new partitions for future data, dropping old partitions (much faster than DELETE for time-series data), and rebuilding statistics per partition. In time-series workloads, automated partition management (e.g., monthly partition creation via a scheduled job) is essential to prevent insert failures when the current partition is full.
+
+**Q: What is sub-partitioning and when is it used?**
+A: Sub-partitioning (composite partitioning) adds a second level of partitioning within each partition—e.g., range by year, then hash by customer_id within each year. It provides finer-grained pruning for queries that filter on both dimensions and better load distribution, at the cost of more management complexity.
+
+**Q: How does partitioning differ between PostgreSQL and Snowflake?**
+A: PostgreSQL uses declarative partitioning (range, list, hash) with physical partition tables that you create and manage explicitly. Snowflake uses micro-partitions (automatic, immutable columnar blocks) as its storage unit, and clustering keys guide which micro-partitions are co-located—there's no user-created partition DDL. Snowflake's Automatic Clustering maintains physical ordering over time.
+
+**Q: What are the downsides of over-partitioning a table?**
+A: Too many partitions (e.g., partitioning by minute instead of month for a daily-query workload) increases metadata overhead, makes partition pruning less effective (more partitions to evaluate), and can cause performance issues in query planning. The partition count should align with actual query access patterns—not be finer than the finest common filter granularity.
+
+---
+
+## 💼 Interview Tips
+
+- Always tie your partitioning strategy to a specific query pattern. "I'd partition by event_date because 95% of queries filter on date ranges" is much stronger than "I'd use range partitioning."
+- Bring up partition maintenance proactively—automated partition creation for future periods and partition dropping for expired data are critical operational concerns that many candidates miss.
+- Distinguish partitioning (a storage layout strategy) from indexing (a lookup acceleration structure). Both improve query performance but via different mechanisms; combining them is often the right answer for large tables.
+- Senior interviewers at Snowflake shops will ask about clustering keys—understand that Snowflake's clustering is logically similar to partitioning but implemented differently (no user-managed DDL partitions).
+- Discuss the trade-off between partition granularity and management overhead. A table partitioned by day gives more pruning opportunities than one partitioned by month, but requires 30x as many partitions and more maintenance scripts. Always calibrate to actual query patterns.

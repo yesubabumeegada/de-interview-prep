@@ -469,3 +469,42 @@ JOIN dim_customer c ON f.customer_key = c.customer_key;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a star schema and why is it called that?**
+A: A star schema consists of a central fact table surrounded by denormalized dimension tables connected via foreign keys. The visual resemblance to a star (fact at center, dimensions radiating outward) gives it its name.
+
+**Q: Why is the star schema the most common pattern in data warehouses?**
+A: Star schemas minimize joins (typically one join per dimension), are intuitive for business users, perform well on columnar storage, and map naturally to how BI tools like Power BI and Tableau generate queries.
+
+**Q: What makes a dimension "conformed" in a star schema?**
+A: A conformed dimension has identical or compatible attributes and keys across multiple star schemas, allowing different fact tables to be joined through shared dimensions. The Date and Customer dimensions are classic examples of conformed dimensions.
+
+**Q: How do you handle many-to-many relationships in a star schema?**
+A: Use a bridge table between the fact table and the dimension, often with a weighting factor (e.g., 0.5 each for two sales reps on one deal). The bridge resolves the many-to-many without duplicating fact rows or distorting measures.
+
+**Q: What are the most common mistakes when designing a star schema?**
+A: Common mistakes include mixing grains in the same fact table, using natural keys instead of surrogate keys in dimensions, adding measures to dimension tables, not handling SCD in dimensions, and creating dimensions with insufficient granularity for planned analysis.
+
+**Q: How do you decide what belongs in the fact table vs. a dimension table?**
+A: Numeric measures that are aggregated (summed, averaged, counted) belong in the fact table. Descriptive text, categorical attributes, and hierarchies used for filtering and grouping belong in dimensions. Date, time, and event identifiers are always dimension foreign keys.
+
+**Q: What is the role of a date dimension in a star schema?**
+A: The Date dimension is the most commonly joined dimension, enabling time-series analysis, fiscal calendar comparisons, and period-over-period calculations. It should be pre-populated with all dates in the business's relevant range, including fiscal year, week, quarter, and holiday attributes.
+
+**Q: How does a star schema perform on modern cloud data warehouses?**
+A: Very well — columnar MPP engines like Snowflake, BigQuery, and Redshift are optimized for star schema query patterns. Dimension tables fit in memory or benefit from broadcast joins, and pruning on dimension filters is highly efficient.
+
+---
+
+## 💼 Interview Tips
+
+- Declaring grain is the first and most important step when designing any star schema — lead with this in interviews to demonstrate foundational discipline.
+- Be able to draw a star schema on a whiteboard for a common scenario (e-commerce orders, web clickstream, HR headcount) within minutes.
+- Know the full Kimball lifecycle: identify business processes, declare grain, identify dimensions, identify facts — this structured approach impresses interviewers.
+- Common mistake to highlight: mixing grains (e.g., mixing transaction-level and daily-summary rows in the same fact table) causes silent double-counting errors.
+- Senior interviewers will ask how you integrate multiple star schemas — answer with conformed dimensions and the bus matrix.
+- Show awareness that star schemas are the "output" of a data platform, not the only layer — connecting it to upstream raw and silver layers demonstrates architectural maturity.

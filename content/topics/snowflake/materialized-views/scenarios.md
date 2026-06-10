@@ -167,3 +167,41 @@ CREATE DYNAMIC TABLE gold.dt_replacement TARGET_LAG = '15 minutes' WAREHOUSE = '
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Materialized View in Snowflake and how does it differ from a regular view?**
+A: A Materialized View precomputes and stores query results, so queries against it read from stored data rather than re-executing the underlying query. A regular view re-executes its query on every access. Materialized Views trade storage cost for faster query performance on expensive aggregations.
+
+**Q: How does Snowflake automatically maintain Materialized Views?**
+A: Snowflake's cloud services layer tracks changes to the base table and automatically refreshes the materialized view in the background using Snowflake-managed compute (not your warehouse). This is transparent to the user—the view always reflects current data within a bounded lag.
+
+**Q: What types of queries support Materialized Views in Snowflake?**
+A: Snowflake Materialized Views support SELECT with filters (WHERE), projections, aggregations (GROUP BY), and JOINs on a single base table. They do not support non-deterministic functions, subqueries in the FROM clause, HAVING clauses, or queries spanning multiple base tables (a key limitation vs. Dynamic Tables).
+
+**Q: When would you use a Materialized View over a Dynamic Table?**
+A: Materialized Views are simpler for read-heavy, single-table aggregation patterns and leverage automatic transparent rewrite (the optimizer substitutes the view without query changes). Dynamic Tables handle multi-table joins, chained transformations, and more complex SQL, but require explicit querying of the dynamic table name.
+
+**Q: What is query rewrite with Materialized Views?**
+A: When a query matches the definition of a materialized view, Snowflake's optimizer can automatically rewrite the query to read from the materialized view instead of the base table—without any change to the original query. This gives performance benefits to existing dashboards and reports transparently.
+
+**Q: What are the cost implications of Snowflake Materialized Views?**
+A: Storage cost for the precomputed results, plus background compute cost for automatic refreshes (billed to Snowflake's cloud services, not your warehouse). For high-churn base tables, refresh frequency drives compute cost. For stable data with heavy query load, the savings on query compute typically outweigh the refresh cost.
+
+**Q: What are the main limitations of Snowflake Materialized Views?**
+A: They support only a single base table (no joins across tables), have restrictions on SQL constructs (no subqueries in FROM, no non-deterministic functions), cannot be manually refreshed on demand, and are limited to Enterprise edition and above. These constraints make Dynamic Tables the preferred choice for complex transformation patterns.
+
+**Q: How do you monitor Materialized View refresh status?**
+A: Query `INFORMATION_SCHEMA.MATERIALIZED_VIEW_REFRESH_HISTORY` or use the Account Usage views to track refresh timestamps, durations, and errors. Alert on refresh failures to catch cases where the view becomes stale due to schema changes or errors in the base table.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the automatic maintenance advantage—Snowflake handles refresh without manual scheduling, which reduces pipeline complexity. But always follow up with the cost trade-off discussion.
+- Clearly articulate Materialized View limitations vs. Dynamic Tables. Interviewers at Snowflake-heavy shops will probe which you'd choose for a given scenario—being specific about the single-table constraint is essential.
+- Mention transparent query rewrite as a key production benefit: existing BI dashboards automatically benefit from materialized views without requiring query changes, which reduces rollout friction.
+- Avoid overselling Materialized Views as a substitute for proper data modeling. For complex multi-hop transformations, they're the wrong tool—Dynamic Tables or dbt models are more appropriate.
+- Senior interviewers want to hear about cost monitoring: high-churn tables with materialized views can generate unexpected compute spend. Showing you'd monitor refresh frequency and evaluate whether the view is actually being used demonstrates operational maturity.

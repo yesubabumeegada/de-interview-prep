@@ -153,3 +153,41 @@ flowchart TD
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the six core dimensions of data quality?**
+A: Completeness (no missing values), accuracy (values reflect reality), consistency (no contradictions across systems), timeliness (data is available when needed), validity (values conform to defined rules), and uniqueness (no unintended duplicates). Each dimension requires different checks and remediation strategies.
+
+**Q: What is the difference between data quality and data reliability?**
+A: Data quality describes the fitness of data for its intended use (accuracy, completeness, validity). Data reliability describes whether the data platform consistently delivers quality data on schedule — it encompasses pipeline uptime, freshness SLAs, and alerting, not just the data itself.
+
+**Q: What is a data quality rule and how do you implement one?**
+A: A data quality rule is an explicit assertion about expected data behavior (e.g., "order_amount must be > 0"). Implementation options include SQL assertions, Great Expectations expectations, dbt tests, or Soda checks — all of which can be run in CI/CD and production monitoring.
+
+**Q: How do you prioritize which data quality checks to implement first?**
+A: Prioritize by business impact: start with checks on data feeding critical reports, SLA-bound datasets, and ML model features. Then expand to high-traffic tables, and finally to lower-priority historical data. A risk-based approach prevents boiling the ocean.
+
+**Q: What is data quality scoring and how is it used?**
+A: Data quality scoring aggregates multiple quality dimension metrics (null rate, duplicate rate, freshness lag, referential integrity pass rate) into a composite score for a dataset. Scores help data consumers quickly assess trust level and help data teams prioritize remediation work.
+
+**Q: What is the difference between data quality monitoring and data testing?**
+A: Data testing runs assertions at a specific point in time (in CI/CD or on pipeline execution) to catch issues in new data loads. Data quality monitoring continuously tracks metrics over time to detect gradual degradation, drift, and emerging patterns that one-time tests miss.
+
+**Q: How do you handle data quality issues discovered in production?**
+A: Follow an incident response process: alert the responsible team, quarantine or flag affected data, assess downstream impact, root-cause the issue, apply a fix, backfill corrected data, and add a new test to prevent recurrence. Document everything in a quality incident log.
+
+**Q: What is referential integrity and how do you validate it in a data pipeline?**
+A: Referential integrity ensures that foreign key values in a fact table exist in the corresponding dimension table. Validate it with SQL anti-joins (records in fact with no matching dimension key), dbt relationship tests, or Great Expectations multi-table validations.
+
+---
+
+## 💼 Interview Tips
+
+- Memorize the six dimensions of data quality (completeness, accuracy, consistency, timeliness, validity, uniqueness) — interviewers frequently open with this question as a baseline check.
+- Show that you treat data quality as an engineering discipline with code, tests, and monitoring — not a manual review process.
+- Be ready to discuss how you build quality checks into the pipeline itself, not as a separate after-the-fact audit.
+- Senior interviewers want to hear about organizational challenges: how do you get data producers to care about quality? Discuss SLAs, data contracts, and ownership.
+- Common mistake: implementing only completeness checks (null rates) while ignoring accuracy and consistency — explain how you would cover all six dimensions systematically.
+- Connect data quality to business outcomes: a 1% error rate in customer addresses could mean millions in undeliverable mail — always anchor quality discussions in business cost.

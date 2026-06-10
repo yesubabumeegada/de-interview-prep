@@ -100,3 +100,42 @@ instance_fleets = [
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Amazon EMR and what workloads is it designed for?**
+A: EMR (Elastic MapReduce) is a managed cluster platform for processing large-scale data using open-source frameworks like Apache Spark, Hive, Presto, and HBase. It's designed for batch ETL, log analysis, ML preprocessing, and interactive SQL on petabyte-scale datasets stored in S3.
+
+**Q: What is the difference between EMR on EC2, EMR on EKS, and EMR Serverless?**
+A: EMR on EC2 gives you full cluster control with persistent or transient clusters. EMR on EKS runs Spark jobs on your existing Kubernetes clusters for unified container infrastructure. EMR Serverless is fully managed with no cluster provisioning — you submit jobs and AWS handles scaling automatically, paying only for resources used.
+
+**Q: What is the recommended storage pattern for EMR clusters?**
+A: The recommended pattern is EMRFS (EMR File System) with S3 as the data store, separating compute from storage. This allows transient clusters — spin up a cluster for a job, write results back to S3, and terminate the cluster. Avoid HDFS as primary storage since data is lost when the cluster terminates.
+
+**Q: What are EMR Instance Groups vs. Instance Fleets?**
+A: Instance Groups use a single instance type per group (master, core, task). Instance Fleets allow multiple instance types and a mix of On-Demand and Spot Instances per fleet, maximizing Spot availability and reducing cost by letting EMR choose from a pool of instance types.
+
+**Q: How do you optimize Spark performance on EMR?**
+A: Key optimizations: use Spot Instances for task nodes, enable dynamic resource allocation, tune `spark.executor.memory` and `spark.executor.cores` for your instance type, use S3 Select to push down filtering, store data in Parquet/ORC format, and use EMR's Graviton instances for better price-performance.
+
+**Q: What is EMR Steps and how are they used?**
+A: Steps are units of work submitted to an EMR cluster — typically a Spark submit command, Hive script, or Pig script. Steps can be submitted at cluster launch (for transient clusters) or added to a running cluster. Step execution order is sequential by default.
+
+**Q: How do you secure data in EMR?**
+A: EMR security involves: encryption at rest (EMRFS S3 server-side or client-side encryption, HDFS encryption), encryption in transit (TLS for inter-node communication), Kerberos for cluster authentication, IAM roles for EC2 instances and EMRFS S3 access, and Lake Formation for fine-grained data access control.
+
+**Q: What is the difference between core nodes and task nodes in EMR?**
+A: Core nodes run HDFS DataNode and YARN NodeManager — they store data on HDFS and run tasks. Removing core nodes risks HDFS data loss. Task nodes only run YARN NodeManager and add compute capacity without storing HDFS data — they are safe to use as Spot Instances since their removal doesn't affect data.
+
+---
+
+## 💼 Interview Tips
+
+- Always recommend transient clusters over persistent clusters for batch ETL workloads — emphasizing cost efficiency and operational simplicity through S3-backed EMRFS storage is a key senior-level signal.
+- Lead cost optimization discussions with Spot Instances on task nodes: explain the task node vs. core node distinction and why only task nodes should be Spot, since removing them doesn't risk HDFS data loss.
+- Senior interviewers want to hear about the shift to EMR Serverless for new workloads — it removes cluster management overhead, but has trade-offs around cold start time and lack of persistent HDFS.
+- Avoid the mistake of conflating EMR with a persistent data warehouse — EMR is a processing engine, not a storage system. Data should live in S3; EMR is the compute layer.
+- Demonstrate tuning knowledge: mention executor sizing rules of thumb (5 cores per executor, leaving 1 core per node for OS), and the importance of avoiding too many small files in S3 (the small-files problem).
+- Mention Bootstrap Actions for installing custom dependencies and EMR notebooks for interactive Spark development — these show breadth of EMR experience beyond just batch job submission.

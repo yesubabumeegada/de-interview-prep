@@ -343,3 +343,41 @@ WHERE WorkloadName = 'QUERYGRID_CONSUMER'
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Teradata Active System Management (TASM) and what does it control?**
+A: TASM is Teradata's workload management framework that governs how queries are classified, prioritized, throttled, and allocated system resources. It enables concurrent workloads (tactical OLTP queries, large batch ETL, ad hoc analytics) to coexist on the same system without any single workload monopolizing resources.
+
+**Q: What is a workload definition in TASM?**
+A: A workload definition classifies queries based on attributes (user, account string, application, query complexity, estimated resource usage) and assigns them to a workload group with specific resource guarantees and limits. Workloads can be prioritized, throttled (limited concurrency), or mapped to different resource partitions.
+
+**Q: What is a throttle in Teradata workload management?**
+A: A throttle limits the number of queries of a given type that can run concurrently. For example, a throttle of 5 on large batch queries means at most 5 such queries run simultaneously; additional queries queue until a slot is available. Throttles prevent resource exhaustion from runaway queries or unexpected load spikes.
+
+**Q: What is the difference between TASM and Priority Scheduler?**
+A: Priority Scheduler is Teradata's foundational resource allocation layer—it assigns CPU and I/O priorities to workloads. TASM (Teradata Active System Management) extends this with dynamic classification, throttling, workload balancing, and system-state-based rule changes (e.g., apply different rules during peak hours). TASM requires the Teradata Workload Management license; Priority Scheduler is available in all editions.
+
+**Q: What is a system state in TASM and how is it used?**
+A: A system state represents a named operational condition of the Teradata system (e.g., "peak_hours," "batch_window," "maintenance"). TASM can switch between system states automatically (based on time of day or resource thresholds) or manually, applying different workload rules for each state. This enables workload management rules to adapt to changing operational contexts.
+
+**Q: What is account string manipulation in Teradata and how does it relate to workload classification?**
+A: Teradata users can include an account string in their session (e.g., via `.SET ACCOUNT` in BTEQ) that TASM uses to classify the query. Embedding priority codes in account strings (a legacy approach) allows workload classification without TASM. Modern TASM uses richer classification criteria but account strings remain important for compatibility with older pipelines.
+
+**Q: What are the resource partition pools in Teradata workload management?**
+A: Teradata resources (CPU, memory, I/O bandwidth) can be divided into partitions allocated to different workload classes. For example, a "tactical" partition gets 20% of CPU for high-priority short queries, while a "batch" partition gets 70% for large ETL jobs, with 10% reserved for administrative work. This guarantees service levels for high-priority workloads even under load.
+
+**Q: How do you diagnose a workload management problem in Teradata?**
+A: Use Teradata Viewpoint to examine active session concurrency, queue lengths, and workload throttle utilization. Check DBQLOGTBL (query logging) for average response times by workload class and periods of high queuing. If tactical queries are being delayed, check whether batch throttles are saturated or whether batch jobs are consuming excessive resources.
+
+---
+
+## 💼 Interview Tips
+
+- Frame workload management as a business continuity concern, not just a technical configuration. When batch ETL and user-facing dashboards compete for the same resources, TASM is what prevents one from starving the other. This framing resonates with senior interviewers.
+- Know the classification-throttle-prioritization chain: TASM first classifies the query, then applies throttles (concurrency limits), then the Priority Scheduler governs CPU/I/O allocation within running workloads. These are three distinct mechanisms often confused.
+- Be ready to discuss a scenario: "How would you configure TASM to ensure tactical queries (< 1 second) always get fast response even during batch loads?" The answer involves dedicated resource partitions, strict throttles on batch, and system states for peak vs. off-peak.
+- Mention that incorrect workload classification is a common production problem—a single misconfigured account string can route a heavy batch job into the tactical workload, starving real-time users. Show you'd build monitoring to detect classification anomalies.
+- Senior interviewers at large Teradata installations will probe your experience with Viewpoint for workload monitoring. Knowing the specific Viewpoint portlets (Workload Monitor, Productivity) for diagnosing TASM issues shows hands-on operations experience.

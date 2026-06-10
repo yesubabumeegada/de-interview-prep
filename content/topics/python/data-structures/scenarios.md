@@ -785,3 +785,41 @@ print(metrics.summary)
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the time complexity of lookup in a Python dict vs. a list?**
+A: Dict lookup is O(1) average (hash table). List lookup by value (`in` operator) is O(n). In data engineering, converting a list to a set or dict before repeated membership tests is a common optimization for large reference datasets.
+
+**Q: When would you use a `defaultdict` over a plain `dict`?**
+A: When building a mapping that accumulates values (e.g., grouping rows by key into a list). `defaultdict(list)` automatically creates an empty list for new keys, eliminating the `if key not in d: d[key] = []` guard. This is cleaner and slightly faster for building group-by structures in Python.
+
+**Q: What is the difference between a list and a deque for queue operations?**
+A: `list.pop(0)` (removing from the front) is O(n) because all remaining elements shift. `collections.deque.popleft()` is O(1) because deque is a doubly-linked list. For FIFO queues (BFS, sliding window processing), always use `deque`.
+
+**Q: What is a heap in Python and how do you use it?**
+A: Python's `heapq` module implements a min-heap using a regular list. `heapq.heappush(h, item)` and `heapq.heappop(h)` maintain the heap property in O(log n). Use it for top-K problems: push all items and maintain a size-K heap, or use `heapq.nlargest(k, iterable)` directly.
+
+**Q: What is the difference between `frozenset` and `set`?**
+A: `frozenset` is an immutable set—it cannot be modified after creation. It is hashable, so it can be used as a dict key or set element. Use `frozenset` when you need to use a set as a dictionary key (e.g., caching results keyed by a variable set of parameters).
+
+**Q: What is `collections.Counter` and how does it help in data processing?**
+A: `Counter` is a subclass of `dict` that counts hashable object occurrences. `Counter(iterable)` builds a frequency map in one line. It supports arithmetic (`+`, `-`, `&`, `|`) for combining counts from multiple sources—useful for computing word frequencies, event counts, or histogram merging.
+
+**Q: What is `collections.namedtuple` and when would you use it over a plain tuple or dict?**
+A: `namedtuple` creates a lightweight, immutable record type with named fields. It has the memory efficiency of a tuple (no per-instance `__dict__`) but field access by name for readability. Use it for passing structured records through a pipeline when a full class is overkill but positional tuple access is too fragile.
+
+**Q: What is a `bisect` and when is it useful in data engineering?**
+A: `bisect` provides binary search on sorted lists in O(log n). Use it for: efficiently inserting into a sorted list (`bisect.insort`), finding which bucket a value falls into (range partitioning without if-elif chains), or time-series lookups where you need the nearest timestamp.
+
+---
+
+## 💼 Interview Tips
+
+- Interviewers frequently give a DE scenario (count distinct values, find top-K, group rows by key) and expect you to choose the right data structure. Practice mapping problem types to structures: grouping → defaultdict; frequency → Counter; top-K → heapq; membership test → set.
+- Know time complexities for common operations: dict O(1) get/set, list O(1) append/O(n) insert, set O(1) add/lookup, deque O(1) both ends, heap O(log n) push/pop.
+- Senior interviewers often probe memory trade-offs: a list of tuples vs. a list of dicts vs. a Pandas DataFrame for 1M records. Discuss per-object overhead, cache locality, and when to reach for NumPy/Pandas vs. pure Python.
+- `collections` module fluency (Counter, defaultdict, deque, OrderedDict, namedtuple) is a strong signal of Python proficiency—mention and use these instead of manual workarounds.
+- Connect data structures to correctness: using a `set` for deduplication in a pipeline guarantees O(1) membership tests regardless of accumulated count, whereas a list would silently degrade to O(n)—demonstrate you think about scale from the start.

@@ -956,3 +956,42 @@ def failover_handler(event, context):
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are Databricks Workflows (Jobs) and what do they orchestrate?**
+A: Databricks Workflows is the built-in orchestration service that schedules and coordinates multi-task pipelines including notebook runs, Python scripts, DLT pipeline updates, dbt jobs, Spark JAR tasks, and SQL tasks — all within the Databricks platform.
+
+**Q: What is a multi-task job in Databricks Workflows and how are dependencies defined?**
+A: A multi-task job consists of multiple tasks with explicit dependencies defined via `depends_on` relationships, forming a DAG. Tasks execute in parallel when their dependencies are satisfied, and the job fails if any task fails (unless configured otherwise with retry or `if_else` branching).
+
+**Q: What are the trigger types available for Databricks Workflows?**
+A: Scheduled (cron-based), File Arrival (trigger when new files land in a cloud storage path), Continuous (keep running and restart on completion), and manual triggers. File Arrival triggers enable event-driven pipeline execution without external orchestration.
+
+**Q: How do you handle task failures and retries in Databricks Workflows?**
+A: Configure `max_retries` and `min_retry_interval_millis` per task. Use `on_failure` email or webhook notifications. Implement task-level `if_else` branching to run cleanup or alerting tasks on failure. Idempotent tasks with checkpointing ensure safe retries without data corruption.
+
+**Q: What are job parameters and task values in Databricks Workflows?**
+A: Job parameters pass key-value pairs to all tasks in a job run, accessible via `dbutils.widgets.get()` in notebooks or `--conf` for Spark tasks. Task values allow one task to pass output to downstream tasks via `dbutils.jobs.taskValues.set()` and `.get()` — enabling dynamic, data-driven pipeline logic.
+
+**Q: How do Databricks Workflows compare to Apache Airflow for orchestration?**
+A: Databricks Workflows is tightly integrated with the Databricks platform, requiring no external infrastructure and providing native monitoring. Airflow is more flexible for cross-system orchestration (triggering non-Databricks tasks, complex dependency patterns) and has a larger ecosystem. Many teams use Airflow to trigger Databricks jobs externally while using Workflows for internal multi-task pipelines.
+
+**Q: What is the Databricks Jobs REST API and how is it used in CI/CD?**
+A: The Jobs REST API (or `databricks jobs` CLI) creates, updates, triggers, and monitors job runs programmatically. In CI/CD, it is used to deploy updated job configurations (cluster settings, task code paths, parameters) and to trigger integration test runs as part of the deployment pipeline.
+
+**Q: How do you monitor Databricks Workflow runs in production?**
+A: Use the Workflows UI for run history and task-level logs, configure email/webhook alerts for failures, query `system.lakeflow.job_run_timeline` system tables for programmatic monitoring, and integrate with external tools (Datadog, PagerDuty) via Databricks webhooks or the REST API.
+
+---
+
+## 💼 Interview Tips
+
+- Know when to use Databricks Workflows vs. Airflow — the answer is nuanced: Workflows for Databricks-centric pipelines, Airflow for cross-platform orchestration.
+- Show familiarity with task values and job parameters — dynamic, data-driven pipeline design using task outputs is a senior-level pattern many candidates miss.
+- Be ready to discuss idempotency in job design: how do you ensure that retried tasks don't produce duplicate data? This is a critical production engineering concern.
+- Senior interviewers will ask about CI/CD integration with Workflows — explain how you deploy job configurations as code using Databricks Asset Bundles or Terraform.
+- Mention the Jobs REST API and `databricks` CLI for automation — showing you can script deployments and monitoring signals engineering discipline.
+- Common mistake: designing jobs with no retry logic or alerting — production jobs must have explicit failure handling; show you build this in from the start.

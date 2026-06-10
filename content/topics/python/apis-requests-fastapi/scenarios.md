@@ -305,3 +305,41 @@ async def process_batch(batch_id: str, submission: BatchSubmission):
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between `requests` and `httpx` for making HTTP calls in Python?**
+A: `requests` is synchronous and battle-tested but blocks the event loop. `httpx` supports both sync and async interfaces with an API nearly identical to `requests`, making it the preferred choice for FastAPI applications or any async codebase where blocking I/O would defeat the purpose of async.
+
+**Q: How do you handle rate limiting and retries with the `requests` library?**
+A: Use `urllib3.util.retry.Retry` with a `requests.adapters.HTTPAdapter`: configure `total` retries, `backoff_factor`, and `status_forcelist` (e.g., 429, 503). Mount the adapter on the session. For rate limiting specifically, also inspect the `Retry-After` response header and sleep accordingly.
+
+**Q: What is FastAPI's dependency injection system and why is it useful for data engineering APIs?**
+A: FastAPI's `Depends()` mechanism injects shared resources (database connections, configuration, auth tokens) into path functions without manual wiring. For DE APIs this means a single `get_db_connection` dependency can be declared once, managed with a context manager, and reused across all endpoints—clean separation of concerns and easy mocking in tests.
+
+**Q: What is Pydantic's role in FastAPI and how does it help with data validation?**
+A: FastAPI uses Pydantic models for automatic request body parsing, type coercion, and validation. If a client sends the wrong type or missing required fields, FastAPI returns a structured 422 response automatically—no manual validation code needed. Pydantic also serializes response models, enforcing output schema contracts.
+
+**Q: How do you add authentication to a FastAPI endpoint?**
+A: Use `HTTPBearer` or `OAuth2PasswordBearer` security schemes with a `Depends()` function that validates the token (JWT verification, database lookup, etc.). This keeps auth logic out of the path function and makes it composable—a single auth dependency can be shared across all protected routes.
+
+**Q: What is the difference between a 4xx and 5xx HTTP status code in an API context?**
+A: 4xx codes indicate client errors (400 Bad Request, 401 Unauthorized, 404 Not Found, 422 Unprocessable Entity)—the client sent an invalid request. 5xx codes indicate server errors (500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable)—the server failed to process a valid request. Retry logic should typically only trigger on 429 and 5xx responses.
+
+**Q: How would you paginate a large dataset response in a FastAPI endpoint?**
+A: Accept `page` and `page_size` query parameters, apply `OFFSET`/`LIMIT` in the query (or cursor-based pagination for large datasets), and return a response model with `items`, `total`, `page`, and `pages` fields. Cursor-based pagination (using a last-seen ID or timestamp) is preferred for deep pagination to avoid performance degradation.
+
+**Q: What is background task processing in FastAPI and when would you use it?**
+A: FastAPI's `BackgroundTasks` allows you to schedule a function to run after the response is returned. Use it for fire-and-forget operations (sending email notifications, writing audit logs, triggering a downstream pipeline) where the client does not need to wait for the result. For heavy work, prefer Celery or an async task queue.
+
+---
+
+## 💼 Interview Tips
+
+- Demonstrate production awareness: always use `requests.Session` (not bare `requests.get`) for connection pooling, header reuse, and retry configuration in long-running DE services.
+- FastAPI interviewers often ask about async: know that `async def` endpoints use the event loop and should never call blocking I/O (use `httpx.AsyncClient`, `asyncpg`, not `psycopg2`). Calling a blocking function in an `async def` route stalls the entire event loop.
+- Show you understand OpenAPI documentation as a feature: FastAPI auto-generates `/docs` and `/openapi.json` from Pydantic models and route definitions—mention this as a DE API best practice for self-documenting internal tools.
+- Senior interviewers test error handling: demonstrate `HTTPException(status_code=404, detail="...")` for expected errors and global exception handlers via `@app.exception_handler` for unexpected ones.
+- Connect API design to DE context: data ingestion APIs, metadata APIs for catalog services, and webhook receivers are common FastAPI use cases in DE. Show you know the patterns, not just the syntax.

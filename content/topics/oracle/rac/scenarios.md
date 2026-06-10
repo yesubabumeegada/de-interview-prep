@@ -210,3 +210,40 @@ Standby switch back: manual ~ 10 minutes (planned)
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Oracle RAC and what problem does it solve?**
+A: Real Application Clusters (RAC) runs multiple Oracle instances against a single shared database on a shared-disk storage system. It eliminates single-instance as a failure point (active-active HA) and provides horizontal scale-out: you add nodes to handle more concurrent sessions and workload without a maintenance window.
+
+**Q: What is Cache Fusion and why is it central to RAC?**
+A: Cache Fusion is the mechanism by which RAC nodes share modified data blocks over the high-speed private interconnect instead of flushing them to disk first. When Node B needs a block held by Node A's buffer cache, Node A ships it directly over InfiniBand—eliminating disk I/O and providing a coherent, distributed buffer cache.
+
+**Q: What is a GCS (Global Cache Service) and a GES (Global Enqueue Service)?**
+A: GCS manages the distributed buffer cache coherency—tracking block ownership, shipping blocks between nodes, and managing block mode (exclusive/shared). GES manages global enqueues (locks and latches) that protect shared resources across all instances, ensuring only one session modifies a block at a time.
+
+**Q: What is an interconnect and why is its performance critical?**
+A: The private interconnect (typically InfiniBand) carries Cache Fusion block transfers and GES messaging between nodes. Slow or saturated interconnect directly increases wait times for `gc buffer busy acquire`, `gc cr block 2-way`, and `gc current block 2-way` waits, degrading RAC performance to worse than single-instance.
+
+**Q: What are services in RAC and why should applications connect via services?**
+A: A RAC Service is a named workload unit that can be configured to run on specific preferred/available instances, fail over, and load-balance connections via Oracle Client (TAF/FCF). Applications connecting via service name (not instance name) are automatically routed to available instances and reconnected on failure.
+
+**Q: What is Transparent Application Failover (TAF) and Fast Connection Failover (FCF)?**
+A: TAF is a client-side Oracle Net feature that transparently reconnects a session to another instance on failure and optionally re-executes the last SELECT. FCF (with ONS/FAN events) is faster—the client receives a failover notification proactively rather than waiting for a connection timeout, enabling sub-second failover for properly configured connection pools.
+
+**Q: What AWR/ASH metrics indicate RAC interconnect problems?**
+A: High values for `gc buffer busy acquire`, `gc cr block 2-way`, `gc current block 2-way`, and `gc current block congested` in the top wait events section. Also check the "Global Cache and Enqueue Statistics" section for high `average cr block receive time` (should be <1 ms on InfiniBand).
+
+**Q: How does application design affect RAC performance?**
+A: Poor affinity leads to excessive Cache Fusion traffic. Applications should use connection services tied to specific instances for localized workloads (e.g., OLTP on Node 1, reports on Node 2). Sequence caching (`CACHE 1000`), avoiding frequent commits with many small rows, and using partitioned tables with partition-wise operations reduce inter-node block shipping.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the active-active HA + scale-out value proposition, then immediately go into Cache Fusion—it is what makes RAC technically unique and interviewers always probe it.
+- Know the key RAC wait events and what they mean: `gc buffer busy` = another session on another node holds the block; `gc cr block 2-way` = read-consistent block shipped from remote node. Pattern-matching waits to root causes impresses senior interviewers.
+- Services vs. instance-name connections is a critical operational point: direct instance connections bypass load balancing and TAF—this is a common misconfiguration in legacy applications.
+- Senior interviewers often ask about anti-patterns: hot sequence values causing `SQ` enqueue contention (fix: high cache + NOORDER), row-chaining across blocks causing excessive Cache Fusion traffic (fix: proper row sizing and PCTFREE).
+- Connect RAC to DR: RAC provides HA within a datacenter; Data Guard provides DR across datacenters. The two are complementary—MAX AVAILABILITY configuration combines both.

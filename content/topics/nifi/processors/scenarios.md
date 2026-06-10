@@ -443,3 +443,41 @@ INSERT INTO nifi.routing_config VALUES (
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between a source, transform, and sink processor in NiFi?**
+A: Source processors generate FlowFiles from external systems (GetFile, ConsumeKafka); they have no incoming relationships. Transform processors modify FlowFiles in transit (ReplaceText, ConvertRecord). Sink processors send data to external destinations (PutS3Object, PutDatabaseRecord) and typically terminate FlowFiles.
+
+**Q: What does "Concurrent Tasks" mean for a processor and how does it affect throughput?**
+A: Concurrent Tasks sets how many threads can execute the processor simultaneously. Increasing it can improve throughput for I/O-bound processors (network, disk), but CPU-bound processors see diminishing returns past the number of available cores. It must be tuned per processor type.
+
+**Q: What is a processor's scheduling strategy and what options are available?**
+A: The scheduling strategy controls how often NiFi invokes the processor. Options include Timer Driven (run every N seconds), CRON Driven (run on a cron schedule), and Event Driven (experimental; trigger on incoming FlowFile). Most production flows use Timer Driven or CRON.
+
+**Q: What is the purpose of the `success` and `failure` relationships?**
+A: Relationships are output paths for FlowFiles after processing. `success` routes FlowFiles that were processed correctly; `failure` routes FlowFiles that encountered an error. You must connect or auto-terminate every relationship before a processor can be started.
+
+**Q: How do you create a custom processor in NiFi?**
+A: Implement the `AbstractProcessor` class from the NiFi API, annotate it with `@Tags`, `@CapabilityDescription`, and `@SupportsBatching` as needed, define `PropertyDescriptor` constants and `Relationship` constants, implement `onTrigger()`, and package it into a NAR (NiFi Archive) file deployed to `lib/`.
+
+**Q: What is the difference between GetFile and ListFile + FetchFile?**
+A: GetFile lists and reads in a single atomic operation—it physically moves/deletes the file. ListFile + FetchFile separates listing (producing attributes) from fetching (retrieving content), enabling distributed processing in a cluster where different nodes fetch different files.
+
+**Q: How does the QueryRecord processor differ from ConvertRecord?**
+A: ConvertRecord translates between formats (CSV → Avro) without transforming structure. QueryRecord executes a SQL SELECT against the incoming record set, enabling filtering, projection, and simple aggregation using the same format-agnostic Record API.
+
+**Q: What is processor state and how can a processor use it?**
+A: NiFi provides a State Manager API allowing processors to persist key-value pairs either locally (per-node) or cluster-wide (via ZooKeeper). ListS3 uses cluster state to track the last-seen modification timestamp so it does not re-list already-processed objects after restart.
+
+---
+
+## 💼 Interview Tips
+
+- When asked to design a flow, clearly identify which processors are sources/transforms/sinks—interviewers look for data-flow thinking, not just naming processors.
+- Know the ListFile + FetchFile pattern cold—it's the recommended approach for clustered NiFi and comes up constantly in senior interviews.
+- Demonstrate awareness of processor thread models: heavy concurrent tasks can starve other processors. Mention the NiFi thread pool settings and how to balance priorities.
+- For custom processor questions, go beyond "implement onTrigger"—mention proper session management, using `ProcessSession.read()` / `write()`, avoiding holding sessions open, and writing unit tests with `TestRunner`.
+- Senior interviewers appreciate when you mention observability: use `getLogger().warn()` with FlowFile context and bulletins, not just raw exceptions.

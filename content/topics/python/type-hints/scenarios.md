@@ -216,3 +216,41 @@ print(result.data)  # int — mypy knows this!
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are type hints in Python and do they affect runtime behavior?**
+A: Type hints are annotations (e.g., `def func(x: int) -> str:`) that document the expected types of variables, parameters, and return values. They are completely ignored at runtime by the Python interpreter—they exist solely for static analysis tools (mypy, pyright) and IDE tooling. Adding incorrect type hints does not raise a runtime error.
+
+**Q: What is the difference between `Optional[X]` and `X | None` (Python 3.10+)?**
+A: Both express that a value can be `X` or `None`. `Optional[X]` is the pre-3.10 spelling from the `typing` module. `X | None` is the modern union syntax introduced in Python 3.10 (PEP 604). They are semantically identical; prefer `X | None` in new code targeting Python 3.10+.
+
+**Q: What is `Union` and when should you use `TypeVar` instead?**
+A: `Union[A, B]` means the value is either type A or type B—the function may behave differently for each. `TypeVar` defines a generic type variable: `T = TypeVar('T')` means the function is generic (works for any type, and if the input is A the output is also A). Use `TypeVar` when the relationship between input and output types must be preserved.
+
+**Q: What are `TypedDict` and `dataclass` and how do they differ for typed records?**
+A: Both describe structured data with named, typed fields. `TypedDict` is a dict subtype—the runtime object is still a plain dict, so it is fully serializable but has no methods or validation. `@dataclass` creates a real class with `__init__` and methods, supports default values, and can be frozen (immutable). Use `TypedDict` for JSON-like interchange; `dataclass` for domain objects.
+
+**Q: What is `Protocol` in Python typing and why is it useful for duck typing?**
+A: `Protocol` (PEP 544) defines a structural interface—any class that implements the required methods is considered compatible, without explicit inheritance. This formalizes Python's duck typing: `class Readable(Protocol): def read(self) -> str: ...` matches any class with a `read` method, enabling static type checking without forcing inheritance.
+
+**Q: What is `mypy` and how do you integrate it into a DE project?**
+A: `mypy` is the standard static type checker for Python. Run it with `mypy src/mypackage` to check all annotated code. Integrate into CI by adding `mypy` to the test step. Configure with `mypy.ini` or `[tool.mypy]` in `pyproject.toml`—set `strict=true` for new projects, use per-module overrides for legacy code with `ignore_missing_imports=true`.
+
+**Q: What is `Annotated` and how does it extend type hints?**
+A: `Annotated[T, metadata]` attaches arbitrary metadata to a type without affecting the type itself. Pydantic uses it for field validation: `Annotated[int, Field(gt=0)]` means a positive integer. FastAPI uses it for dependency injection: `Annotated[Session, Depends(get_db)]`. It enables framework-specific semantics without inventing new type constructs.
+
+**Q: What is `Final` and `ClassVar` in Python typing?**
+A: `Final[T]` marks a variable as a constant—mypy raises an error if it is reassigned after initialization. `ClassVar[T]` marks a class attribute that should not appear on instances—mypy warns if you set it via `self`. Both are documentation and enforcement tools for design intent.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the runtime no-op point: type hints are not enforced at runtime. Show you know this to clarify that type safety comes from static analysis in CI (mypy/pyright), not from the Python interpreter.
+- Demonstrate `Protocol` for DE interfaces: a `DataReader` protocol with `read() -> pd.DataFrame` matches S3Reader, DBReader, and LocalReader without inheritance—this is the modern Pythonic way to type duck-typed architectures.
+- Senior interviewers appreciate `TypeVar` usage for generic utility functions (e.g., a generic `retry(func: Callable[..., T]) -> T` decorator that preserves the wrapped function's return type)—it shows advanced type system fluency.
+- Mention `py.typed` marker file (PEP 561)—a shared DE package that ships type hints needs this file in the package root so mypy can use the annotations. Without it, mypy ignores the package's type information.
+- Connect type hints to DE quality gates: mypy in CI catches type-related bugs before code reaches production, acting as a lightweight form of contract testing for function signatures across pipeline components.

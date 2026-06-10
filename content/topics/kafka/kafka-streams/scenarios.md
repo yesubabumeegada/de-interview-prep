@@ -200,3 +200,42 @@ hourlyBilling.toStream()
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Kafka Streams and how does it differ from Kafka consumers?**
+A: Kafka Streams is a client-side stream processing library that runs inside your Java application without a separate cluster. Unlike plain Kafka consumers, it provides stateful operations (aggregations, joins, windowing), built-in fault tolerance via changelog topics, and interactive query capabilities.
+
+**Q: What is a KStream vs. a KTable?**
+A: A KStream represents an unbounded stream of events — each record is an independent event (append semantics). A KTable represents a changelog stream — each record is an update to a key's latest value (upsert semantics), maintaining a materialized view of the latest state per key.
+
+**Q: What is a GlobalKTable?**
+A: A GlobalKTable is fully replicated to every Streams instance (unlike KTable which is partitioned). It's used for joining a large stream against a small lookup table without requiring co-partitioning, since every instance has the full table locally.
+
+**Q: How does Kafka Streams handle stateful operations and fault tolerance?**
+A: Stateful operations use RocksDB stores backed by Kafka changelog topics. On failure or restart, Streams restores the state by replaying the changelog topic, restoring the exact state before the failure. Standby replicas (optional) pre-populate state on other instances to reduce recovery time.
+
+**Q: What is a windowed aggregation in Kafka Streams?**
+A: Windowed aggregations group stream records by key within time windows — tumbling (fixed non-overlapping), hopping (overlapping), or session (activity-based). Kafka Streams manages per-window state stores and handles late records based on the configured grace period.
+
+**Q: How does co-partitioning affect Kafka Streams joins?**
+A: KStream-KTable and KStream-KStream joins require co-partitioned inputs — the same key must land in the same partition for both topics. This is enforced by using the same number of partitions and the same partitioner. Violating this causes incorrect join results.
+
+**Q: What is the difference between Kafka Streams and Apache Flink?**
+A: Kafka Streams is a Java library embedded in your application, suitable for simpler stateful stream processing with Kafka as the only source and sink. Flink is a standalone distributed streaming engine supporting complex stateful processing, multiple sources/sinks, and advanced windowing — preferred for large-scale, multi-source pipelines.
+
+**Q: How do you scale a Kafka Streams application?**
+A: Run multiple instances of the Streams application with the same `application.id`. Kafka Streams automatically distributes partitions across instances, providing horizontal scaling. The maximum parallelism equals the maximum number of partitions across all input topics.
+
+---
+
+## 💼 Interview Tips
+
+- Know the KStream vs. KTable distinction well — it's the most common Kafka Streams interview question. Use append-vs-upsert semantics as your framing, with practical examples (event log vs. user profile table).
+- Explain co-partitioning as a join prerequisite — not knowing this is a red flag for anyone who claims Kafka Streams experience, as co-partitioning issues are a frequent production bug.
+- Discuss changelog topic-based state recovery — it's Kafka Streams' key fault tolerance mechanism and understanding it shows you grasp the architectural design, not just the API.
+- Compare Kafka Streams to Flink honestly: Streams is simpler to operate (no cluster, Java library only, Kafka-native); Flink is more powerful (complex stateful ops, multiple sources). Knowing when each is appropriate shows judgment.
+- For senior roles, discuss standby replicas and interactive queries — they're advanced features that show production-level depth beyond basic aggregations.
+- Be ready to discuss exactly-once in Kafka Streams: set `processing.guarantee=exactly_once_v2`, which handles transactions automatically — knowing the config and its performance implications separates seniors from juniors.

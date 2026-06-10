@@ -382,3 +382,42 @@ def check_global_lag(regional_kafka_clusters: dict, global_cluster: str) -> dict
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Change Data Capture (CDC) and why is it used?**
+A: CDC is a technique that identifies and captures row-level changes (inserts, updates, deletes) in a source database and propagates them to downstream systems. It enables real-time or near-real-time data synchronization without full table scans.
+
+**Q: What are the main CDC implementation methods?**
+A: The three main methods are log-based CDC (reads the database transaction/WAL log), trigger-based CDC (database triggers write changes to a shadow table), and query-based CDC (polls tables for rows with updated timestamps). Log-based is preferred for production due to low source overhead.
+
+**Q: What is a WAL and how does it enable log-based CDC?**
+A: The Write-Ahead Log (WAL) is a database journal that records every committed transaction before it's applied to data files. CDC tools like Debezium read the WAL to capture changes without touching source tables, providing minimal overhead and capturing deletes.
+
+**Q: How does Debezium work?**
+A: Debezium runs as a Kafka Connect source connector that reads the database WAL (PostgreSQL logical replication, MySQL binlog, etc.), converts each change event into a structured message, and publishes it to a Kafka topic per table with before/after row snapshots.
+
+**Q: What is an initial snapshot in CDC and why is it necessary?**
+A: Before streaming incremental changes, CDC tools perform an initial snapshot — a consistent read of the entire source table — to establish a baseline. Without it, downstream systems would only see changes from the CDC start time, missing all historical data.
+
+**Q: How do you handle schema evolution in a CDC pipeline?**
+A: Use Schema Registry to version-control message schemas. When a column is added or renamed, the CDC connector detects the DDL event and updates the schema; downstream consumers use schema compatibility rules (backward/forward) to handle the transition without breaking.
+
+**Q: What are the challenges of CDC with soft deletes vs. hard deletes?**
+A: Soft deletes (marking rows as deleted with a flag) are easily captured by query-based or log-based CDC. Hard deletes (physical row removal) require log-based CDC to capture the DELETE event; query-based polling cannot detect them since the row no longer exists.
+
+**Q: How do you ensure CDC delivery guarantees?**
+A: Log-based CDC provides at-least-once delivery by default. Combine with idempotent sink writes (upsert by primary key) and Kafka's transactional producer for exactly-once semantics end-to-end.
+
+---
+
+## 💼 Interview Tips
+
+- Always specify which CDC method you'd use and why — saying "I'd use Debezium" without explaining log-based vs. query-based shows surface-level knowledge.
+- Mention the initial snapshot problem proactively; interviewers use this to test whether you understand the full lifecycle, not just steady-state streaming.
+- Be ready to discuss schema evolution — production CDC pipelines break when source tables change, and your answer on Schema Registry compatibility modes distinguishes senior candidates.
+- Avoid overstating CDC as "always real-time" — WAL replication lag, consumer group lag, and network latency add up; give realistic latency estimates.
+- For system design questions, explain the full chain: source DB → WAL → Debezium → Kafka → consumer → sink, and where failures can occur at each step.
+- Know the database-specific prerequisites: PostgreSQL requires `wal_level=logical`, MySQL requires `binlog_format=ROW` — operational readiness details impress interviewers.

@@ -497,3 +497,42 @@ ROI_SUMMARY = {
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the Photon engine in Databricks and what is its primary advantage?**
+A: Photon is a native vectorized query execution engine written in C++ that replaces the JVM-based Spark execution engine for SQL and DataFrame operations. Its primary advantage is significantly faster query execution — often 2-4x for SQL-heavy workloads — especially for scan-heavy analytical queries.
+
+**Q: How does Photon differ from standard Apache Spark execution?**
+A: Standard Spark uses JVM-based row-at-a-time or RDD execution with codegen. Photon uses vectorized execution (processing data in batches of ~1000 rows using CPU SIMD instructions), eliminating JVM overhead and enabling much higher CPU utilization for SQL operations.
+
+**Q: What types of workloads benefit most from Photon?**
+A: Photon most benefits SQL-heavy analytical workloads: large table scans with filters, aggregations, joins, and sort operations on Delta Lake tables. BI query workloads in Databricks SQL and ETL pipelines with significant SQL transformation logic see the largest gains.
+
+**Q: What types of workloads do NOT benefit from Photon?**
+A: Workloads that use custom Python UDFs (not vectorized pandas UDFs), ML model training, graph processing, or operations not yet implemented in Photon fall back to standard Spark execution. Photon is not a universal accelerator — it targets SQL and DataFrame operations specifically.
+
+**Q: How does Photon interact with Delta Lake?**
+A: Photon is deeply optimized for reading Delta Lake tables — it leverages Delta's data skipping, file statistics, and column-level statistics to minimize I/O, and its vectorized reads of Parquet files (Delta's storage format) are significantly faster than Spark's default Parquet reader.
+
+**Q: How do you enable Photon on a Databricks cluster?**
+A: Photon is enabled via the cluster configuration UI or API by checking "Use Photon Acceleration" and selecting a Photon-enabled Databricks Runtime. It requires a compatible runtime version (DBR 9.1+) and is automatically enabled for all SQL Warehouses.
+
+**Q: How can you tell if Photon is being used in a query execution plan?**
+A: The Spark UI query plan shows Photon-specific operators (e.g., `PhotonScan`, `PhotonProject`, `PhotonAggregate`) when Photon is executing a stage. Stages that fall back to Spark show standard operator names. The Databricks query profile UI also indicates Photon vs. Spark execution per stage.
+
+**Q: What is the cost implication of using Photon?**
+A: Photon-enabled clusters use Databricks-specific DBU rates that are higher than standard clusters. However, because Photon executes faster, total query time (and therefore total DBU consumption) is often lower for SQL workloads, resulting in net cost savings despite the higher per-hour rate.
+
+---
+
+## 💼 Interview Tips
+
+- Know that Photon is not magic — it accelerates SQL/DataFrame operations but won't help Python UDF-heavy or ML workloads. Showing this nuance impresses interviewers.
+- Be able to explain vectorized execution conceptually: processing columns in batches using CPU SIMD rather than row-by-row — this demonstrates low-level execution awareness.
+- Mention the cost tradeoff explicitly: higher DBU rate but lower total cost for SQL-heavy workloads due to faster completion times — interviewers want to see cost awareness.
+- Senior interviewers may ask you to diagnose why Photon isn't helping a specific workload — walk through the fallback conditions (UDFs, unsupported operations).
+- Connect Photon to SQL Warehouses: all SQL Warehouses run Photon by default, making it the standard engine for Databricks SQL analytics.
+- Common mistake: assuming Photon replaces Spark entirely — it is an accelerator for specific operation types; Spark runtime still handles orchestration, shuffle, and non-Photon operations.

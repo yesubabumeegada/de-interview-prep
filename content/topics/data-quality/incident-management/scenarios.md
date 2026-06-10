@@ -193,3 +193,41 @@ ORDER BY 1;
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a data quality incident and how does it differ from a pipeline failure?**
+A: A pipeline failure is an operational error (job crashes, dependency unavailable). A data quality incident is when the pipeline completes successfully but produces incorrect, incomplete, or misleading data — often more dangerous because it is harder to detect automatically.
+
+**Q: What are the phases of a data quality incident response?**
+A: Detection (alerts or consumer reports), triage (assess severity and blast radius), containment (flag or quarantine affected data, notify consumers), root cause analysis, remediation (fix source and reprocess), verification (confirm fix), and postmortem (document and add prevention measures).
+
+**Q: How do you measure the blast radius of a data quality incident?**
+A: Use data lineage to identify all downstream datasets, reports, dashboards, and ML models that consume the affected data. Assess whether the issue affects current reporting, historical data, or both, and quantify the number of consumers and business decisions at risk.
+
+**Q: What is a data quality SLA and how does it relate to incident management?**
+A: A data quality SLA defines acceptable bounds for freshness, accuracy, and availability for a dataset. Incident severity is determined by how severely and for how long an SLA is violated — this drives escalation priority and the urgency of remediation.
+
+**Q: How do you handle retroactive data corrections after a data quality incident?**
+A: Options include reprocessing the affected pipeline from the last known good state, applying a targeted SQL correction (with audit trail), or publishing a correction dataset. All approaches require notifying consumers, documenting the correction, and validating that downstream effects are resolved.
+
+**Q: What is a data quality postmortem and what should it include?**
+A: A postmortem documents what happened, the timeline, root cause, impact, remediation steps taken, and action items to prevent recurrence. It should be blameless, focus on systemic fixes (new tests, better monitoring, process changes), and be shared with all stakeholders.
+
+**Q: How do you prevent repeat data quality incidents?**
+A: Add targeted data quality checks to catch the specific failure mode that occurred, improve upstream monitoring (source profiling, freshness checks), enhance documentation (data contracts), implement data lineage for faster blast radius assessment, and conduct regular data quality reviews.
+
+**Q: What is the role of an on-call rotation in data quality incident management?**
+A: An on-call rotation ensures a designated engineer is always responsible for responding to data quality alerts within the SLA response window. It distributes the operational burden, builds team-wide familiarity with production systems, and ensures incidents are not silently ignored.
+
+---
+
+## 💼 Interview Tips
+
+- Show that you have a structured incident response process, not just "fix it and move on" — interviewers at senior levels expect operational maturity.
+- Always mention postmortems and blameless culture — this signals engineering maturity and shows you prioritize learning over blame.
+- Be ready to discuss a real (or hypothetical) data quality incident you handled: what was wrong, how you found it, what you did, and what you changed afterward.
+- Blast radius assessment using lineage is a differentiator — most junior engineers think only about the immediate table, not all downstream consumers.
+- Senior interviewers want to hear about proactive measures: how do you prevent incidents before they happen, not just respond after?
+- Distinguish between P1 incidents (critical business decisions at risk, executive visibility) and lower-severity issues — show that you prioritize based on impact, not just technical severity.

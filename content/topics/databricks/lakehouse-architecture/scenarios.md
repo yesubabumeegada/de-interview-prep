@@ -990,3 +990,42 @@ DR_ARCHITECTURE = {
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the Lakehouse architecture and how does it differ from a data lake or data warehouse?**
+A: A Lakehouse combines the low-cost, flexible storage of a data lake with the reliability, performance, and governance of a data warehouse. It achieves this using open table formats (Delta Lake, Iceberg) that add ACID transactions and schema enforcement to cloud object storage.
+
+**Q: What are the core components of the Databricks Lakehouse Platform?**
+A: Delta Lake (open table format with ACID), Apache Spark (unified compute for batch, streaming, and ML), Unity Catalog (unified governance and discovery), Databricks SQL (SQL analytics layer with Photon), and MLflow (ML lifecycle management).
+
+**Q: What is the medallion architecture and how does it implement Lakehouse principles?**
+A: The medallion architecture organizes data into Bronze (raw ingested data, full fidelity), Silver (cleaned, conformed, and validated data), and Gold (aggregated, business-ready datasets). Each layer adds quality and structure, implementing progressive data refinement within the Lakehouse.
+
+**Q: How does the Lakehouse avoid the problems of the Lambda architecture?**
+A: Lambda architecture maintains separate batch and streaming pipelines that must be reconciled, causing code duplication and consistency issues. The Lakehouse uses unified Structured Streaming on Delta Lake tables to handle both streaming and batch in the same pipeline, eliminating the dual-system complexity.
+
+**Q: What role does Unity Catalog play in the Lakehouse architecture?**
+A: Unity Catalog provides a unified metastore for all data assets (tables, views, functions, models, files) across all workspaces, with fine-grained access control, automatic data lineage, and audit logging. It is the governance layer that makes the Lakehouse enterprise-ready.
+
+**Q: How does the Lakehouse architecture support machine learning workloads?**
+A: The Lakehouse provides a single platform for data engineering (ETL on Delta Lake), feature engineering (Feature Store), model training (MLflow tracking on Spark/GPU clusters), model serving (Model Serving endpoints), and monitoring — eliminating data copies between systems.
+
+**Q: What are the tradeoffs of a Lakehouse vs. a pure data warehouse approach?**
+A: Lakehouses are more cost-effective for large data volumes (object storage is cheaper), support more workload types (ML, streaming, unstructured data), and avoid vendor lock-in with open formats. Data warehouses (Snowflake, BigQuery) offer simpler operation, better SQL optimization, and stronger historical BI performance.
+
+**Q: How does the open table format ecosystem (Delta, Iceberg, Hudi) enable multi-engine Lakehouse architectures?**
+A: Open table formats define a standard way for any compute engine to read and write data with ACID guarantees. Iceberg and Delta Lake are now readable by Snowflake, BigQuery, Athena, and others, enabling a Lakehouse where different engines can operate on the same data without copies.
+
+---
+
+## 💼 Interview Tips
+
+- Be able to articulate the Lakehouse value proposition in one sentence: "ACID reliability and governance of a warehouse, cost and flexibility of a data lake, on open formats."
+- Know the medallion architecture deeply — it comes up in nearly every Databricks interview and is the de facto standard for organizing Lakehouse data.
+- Senior interviewers will probe your understanding of open table formats and interoperability — know why open formats matter for avoiding vendor lock-in.
+- Be ready to compare Lakehouse with Snowflake/BigQuery approaches — show nuanced understanding of when a pure cloud DWH might still be the right choice.
+- Show awareness that Lakehouse is both an architecture pattern and a Databricks product positioning — distinguish between the concept and the platform.
+- Common mistake: treating the Lakehouse as only a Databricks concept — open Lakehouse (using Iceberg + any compute engine) is a valid multi-vendor architecture worth discussing.

@@ -360,3 +360,41 @@ def test_daily_etl_performance():
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the first thing you check when a Spark job is running slowly?**
+A: Open the Spark UI and examine the Stages tab. Look for stages with long durations, high task skew (max task time >> median), large shuffle read/write sizes, and spill to disk. This immediately points to the bottleneck: data skew, shuffle size, or insufficient parallelism.
+
+**Q: What is data skew and how do you fix it in PySpark?**
+A: Skew occurs when some partitions contain disproportionately more data than others, causing a few tasks to run far longer than the rest. Fixes: (1) Salting the join key to distribute the hot partition, (2) enabling AQE's skew join handling (`spark.sql.adaptive.skewJoin.enabled=true`), (3) using broadcast join to eliminate the shuffle entirely if the small side fits in memory.
+
+**Q: What is the optimal shuffle partition count and how do you choose it?**
+A: Target partition sizes of 100–200 MB. A rough formula: `shuffle_bytes / target_partition_size`. Default is 200 (`spark.sql.shuffle.partitions`), which is too low for large jobs and too high for small ones. With AQE enabled, set it high (e.g., 2000) and let AQE coalesce automatically.
+
+**Q: When should you use `repartition()` vs. `coalesce()`?**
+A: `repartition(n)` does a full shuffle to create exactly n evenly distributed partitions—use when you need to increase partitions or rebalance skewed data. `coalesce(n)` reduces partitions without a full shuffle by merging local partitions—use when decreasing partitions (e.g., before writing output) to avoid unnecessary network traffic.
+
+**Q: What is the broadcast join threshold and how do you override it?**
+A: `spark.sql.autoBroadcastJoinThreshold` (default 10 MB) controls the size below which Spark auto-broadcasts a table. Override with `broadcast()` hint: `df_small.hint("broadcast")`. Broadcasting eliminates shuffle for the join but the table must fit in every executor's memory.
+
+**Q: Why should you avoid Python UDFs in hot paths and what is the alternative?**
+A: Python UDFs serialize data from JVM to Python process and back row-by-row, breaking Whole-Stage CodeGen and introducing serialization overhead. Use Spark SQL built-in functions first, then Pandas UDFs (vectorized, operate on Arrow batches with far less overhead), then Scala/Java UDFs if needed.
+
+**Q: What is the impact of small files on Spark performance and how do you fix it?**
+A: Many small files (e.g., thousands of 1 KB Parquet files) cause excessive task creation, file system metadata overhead, and poor read performance. Fix by coalescing output with `df.coalesce(n).write.parquet(path)` or using Delta Lake / Iceberg OPTIMIZE command to compact files post-write.
+
+**Q: How does Parquet partitioning (directory partitioning) affect Spark read performance?**
+A: Writing with `.partitionBy("date", "region")` creates directory hierarchies. Spark's partition pruning eliminates directory scans when the query filters on partition columns, dramatically reducing data read. However, too many partitions (over-partitioning on high-cardinality columns) creates too many small files and degrades performance.
+
+---
+
+## 💼 Interview Tips
+
+- Always start your performance answer with the Spark UI—never with a configuration change. Diagnosis before prescription demonstrates engineering maturity.
+- Know the skew debugging flow: Spark UI → task time distribution → identify the max-time task → check input data size → correlate with join key distribution → choose fix (AQE, salt, broadcast).
+- Senior interviewers often give a scenario: "Your job writes 10,000 small files per day to S3 and downstream reads are slow." Walk through: cause (over-partitioned output or high-cardinality partitionBy column), fix (coalesce before write, or post-write compaction with Delta/Iceberg).
+- Demonstrate you know the trade-off space: broadcasting saves shuffle but uses memory; more partitions improve parallelism but increase scheduling overhead. There are no universal settings.
+- Connect performance tuning to cost: in cloud environments (EMR, Databricks), faster jobs = fewer cluster-hours = lower cost. Framing tuning as cost optimization resonates strongly with senior interviewers.

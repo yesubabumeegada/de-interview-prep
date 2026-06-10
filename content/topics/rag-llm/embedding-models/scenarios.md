@@ -1134,3 +1134,41 @@ class DriftDetectionPipeline:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is an embedding model and what does it produce?**
+A: An embedding model maps text (or other data) into a dense vector in a high-dimensional space such that semantically similar items are geometrically close. The resulting vectors are stored in a vector database and used for similarity search during retrieval.
+
+**Q: What is the difference between bi-encoder and cross-encoder models?**
+A: A bi-encoder independently encodes the query and each document into vectors, enabling fast approximate nearest-neighbor search. A cross-encoder takes the query and document together as input, producing a more accurate relevance score but requiring inference for every query-document pair—too slow for first-stage retrieval.
+
+**Q: What is mean pooling vs. CLS token pooling in transformer-based embeddings?**
+A: CLS token pooling uses the representation of the special [CLS] token as the sentence embedding, which BERT-style models are trained to encode with sentence-level meaning. Mean pooling averages all token representations, often producing more robust sentence embeddings, especially for models not specifically trained with CLS-based objectives.
+
+**Q: How do you choose between a general-purpose embedding model and a domain-specific one?**
+A: General-purpose models (e.g., text-embedding-ada-002, all-MiniLM) work well for broad topics. Domain-specific models (e.g., fine-tuned on legal or medical text) outperform when the vocabulary and concepts differ significantly from general web text. Evaluate both on a held-out set representative of your actual queries.
+
+**Q: What is the MTEB benchmark and why does it matter?**
+A: MTEB (Massive Text Embedding Benchmark) evaluates embedding models across retrieval, clustering, classification, and other tasks. It provides a standardized leaderboard so practitioners can compare models fairly before committing to one for production.
+
+**Q: Why does embedding dimensionality matter for production systems?**
+A: Higher-dimensional embeddings can capture more nuance but increase storage, memory, and ANN search latency. Many modern models offer Matryoshka Representation Learning (MRL) embeddings that can be truncated to lower dimensions with graceful quality degradation, offering a tunable speed-quality trade-off.
+
+**Q: What is embedding drift and how do you handle it?**
+A: Embedding drift occurs when a model update changes the vector space, making old stored embeddings incompatible with new query embeddings. Handling it requires re-embedding all documents after any model change, which is expensive—so model versioning and re-indexing pipelines must be planned in advance.
+
+**Q: How does late interaction (e.g., ColBERT) differ from standard bi-encoders?**
+A: ColBERT stores per-token embeddings for each document rather than a single vector. At query time it computes token-level interactions (MaxSim) between query and document tokens. This gives cross-encoder-level accuracy at bi-encoder-level latency, at the cost of higher storage.
+
+---
+
+## 💼 Interview Tips
+
+- Always discuss the retrieval quality vs. latency trade-off when recommending an embedding model—senior interviewers want to see that you think about production constraints, not just benchmark numbers.
+- Avoid treating embedding model selection as a one-time decision. Bring up model versioning, re-indexing pipelines, and how you'd handle a model update without downtime.
+- Mention fine-tuning on domain-specific data as a lever to improve retrieval quality, and explain that you'd need labeled query-passage pairs (e.g., from user click data or curated relevance judgments) to do it effectively.
+- Be prepared to explain why cosine similarity is preferred over Euclidean distance for high-dimensional embeddings (magnitude normalization removes spurious distance effects).
+- Senior interviewers appreciate awareness of emerging techniques like MRL and ColBERT—even if you haven't used them, knowing they exist and why demonstrates active engagement with the field.

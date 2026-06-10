@@ -444,3 +444,42 @@ with DAG(
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: How do you define task dependencies in Airflow and what are the two main syntaxes?**
+A: Use the bitshift operators `>>` and `<<` (e.g., `task_a >> task_b` means task_a must succeed before task_b runs), or the `set_upstream`/`set_downstream` methods. The bitshift syntax is preferred for readability. Both produce the same DAG graph structure.
+
+**Q: What is `trigger_rule` and what are the most commonly used values?**
+A: `trigger_rule` defines when a task is eligible to run based on its upstream tasks' states. Common values: `all_success` (default — all upstreams must succeed), `all_done` (all upstreams must be done regardless of state), `one_failed` (trigger if any upstream fails — for alerting tasks), `none_failed` (all upstreams succeeded or were skipped).
+
+**Q: What happens to downstream tasks when an upstream task fails with the default trigger_rule?**
+A: With `trigger_rule='all_success'` (default), any downstream task whose upstream failed transitions to `upstream_failed` state and is skipped — it does not run. This cascades through the entire downstream dependency chain.
+
+**Q: What is the difference between `depends_on_past` and using `ExternalTaskSensor` for cross-DAG dependencies?**
+A: `depends_on_past=True` creates a self-dependency within the same DAG — a task won't run unless the same task in the *previous DagRun* of the same DAG succeeded. `ExternalTaskSensor` waits for a task in a *different* DAG to complete — enabling explicit cross-DAG dependency management without code coupling.
+
+**Q: How do you create a fan-out and fan-in pattern in Airflow?**
+A: Fan-out: one upstream task sets downstream dependencies to multiple parallel tasks (`task_a >> [task_b, task_c, task_d]`). Fan-in: multiple tasks converge on a single downstream task (`[task_b, task_c, task_d] >> task_e`). The fan-in task uses `trigger_rule` to determine when to proceed given its multiple upstreams.
+
+**Q: What is a task group and how does it improve DAG organization?**
+A: Task groups (Airflow 2.x) are a visual and organizational grouping of related tasks within a DAG. They create a collapsible section in the UI graph view and allow setting shared dependencies at the group level. They replace the older SubDAG pattern, which had performance and deadlock issues.
+
+**Q: Why are SubDAGs discouraged in modern Airflow and what replaced them?**
+A: SubDAGs ran as separate DAGs with their own scheduler interactions, causing deadlocks, scheduling delays, and worker slot contention (SubDAGs used SequentialExecutor by default, ignoring the main executor). Task Groups in Airflow 2.x provide the same visual grouping without these architectural problems.
+
+**Q: How do you handle a scenario where you want Task C to run even if Task A fails but Task B succeeds?**
+A: Set `trigger_rule='none_failed_min_one_success'` or `trigger_rule='all_done'` on Task C, depending on the exact requirement. `none_failed` allows C to run if all upstreams either succeeded or were skipped. `all_done` allows C to run regardless of upstream states. The choice depends on whether you want C to receive the failure information or proceed despite it.
+
+---
+
+## 💼 Interview Tips
+
+- `trigger_rule` is one of the most common advanced Airflow interview topics — go beyond the default `all_success` and explain 3-4 rules with concrete use cases (alerting tasks using `one_failed`, cleanup tasks using `all_done`).
+- Task Groups vs. SubDAGs is a must-know distinction — if you say SubDAG in an interview without acknowledging its deprecation, interviewers familiar with Airflow 2.x will flag it.
+- `depends_on_past` is frequently misunderstood — clearly articulate that it creates sequential execution across time (DagRun intervals), not within a single DagRun.
+- Show awareness of the fan-in trigger_rule subtlety: if you fan-in with `all_success` and one branch was skipped (not failed), the fan-in task still won't run — `none_failed` is often the right choice for fan-in after branching.
+- Senior interviewers often present a DAG dependency scenario and ask you to reason about what state each task will end up in given various upstream outcomes — practice walking through these mental models.
+- Avoid complex nested dependency chains in DAG design — mention that flat, readable DAGs with clear task names and grouping are more maintainable, which signals engineering maturity beyond just "making it work."

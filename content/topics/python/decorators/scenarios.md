@@ -805,3 +805,41 @@ def extract_orders(date):
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Python decorator and what problem does it solve?**
+A: A decorator is a callable that takes a function (or class) as input and returns a modified version of it. It enables cross-cutting concerns (logging, timing, retry, caching, authentication) to be applied declaratively with `@decorator_name`, keeping the original function's business logic clean.
+
+**Q: What does `functools.wraps` do and why is it important?**
+A: `@functools.wraps(func)` copies the wrapped function's `__name__`, `__doc__`, `__module__`, and `__qualname__` to the wrapper. Without it, introspection, debugging, and logging show the wrapper's name instead of the original function's—which breaks stack traces and documentation in production code.
+
+**Q: How do you write a decorator that accepts arguments?**
+A: You need three levels of functions: the outermost accepts the decorator arguments and returns a decorator, the middle function accepts the original function and returns a wrapper, and the innermost is the wrapper. Alternatively, use a class with `__call__` and `__init__` accepting the arguments.
+
+**Q: What is `functools.lru_cache` and when is it useful in data engineering?**
+A: `@lru_cache(maxsize=N)` memoizes a function's return value keyed by its arguments, using a Least Recently Used eviction policy. In DE it is useful for caching expensive metadata lookups (schema registry calls, database schema queries, configuration reads) that are called frequently with the same arguments.
+
+**Q: How would you write a retry decorator for transient network failures?**
+A: Wrap the function in a while loop (up to max_attempts), catch the target exception, sleep with exponential backoff (`time.sleep(2 ** attempt)`), and re-raise after the last attempt. Apply `@functools.wraps` to the wrapper. Libraries like `tenacity` provide production-grade retry decorators with configurable strategies.
+
+**Q: Can decorators be stacked and in what order are they applied?**
+A: Yes—multiple decorators stack from bottom to top. `@A @B def f()` is equivalent to `f = A(B(f))`. B is applied first (closest to the function), then A. The order matters: `@retry @log_time` means each retry attempt is timed; `@log_time @retry` means the total retry duration is logged as one event.
+
+**Q: What is a class-based decorator and when would you use it over a function-based one?**
+A: A class with `__call__` serves as a decorator. Class-based decorators are useful when the decorator needs to maintain state across calls (e.g., a call counter, circuit-breaker state, accumulated metrics) because instance attributes provide natural state storage without closures.
+
+**Q: How does a decorator interact with a class method (e.g., `@classmethod` combined with a custom decorator)?**
+A: Order matters: `@staticmethod` and `@classmethod` must generally be the outermost decorators because they transform the descriptor protocol. Custom decorators applied inside `@classmethod` receive the raw function, not the bound class method. Test stacking order carefully and be aware that some decorators do not compose cleanly with descriptors.
+
+---
+
+## 💼 Interview Tips
+
+- Write a decorator from scratch in an interview without hesitation—three-function structure for parameterized, two-function for unparameterized. The `functools.wraps` line should be automatic.
+- Senior interviewers test practical use: "Show me a decorator that logs function entry/exit with timing and catches exceptions." Write it cleanly with wraps, a try/except/finally, and structured log output.
+- Mention `functools.lru_cache` for DE metadata caching—it shows you apply decorators for real performance gains, not just academic examples.
+- Decorator ordering questions (`@A @B` — which runs first?) are common gotcha questions. Walk through the equivalence: `A(B(f))`. B wraps f first; A wraps the result of B(f).
+- Connect decorators to DE frameworks: Airflow's `@task` (TaskFlow API) and FastAPI's `@app.get()` are decorators under the hood. Showing you recognize the pattern in frameworks demonstrates conceptual breadth.

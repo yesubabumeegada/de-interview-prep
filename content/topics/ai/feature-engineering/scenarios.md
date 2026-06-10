@@ -659,3 +659,42 @@ def run_consistency_check(feature_name: str, entity_ids: List[int], date: str) -
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is feature leakage and how do you detect it?**
+A: Feature leakage occurs when information from the future or from the target variable inadvertently enters the training features, causing inflated evaluation metrics. Detect it by checking feature creation timestamps relative to the label timestamp, validating that features are available at prediction time, and looking for suspiciously high feature-target correlations.
+
+**Q: What is the difference between a feature store's online store and offline store?**
+A: The offline store (e.g., S3 + Parquet, Delta Lake) stores historical feature values at scale for training dataset generation. The online store (e.g., Redis, DynamoDB) serves low-latency point lookups of the latest feature values for real-time model inference.
+
+**Q: How do you handle high-cardinality categorical features?**
+A: Options include target encoding (replace category with mean target), frequency encoding, entity embeddings (learned in a neural network), or hashing (feature hashing trick). The right choice depends on cardinality magnitude, downstream model type, and leakage risk with target encoding.
+
+**Q: What is point-in-time correct feature retrieval and why is it essential?**
+A: Point-in-time correct retrieval ensures that when constructing a training row for a given event timestamp, only feature values that were known *before* that timestamp are used. Without it, future information leaks into training data, making offline metrics optimistic and production performance disappointing.
+
+**Q: What are the trade-offs between computing features at training time vs. pre-computing and storing them?**
+A: Computing at training time avoids storage costs and is always fresh, but is slow and may be inconsistent with serving logic. Pre-computing ensures training-serving consistency and fast retrieval, but adds infrastructure complexity and storage overhead.
+
+**Q: How would you handle missing values in a feature used by a production model?**
+A: Impute with a statistically sound strategy (median, mode, or model-based), but always log missingness as a separate binary feature to preserve its signal. In production, add monitoring for missing rate changes — a spike often signals upstream data issues.
+
+**Q: What is feature interaction and when should you engineer it explicitly?**
+A: Feature interactions capture combined effects of two or more features that aren't captured individually (e.g., age × income). Explicit engineering is most valuable for linear models and tree models with depth limits. Deep learning models can learn interactions automatically, so explicit engineering matters less there.
+
+**Q: How do you validate that a new feature actually improves model quality?**
+A: Run an ablation study — compare model performance with and without the feature, using the same train/validation/test split and holdout. Also measure: feature importance scores, permutation importance, and the feature's contribution to prediction confidence on a held-out set. Confirm improvements hold on production data distribution.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with feature leakage when discussing feature engineering — it's the most common source of "great offline metrics, terrible production performance" and signals production experience to interviewers.
+- When discussing feature stores, frame your answer around the offline/online separation and training-serving consistency — these are the core architectural decisions, not just tooling choices.
+- Senior interviewers want to hear about feature governance: versioning, documentation, reuse across teams, and deprecation policies. Feature engineering at scale is as much an organizational problem as a technical one.
+- Avoid presenting one-size-fits-all approaches — always mention that the right encoding or imputation strategy depends on the model type, data distribution, and business context.
+- Bring up monitoring: a feature that works today may drift tomorrow. Mentioning feature distribution monitoring (mean, variance, null rate) alongside model monitoring shows end-to-end thinking.
+- When asked about embedding features, mention that they create training-serving coupling — the embedding model version at training time must match the version at serving time.

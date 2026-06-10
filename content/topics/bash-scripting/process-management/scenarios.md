@@ -232,3 +232,42 @@ echo "════════════════════════�
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: How do you run a process in the background and capture its PID?**
+A: Append `&` to the command and capture `$!` immediately: `long_running_cmd & pid=$!`. Use `wait $pid` later to block until it finishes and retrieve its exit code.
+
+**Q: What is the difference between `kill`, `kill -9`, and `pkill`?**
+A: `kill PID` sends SIGTERM (15) by default, asking the process to terminate gracefully. `kill -9 PID` sends SIGKILL, which cannot be caught or ignored and forces immediate termination. `pkill` matches by process name pattern rather than PID.
+
+**Q: How do you check if a process is still running given its PID?**
+A: Use `kill -0 $pid 2>/dev/null` — it sends no signal but returns 0 if the process exists and you have permission to signal it, non-zero otherwise. Alternatively, check `ps -p $pid`.
+
+**Q: What is a zombie process and how does it occur?**
+A: A zombie process is one that has finished executing but whose entry remains in the process table because its parent has not yet called `wait()` to collect its exit status. In bash scripts, backgrounded jobs become zombies briefly until the shell reaps them with `wait`.
+
+**Q: How do you run a long script that survives SSH session disconnection?**
+A: Use `nohup script.sh &` to ignore the SIGHUP signal sent when the terminal closes, or run inside a `screen` or `tmux` session that persists independently of the SSH connection.
+
+**Q: What is `nice` and `renice` used for?**
+A: `nice` launches a process with a specified scheduling priority (niceness from -20 highest to 19 lowest). `renice` changes the priority of an already-running process. Use them to run batch jobs at low priority so they do not compete with interactive workloads.
+
+**Q: How do you limit the CPU and memory a process can use in bash?**
+A: Use `ulimit` to set resource limits for the current shell and its children: `ulimit -v 1048576` caps virtual memory at 1 GB. For finer control use `systemd-run` with resource limits or Linux `cgroups`.
+
+**Q: How do you send a signal to all processes in a process group?**
+A: Prefix the PID with a minus sign: `kill -- -$pgid` sends the signal to every process in the group. This is useful for cleaning up a parent and all its children at once.
+
+---
+
+## 💼 Interview Tips
+
+- Always prefer SIGTERM over SIGKILL — lead with graceful shutdown in answers and explain when SIGKILL is truly the last resort, demonstrating production empathy.
+- Mention `nohup` or `tmux`/`screen` when discussing long-running data pipeline jobs; it shows you have dealt with real operational challenges.
+- For data engineering roles, connect process management to orchestration: explain how Airflow or Kubernetes manages worker processes and why that matters versus raw shell jobs.
+- Senior interviewers probe for awareness of zombie processes and orphaned processes — describe `wait` and proper PID management to stand out.
+- Discuss `nice` and `renice` in the context of running resource-heavy batch jobs alongside production services — it shows cost-conscious and reliability-aware thinking.
+- Demonstrate that you would monitor background processes (`wait`, `jobs`, exit code checks) rather than fire-and-forget, which is a common junior mistake.

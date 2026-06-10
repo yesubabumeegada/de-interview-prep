@@ -277,3 +277,42 @@ trap cleanup_secrets EXIT
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between a shell variable and an environment variable?**
+A: A shell variable exists only in the current shell session and is not inherited by child processes. An environment variable is exported (`export VAR=value`) and is passed to all child processes spawned from that shell.
+
+**Q: How do you source a `.env` file in a bash script?**
+A: Use `source .env` or `. .env` to load the file's variable assignments into the current shell. For safety, strip comments and blank lines first or use a purpose-built tool like `dotenv`.
+
+**Q: How do you provide a default value for an environment variable in bash?**
+A: Use parameter expansion: `${VAR:-default}` returns "default" if VAR is unset or empty. `${VAR:=default}` also assigns the default to VAR if it was unset.
+
+**Q: Why should secrets never be stored in environment variables in production?**
+A: Environment variables are visible to all processes on the same system via `/proc/<pid>/environ`, can leak into logs, and are often exposed in container inspection commands. Use a secrets manager (AWS Secrets Manager, HashiCorp Vault) and inject secrets at runtime instead.
+
+**Q: How do you make an environment variable available only for a single command?**
+A: Prefix the command with the assignment: `FOO=bar ./script.sh`. The variable is set only for that command's environment and does not persist in the current shell.
+
+**Q: What does `printenv` vs `env` vs `set` show?**
+A: `printenv` and `env` (with no arguments) both show exported environment variables. `set` shows all shell variables including local ones, functions, and exported variables — a much larger output.
+
+**Q: How do you reference an environment variable safely when it might contain spaces?**
+A: Always double-quote variable references: `"$VAR"`. Without quotes, word splitting and glob expansion can cause unexpected behavior when the value contains spaces or special characters.
+
+**Q: How do you pass environment variables to a Docker container?**
+A: Use the `-e` flag for individual variables (`docker run -e DB_HOST=localhost`), `--env-file` to load from a file (`docker run --env-file .env`), or define them in a `docker-compose.yml` under the `environment` or `env_file` keys.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with security when discussing environment variables — mention secrets managers before showing you know the syntax, as it signals production awareness.
+- Be ready to explain the difference between `export`, `source`, and subshell inheritance; these are common interview trip-up points.
+- Demonstrate knowledge of `.env` file conventions and tools like `direnv` for per-project environment management in local development.
+- Senior interviewers care about how secrets flow through CI/CD pipelines — discuss injecting secrets from a vault at runtime rather than baking them into images or config files.
+- Mention `set -u` as a safeguard against typos in variable names; it shows you write defensively.
+- Avoid hardcoding any credentials or tokens in scripts during a live coding interview — even as placeholders — it is a red flag for interviewers assessing security hygiene.

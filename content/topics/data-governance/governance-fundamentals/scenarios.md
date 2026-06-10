@@ -190,3 +190,38 @@ flowchart LR
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is data governance and what does it encompass?**
+A: Data governance is the set of policies, processes, standards, and roles that ensure data is accurate, available, consistent, secure, and used appropriately. It encompasses data quality, access control, lineage, classification, metadata management, and compliance with regulations.
+
+**Q: What is the difference between data governance and data management?**
+A: Data management is the technical practice of collecting, storing, and processing data. Data governance defines the policies and accountability structures that guide how data management is done — who owns data, what standards apply, and how compliance is enforced. Governance sets the rules; management executes them.
+
+**Q: What is a data steward and how does the role differ from a data owner?**
+A: A data owner is typically a business executive accountable for a data domain's value and compliance (e.g., the VP of Finance owns financial data). A data steward is the operational role — usually a data analyst or engineer — who maintains metadata quality, enforces standards, and acts as the day-to-day custodian of that domain's data.
+
+**Q: What is a data governance council and what does it do?**
+A: A data governance council (or committee) is a cross-functional group of data owners, stewards, legal/compliance, and IT leaders who define governance policies, resolve disputes about data definitions and access, and oversee the governance program. It provides the organizational accountability that makes governance stick.
+
+**Q: What are the key components of a data governance framework?**
+A: A mature framework includes: policies and standards, organizational roles (owners, stewards, custodians), a data catalog for discovery and metadata, data quality rules and monitoring, access control policies, lineage tracking, classification and sensitivity labels, and a process for handling incidents and exceptions.
+
+**Q: How does data mesh change traditional centralized data governance?**
+A: Traditional governance is centralized — a single team sets policies and manages all data. Data mesh distributes data ownership to domain teams while maintaining federated governance: a central platform defines standards and tooling, but domain teams are accountable for their own data products' quality, metadata, and compliance.
+
+**Q: What metrics would you use to measure the health of a data governance program?**
+A: Key metrics include: percentage of datasets with a documented owner, catalog coverage (% of assets with complete metadata), data quality score by domain, mean time to resolve data quality incidents, number of policy violations detected, and audit readiness score from compliance reviews.
+
+---
+
+## 💼 Interview Tips
+
+- Show that you understand governance as a socio-technical problem — the organizational and cultural aspects (roles, accountability, incentives) are as important as the tools, and senior interviewers know this.
+- Differentiate data owner from data steward clearly and confidently — it is a common interview question and mixing them up signals lack of governance experience.
+- Connect governance to business outcomes: reduced regulatory risk, faster data discovery, higher trust in analytics — frame it as a value driver, not a compliance tax.
+- For senior or staff-level roles, discuss federated governance and data mesh: explain how you balance domain autonomy with platform-wide standards and interoperability.
+- Bring up measurable outcomes — governance programs that cannot show metrics often get defunded; demonstrating that you would track catalog coverage or quality scores signals strategic thinking.
+- Avoid presenting governance as purely a tooling problem; interviewers who have run governance programs know that adoption and cultural change are the hard parts.

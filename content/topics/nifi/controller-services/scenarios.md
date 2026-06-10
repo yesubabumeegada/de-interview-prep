@@ -511,3 +511,41 @@ graph TD
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Controller Service in NiFi?**
+A: A Controller Service is a shared, long-lived component that provides resources (database connections, SSL contexts, schema registries) to processors and other controller services. It is initialized once and reused across many processors, avoiding the overhead of creating a new connection per FlowFile.
+
+**Q: Why use a DBCPConnectionPool Controller Service instead of configuring JDBC in each processor?**
+A: The connection pool manages a fixed set of reusable database connections and enforces limits, preventing connection exhaustion. Centralizing credentials in one service also simplifies secret rotation—you update one place instead of every processor property.
+
+**Q: What scopes can a Controller Service be defined at?**
+A: Process Group scope (visible only within that group and its children) or Root/Controller scope (visible cluster-wide). Defining shared infrastructure services at root scope and business-logic services at process-group scope follows least-privilege and promotes reuse.
+
+**Q: How do you enable or disable a Controller Service without stopping processors?**
+A: In the NiFi UI, navigate to the gear icon → Controller Services tab, then enable/disable the service. NiFi will warn if processors referencing the service are running; you can choose to stop them automatically or abort. Disabling is required before changing most service properties.
+
+**Q: What happens if a Controller Service fails to initialize?**
+A: Processors that depend on it transition to an Invalid state and cannot be started. The NiFi bulletin board and the service's status icon show the error. You must fix the configuration and re-enable the service.
+
+**Q: Name three common Controller Services used in data engineering flows.**
+A: DBCPConnectionPool (JDBC connection pool), AvroSchemaRegistry / ConfluentSchemaRegistry (schema management for record-aware processors), and StandardSSLContextService (TLS configuration shared by HTTPS and Kafka processors).
+
+**Q: How do Controller Services interact with record-based processors?**
+A: Record Reader and Record Writer Controller Services (e.g., CSVReader, AvroRecordSetWriter) are passed to processors like ConvertRecord or QueryRecord, decoupling format-parsing logic from processing logic. Swapping the reader/writer changes format without touching the processor configuration.
+
+**Q: Can Controller Services be version-controlled in NiFi Registry?**
+A: Yes. Process Groups saved to NiFi Registry include their Controller Services. When you import or upgrade a versioned flow, the associated services are restored with the correct configuration, enabling reproducible deployments.
+
+---
+
+## 💼 Interview Tips
+
+- Highlight the separation of concerns: Controller Services handle infrastructure (connections, credentials, formats) while processors handle business logic. This is a design principle senior interviewers appreciate.
+- Know the enable/disable lifecycle and why you cannot edit a running service—it prevents in-flight processors from using an inconsistent resource.
+- Mention secret management integration: pairing DBCPConnectionPool with NiFi's sensitive property encryption or an external vault (HashiCorp Vault via the NAR) shows production awareness.
+- Avoid the common mistake of creating a new DBCPConnectionPool per processor in the same flow—explain why shared pools are superior (connection limits, monitoring, rotation).
+- Senior interviewers may ask how you'd test a new Controller Service in isolation before wiring it to processors—use a test process group with a GenerateFlowFile → processor → LogAttribute chain.

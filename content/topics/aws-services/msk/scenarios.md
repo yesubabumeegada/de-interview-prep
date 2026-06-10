@@ -229,3 +229,42 @@ consumer = KafkaConsumer(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Amazon MSK and how does it differ from Kinesis Data Streams?**
+A: MSK (Managed Streaming for Apache Kafka) is a fully managed Kafka service running the open-source Kafka protocol. Kinesis is a proprietary AWS streaming service. MSK is ideal when you need Kafka API compatibility, existing Kafka tooling (Kafka Streams, ksqlDB, MirrorMaker), or very high throughput. Kinesis is simpler to operate but locked to AWS APIs.
+
+**Q: What are the key components of an MSK cluster?**
+A: An MSK cluster consists of: broker nodes (Kafka brokers running on EC2 across AZs), ZooKeeper nodes (for cluster coordination — being replaced by KRaft mode), topics (logical stream categories), partitions (the unit of parallelism within a topic), and a configuration for replication factor and retention settings.
+
+**Q: How does MSK handle high availability?**
+A: MSK deploys brokers across multiple Availability Zones (typically 3). With a replication factor of 3 and `min.insync.replicas=2`, the cluster tolerates one AZ failure without data loss. MSK automatically replaces failed brokers and rebalances partition leaders.
+
+**Q: What is the difference between MSK Provisioned and MSK Serverless?**
+A: MSK Provisioned requires you to select broker instance types and storage upfront, giving you control over performance and cost for predictable workloads. MSK Serverless automatically scales capacity based on demand with no cluster management — you pay per partition-hour and data throughput, ideal for variable or unknown workloads.
+
+**Q: How do you secure an MSK cluster?**
+A: MSK security layers include: encryption in transit (TLS between clients and brokers), encryption at rest (KMS), client authentication (TLS mutual auth with certificates, SASL/SCRAM with Secrets Manager, or IAM access control), and network isolation (VPC with private subnets and security groups).
+
+**Q: What is MSK Connect?**
+A: MSK Connect is a fully managed service for running Apache Kafka Connect connectors. It enables no-code data integration — ingesting data from databases (Debezium CDC), S3, and other sources into Kafka topics, or sinking Kafka topics to S3, Redshift, or OpenSearch, without managing Kafka Connect workers.
+
+**Q: How do you monitor MSK cluster health?**
+A: Monitor MSK using CloudWatch metrics: `UnderReplicatedPartitions` (replication lag, critical alert), `OfflinePartitionsCount` (unavailable partitions, critical), `BytesInPerSec/BytesOutPerSec` (throughput), `CpuUser` and `KafkaDataLogsDiskUsed` (resource utilization). Enable enhanced monitoring for broker and topic-level metrics.
+
+**Q: How does consumer lag monitoring work in MSK?**
+A: Consumer lag is the difference between the latest offset in a partition and the consumer group's committed offset. Monitor it via CloudWatch metric `MaxOffsetLag` or by using Kafka consumer group tools. High lag means consumers are falling behind producers — trigger scaling or alerting when lag exceeds thresholds.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the Kafka vs. Kinesis decision framework: MSK when you need open-source Kafka compatibility, existing Kafka ecosystem tools, or very high throughput (millions of events/second); Kinesis when you want simpler AWS-native integration and don't need Kafka APIs.
+- Senior interviewers expect deep knowledge of replication: explain `replication.factor`, `min.insync.replicas`, and `acks=all` together as the combination that guarantees durability — knowing all three demonstrates production experience.
+- Mention MSK Connect and Debezium for CDC (Change Data Capture) patterns — this is a common data engineering use case that shows you know real-world Kafka applications beyond basic produce/consume.
+- Avoid the mistake of treating MSK as a drop-in Kinesis replacement without discussing the operational differences: MSK requires VPC setup, security group configuration, and broker monitoring that Kinesis abstracts away.
+- Demonstrate awareness of the small files problem on the Kafka → S3 sink: Kafka S3 Sink Connector creates many small files. Mention configuring `s3.part.size` and `rotate.interval.ms` to balance latency vs. file size.
+- Know consumer group rebalancing as a production pain point: frequent rebalances cause lag spikes. Mention cooperative incremental rebalancing (KIP-429) as the modern solution that avoids stop-the-world rebalances.

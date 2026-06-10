@@ -363,3 +363,39 @@ process = PythonOperator(
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is an Airflow pool and what problem does it solve?**
+A: A pool is a named resource slot counter that limits the number of concurrently running tasks sharing that pool. It prevents overloading downstream systems (databases, APIs, storage) by capping concurrent access regardless of how many Airflow workers are available.
+
+**Q: How do you assign a task to a pool?**
+A: Set the `pool` parameter on any operator: `MyOperator(task_id='...', pool='my_pool', pool_slots=1)`. The `pool_slots` parameter (default 1) lets a single task consume multiple pool slots — useful for resource-intensive tasks that should count more heavily toward the limit.
+
+**Q: What is the default pool in Airflow and what is its default slot count?**
+A: The `default_pool` has 128 slots by default. All tasks that don't specify a pool are assigned to `default_pool`. Adjust the slot count based on your executor capacity and downstream system limits.
+
+**Q: What is the difference between a pool and an Airflow queue?**
+A: Pools limit concurrency of task execution (resource throttling). Queues (used with CeleryExecutor and KubernetesExecutor) route tasks to specific worker groups — e.g., a GPU worker queue for ML tasks, or a high-memory queue for large Spark submissions. They address resource affinity, not throttling.
+
+**Q: How do pools interact with DAG-level `max_active_runs` and task-level `max_active_tis_per_dag`?**
+A: `max_active_runs` limits how many DagRuns of a DAG execute simultaneously. `max_active_tis_per_dag` limits concurrent task instances of a specific task across all DagRuns. Pools apply across all DAGs sharing the pool — they're orthogonal controls that all apply simultaneously, with the most restrictive one winning.
+
+**Q: When would you create multiple queues in a Celery-based Airflow deployment?**
+A: Create multiple queues when you have heterogeneous workers — e.g., workers with GPUs, high-memory instances, or specific software installed. Route tasks requiring those resources to the appropriate queue, ensuring they land on capable workers rather than any available worker.
+
+**Q: How do you monitor pool utilization and identify pool bottlenecks?**
+A: The Airflow UI's Pools page shows slot usage in real time. Export pool metrics to your monitoring system (CloudWatch, Datadog) via StatsD/OpenMetrics. Tasks queued waiting for pool slots appear in the `queued` state — a sustained spike in queued tasks signals a pool that needs more slots or downstream system capacity.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the "why" of pools: protecting downstream systems from being overwhelmed by concurrent Airflow tasks is the core use case. Don't just explain mechanics without the motivation.
+- The distinction between pools (concurrency throttling) and queues (worker routing) is a frequent interview question — keep these clearly separated in your answer.
+- Mention `pool_slots` — many candidates are unaware that tasks can consume multiple slots, which is important for modeling resource-intensive tasks correctly.
+- Senior interviewers will ask about contention between backfill runs and production runs — pools are one of the primary tools for preventing backfills from starving production tasks.
+- Show awareness that pool configurations are stored in the metadata database and should be managed as code (exported/imported via CLI or Terraform providers) rather than configured manually in the UI.
+- Discuss monitoring: a pool that's perpetually at capacity is a signal to either increase slots, add downstream capacity, or restructure task scheduling — showing this diagnostic mindset signals operational experience.

@@ -274,3 +274,40 @@ END;
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is an AWR report and what information does it contain?**
+A: An Automatic Workload Repository (AWR) report is a performance snapshot comparison between two points in time. It contains database statistics including wait events, top SQL by elapsed time/CPU/reads, load profile, instance efficiency percentages, memory statistics, and I/O metrics.
+
+**Q: How do you generate an AWR report?**
+A: Run `@$ORACLE_HOME/rdbms/admin/awrrpt.sql` in SQL*Plus and specify HTML or text format, the number of days to display snapshots, and the begin/end snapshot IDs. For a specific RAC instance use `awrrpti.sql`; for a comparison report use `awrddrpt.sql`.
+
+**Q: What is a snapshot in AWR and how often are they taken?**
+A: A snapshot is a point-in-time capture of Oracle performance statistics stored in the `SYSAUX` tablespace. By default snapshots are taken every 60 minutes and retained for 8 days. Both intervals are configurable via `DBMS_WORKLOAD_REPOSITORY.MODIFY_SNAPSHOT_SETTINGS`.
+
+**Q: What does the "DB Time" metric in AWR represent?**
+A: DB Time is the total time the database spent on user calls (CPU + wait time) across all sessions during the snapshot interval. It is the primary workload indicator—high DB Time with low throughput points to contention or inefficient SQL.
+
+**Q: How do you identify the top SQL statements from an AWR report?**
+A: The "SQL Statistics" section ranks SQL by elapsed time, CPU time, buffer gets, disk reads, and executions. Start with "SQL ordered by Elapsed Time" to find the most expensive statements, then drill into the SQL details for execution plans and bind variable information.
+
+**Q: What are the most important wait events to look for in an AWR report?**
+A: `db file sequential read` (single-block I/O—index scan on slow disk), `log file sync` (commit latency—I/O or redo log contention), `latch: shared pool` (parse contention), `enq: TX - row lock contention` (blocking locks), and `direct path read` (full table scans hitting disk).
+
+**Q: What is the difference between AWR and Statspack?**
+A: Statspack is the older, free predecessor to AWR; AWR requires the Diagnostics Pack license. AWR stores data in `SYSAUX`, has finer granularity, integrates with ADDM/ASH, and is queryable via `DBA_HIST_*` views. Statspack uses the `PERFSTAT` schema and lacks ASH integration.
+
+**Q: How does ADDM use AWR data?**
+A: The Automatic Database Diagnostic Monitor (ADDM) runs automatically after each AWR snapshot, analyzing the delta to identify the top performance bottlenecks (SQL, I/O, memory, contention) and generates prioritized findings with recommendations accessible via `DBA_ADVISOR_FINDINGS`.
+
+---
+
+## 💼 Interview Tips
+
+- When asked to diagnose a slow database, walk through AWR sections in order: Load Profile → Instance Efficiency → Top Wait Events → Top SQL. This structured approach impresses interviewers.
+- Know the licensing caveat: AWR and ADDM require the Diagnostics Pack. Mentioning this shows you understand real-world procurement constraints.
+- Senior interviewers often provide a wait event and ask what it means. Memorize the top 10 wait events and their root causes—`log file sync` (commit/redo I/O) and `db file sequential read` (index scan) come up most.
+- Demonstrate you can correlate sections: high `db file sequential read` + a specific SQL in "SQL ordered by Disk Reads" + an index missing from the execution plan tells a complete story.
+- Mention ASH (Active Session History) as the complement to AWR for real-time and recent analysis—`V$ACTIVE_SESSION_HISTORY` vs. `DBA_HIST_ACTIVE_SESS_HISTORY` for historical data.

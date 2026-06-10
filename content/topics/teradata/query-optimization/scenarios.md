@@ -285,3 +285,41 @@ The optimizer will use this join index for the critical report, bypassing the re
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the Teradata Query Optimizer and how does it choose execution plans?**
+A: The Teradata Query Optimizer (also called the Optimizer or Optimizer/Explain) is a cost-based optimizer that generates and evaluates multiple execution plans using statistics about table row counts, column value distributions, and index structures. It chooses the plan with the lowest estimated cost in terms of CPU, I/O, and BYNET communication.
+
+**Q: What does EXPLAIN do in Teradata and how do you interpret it?**
+A: EXPLAIN prefixes a SQL statement and returns a textual description of the execution plan the Optimizer chose—join strategies, redistribution steps, spool usage, and estimated row counts. Key things to look for: Product Joins (redistribution overhead), large spool sizes, and steps where statistics are missing (marked "no statistics").
+
+**Q: What is a spool file in Teradata and what causes it to become a bottleneck?**
+A: A spool file is a temporary storage area on each AMP used to hold intermediate query results between steps. Excessive spool usage occurs with large intermediate result sets—from broad joins, missing filters, or Cartesian products. Running out of spool space causes query failure. Reducing spool requires filtering earlier, avoiding unnecessary columns, or redesigning joins.
+
+**Q: What are Teradata statistics and why are they critical for optimizer decisions?**
+A: Statistics are histograms of column value distributions collected by `COLLECT STATISTICS ON table COLUMN col`. The Optimizer uses them to estimate row counts for joins, filters, and aggregations. Without current statistics, the Optimizer falls back to random AMP sampling estimates, which can produce wildly inaccurate plans and poor join strategies.
+
+**Q: What is a Product Join in Teradata's execution plan and why is it bad?**
+A: A Product Join (cross join style redistribution) in the EXPLAIN output typically means the Optimizer lacked statistics or cardinality estimates were so poor it chose a Cartesian product approach. It's almost always unintentional and catastrophically expensive. Collecting statistics on the join columns almost always eliminates Product Joins.
+
+**Q: What is the difference between a Merge Join and a Hash Join in Teradata?**
+A: Teradata's Merge Join sorts both input rows by the join key on each AMP and merges them—efficient when data is already PI-aligned. A Hash Join redistributes rows by hashing on the join key before joining—useful when PIs don't align. In Teradata EXPLAIN output, look for "by way of a sorted merge" or "using a hash join" to identify which was chosen.
+
+**Q: What query rewriting techniques improve Teradata query performance?**
+A: Filter early (push WHERE clauses as close to the base tables as possible), project only needed columns (avoid SELECT *), use derived tables or volatile tables to break complex queries into steps with intermediate statistics collection, align JOIN columns with Primary Indexes to enable PI joins, and use SAMPLE for exploratory queries during development.
+
+**Q: What is a workload management (TASM/TDWM) role in query optimization?**
+A: Teradata Active System Management (TASM) governs resource allocation: it can throttle, defer, or abort queries based on their resource consumption and priority class. Understanding TASM means knowing that even a well-optimized query may be queued if system resources are constrained—workload classification and priority settings affect real query throughput in production.
+
+---
+
+## 💼 Interview Tips
+
+- Always start Teradata query optimization discussions with EXPLAIN—it's the diagnostic tool that reveals what the optimizer is actually doing. Showing you diagnose before optimizing demonstrates engineering discipline.
+- Know Product Joins as the most dangerous symptom in an EXPLAIN output. Interviewers at Teradata shops frequently ask "what would you do if you see a Product Join in EXPLAIN?" Collecting statistics on join columns is the first response.
+- Connecting statistics freshness to optimizer quality is essential—stale statistics lead to bad plans, and many production issues trace back to statistics that haven't been collected after a major data change. Show you'd include statistics collection in your ETL pipeline.
+- Discuss spool management as an operational concern: production Teradata environments run out of spool space during peak loads, causing query failures. Knowing how to profile spool usage and rewrite queries to reduce intermediate result sizes is a practical senior skill.
+- Senior interviewers at financial services companies (heavy Teradata users) will expect you to connect query optimization to TASM—understanding that resource governance affects query scheduling, not just query structure, shows system-level awareness.

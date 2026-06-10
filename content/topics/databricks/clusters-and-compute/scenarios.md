@@ -928,3 +928,42 @@ SCALING_STRATEGY = {
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the main cluster types in Databricks and when do you use each?**
+A: All-Purpose Clusters are long-running, shared clusters used for interactive development and collaboration. Job Clusters are ephemeral clusters launched specifically for a job run and terminated afterward — they are cheaper and more isolated. SQL Warehouses are optimized for Databricks SQL workloads.
+
+**Q: What is the difference between Standard, High Concurrency, and Single Node cluster modes?**
+A: Standard mode supports multiple users but has limited isolation. High Concurrency mode enables fine-grained sharing with table ACLs and is optimized for many simultaneous users. Single Node mode runs Spark with no worker nodes — useful for small datasets, ML training on a single GPU, or development.
+
+**Q: How does Databricks cluster autoscaling work?**
+A: Autoscaling monitors the pending task queue and scales workers up when tasks are backlogged and down when workers are idle beyond the idle timeout. It reduces cost for variable workloads but can introduce latency when scaling up — not ideal for strict latency SLAs.
+
+**Q: What is a Databricks SQL Warehouse and how does it differ from a compute cluster?**
+A: A SQL Warehouse is a managed compute resource optimized for SQL analytics workloads, using the Photon execution engine. Unlike general-purpose clusters, it starts faster, scales per-query, and is designed for BI tool connectivity via JDBC/ODBC.
+
+**Q: What is instance pooling in Databricks and what is its benefit?**
+A: Instance pools pre-provision and maintain idle cloud VM instances that clusters can claim immediately on startup. They dramatically reduce cluster start times (from 5-7 minutes to seconds) by eliminating VM provisioning latency — critical for job clusters and interactive workflows.
+
+**Q: What are Databricks Runtime versions and why do they matter?**
+A: Databricks Runtime (DBR) is the set of software packages pre-installed on clusters (Spark version, Delta Lake version, ML libraries). The ML Runtime adds pre-installed ML frameworks. Choosing the correct DBR version ensures compatibility with library versions and Delta features your code requires.
+
+**Q: How do you right-size a Databricks cluster for a production job?**
+A: Profile the job with a representative data volume: check CPU utilization, shuffle spill to disk, and GC overhead in the Spark UI. Increase memory if spilling, add cores if CPU-bound, and use storage-optimized instances if shuffle-heavy. Set autoscaling bounds based on observed peak demand.
+
+**Q: What are spot/preemptible instances and when should you use them in Databricks?**
+A: Spot instances are discounted cloud VMs that can be reclaimed by the cloud provider with short notice. Use them for fault-tolerant batch workloads (not streaming or interactive) where cost savings outweigh the risk of interruption. Databricks supports mixed instance fleets with on-demand drivers and spot workers.
+
+---
+
+## 💼 Interview Tips
+
+- Know when to use Job Clusters vs. All-Purpose Clusters — always recommending Job Clusters for production workloads shows cost awareness and operational discipline.
+- Instance pools are a high-value optimization that many candidates overlook — mentioning them signals practical production experience.
+- Be ready to walk through cluster sizing methodology: show that you use Spark UI metrics to drive decisions, not guesswork.
+- Senior interviewers will probe cost optimization strategies — discuss spot instances, autoscaling, cluster policies, and job cluster lifecycle management.
+- Know Databricks Runtime versions relevant to your target role (ML Runtime, GPU Runtime, photon-enabled runtimes) — version awareness signals active practitioner knowledge.
+- Common mistake: using All-Purpose Clusters for production jobs — explain why Job Clusters are preferred for isolation, cost, and clean state.

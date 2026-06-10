@@ -245,3 +245,41 @@ Column partitioning stores data by column, enabling projection pushdown. Combine
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Primary Index (PI) in Teradata and what does it control?**
+A: The Primary Index is a column (or set of columns) that determines how rows are distributed across AMPs. Teradata hashes the PI value and uses the hash to assign the row to a specific AMP. The PI is the single most important design decision in Teradata—it determines data distribution, parallelism, and join performance.
+
+**Q: What is the difference between a Unique Primary Index (UPI) and a Non-Unique Primary Index (NUPI)?**
+A: A UPI guarantees that no two rows have the same PI value, meaning each AMP gets at most one row per PI value—perfect even distribution. A NUPI allows duplicates, which can lead to data skew if certain PI values are common (e.g., NULL or a low-cardinality status field). UPIs are also used to enforce uniqueness constraints.
+
+**Q: What is an AMP skew and how does it impact query performance?**
+A: AMP skew occurs when the PI distribution is uneven—some AMPs have significantly more rows than others. Since query performance is bounded by the slowest AMP, skew means the overloaded AMPs become bottlenecks. Queries and loads take longer, and hot AMPs can exhaust disk space. Choose a high-cardinality PI to prevent skew.
+
+**Q: How do you check for AMP skew in Teradata?**
+A: Query `DBC.TableSizeV` or `DBCINFO.Table_Size` grouped by `VProc` (AMP number) to see row and byte counts per AMP. A skew factor > 10-15% is typically concerning. Tools like Teradata Viewpoint and `SHOW TABLE` also report skew metrics. The skew factor is `(max_AMP_size - avg_AMP_size) / avg_AMP_size * 100`.
+
+**Q: What is a Primary Index join and why is it preferred?**
+A: A PI join occurs when two tables are joined on their Primary Index columns. Since data is co-located on the same AMP by PI hash, the join can be performed locally on each AMP without any inter-AMP data redistribution over BYNET. This is the most efficient join type in Teradata—zero BYNET traffic.
+
+**Q: What is a Product Join (redistribution join) in Teradata?**
+A: A Product Join (also called a redistribute join) is triggered when tables are joined on non-PI columns. Teradata must redistribute one or both tables across AMPs by hashing on the join key before the join can execute. This generates BYNET traffic and is more expensive than a PI join. Minimizing redistributions is a key query optimization goal.
+
+**Q: Can you change the Primary Index of an existing table?**
+A: Not directly—Teradata doesn't allow altering the PI of an existing table in-place. The standard approach is to create a new table with the desired PI, INSERT-SELECT from the old table, rename the tables, and drop the original. This is expensive for large tables and requires maintenance window planning.
+
+**Q: What is a No Primary Index (NoPI) table and when is it used?**
+A: A NoPI table has no Primary Index—rows are assigned to AMPs in a round-robin fashion at insert time, guaranteeing even distribution regardless of data values. NoPI tables are used for staging tables where you want guaranteed even distribution before applying a redistribution or hash join. They cannot be used for PI joins.
+
+---
+
+## 💼 Interview Tips
+
+- The Primary Index is the most important design decision in Teradata—lead with this in any architecture discussion. Interviewers at Teradata shops know this and will probe your depth immediately.
+- Skew is the most common production performance problem caused by poor PI choice. Be ready to explain how to detect it, what causes it, and how to fix it (redesign the PI, possibly adding a secondary column to increase cardinality).
+- Frame PI joins vs. redistribution joins as a design principle: "I align the PIs of frequently joined tables on the join key to enable PI joins and eliminate BYNET overhead." This is exactly the kind of concrete optimization thinking interviewers want.
+- Know when NoPI is the right choice: staging tables that receive unordered data from multiple sources benefit from round-robin distribution to prevent skew at the cost of PI join capability.
+- Be prepared to walk through the process of changing a PI on a large production table—it requires careful planning (offline window, storage for double the data, rename strategy). This operational awareness separates senior candidates.

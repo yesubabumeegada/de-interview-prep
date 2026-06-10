@@ -500,3 +500,41 @@ GROUP BY source_partner, schema_version;
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is record-based processing in NiFi and why is it preferred over FlowFile-per-record patterns?**
+A: Record-based processing treats a single FlowFile as a batch of structured records using Reader/Writer Controller Services. Instead of splitting into thousands of FlowFiles, transforming each, and merging back, you process millions of records in one FlowFile—dramatically reducing FlowFile Repository write overhead and provenance noise.
+
+**Q: What are the key components needed for record-based processing?**
+A: A Record Reader Controller Service (e.g., CSVReader, JsonTreeReader, AvroReader), a Record Writer Controller Service (e.g., AvroRecordSetWriter, JsonRecordSetWriter), and a record-aware processor (ConvertRecord, QueryRecord, LookupRecord, UpdateRecord, PublishKafkaRecord).
+
+**Q: How does the Schema Registry fit into record-based processing?**
+A: A Schema Registry Controller Service (AvroSchemaRegistry or ConfluentSchemaRegistry) provides Avro schemas to readers and writers. Centralizing schemas enforces contract between producers and consumers and enables schema evolution without changing processor configuration.
+
+**Q: What does QueryRecord allow you to do?**
+A: QueryRecord executes a SQL SELECT statement against the incoming record set using Apache Calcite. You can filter rows, project columns, alias fields, and perform simple aggregations—all without writing code. Multiple output relationships can each have different SQL queries.
+
+**Q: How does UpdateRecord differ from ReplaceText for modifying data?**
+A: ReplaceText operates on raw bytes/text with regex, which is fragile for structured formats. UpdateRecord is schema-aware—you specify a field path using RecordPath syntax and a new value (literal or EL expression). It correctly handles nested records, arrays, and type coercion.
+
+**Q: What is RecordPath and how is it used?**
+A: RecordPath is NiFi's XPath-equivalent for records. It navigates nested structures: `/user/address/city` accesses a nested field; `/items[*]/price` addresses all elements in an array. It is used in UpdateRecord, LookupRecord, and PartitionRecord to target specific fields.
+
+**Q: What is PartitionRecord and when would you use it?**
+A: PartitionRecord splits a single FlowFile into multiple FlowFiles, each containing records that share the same value for specified fields. Use it to fan out a batch by partition key (e.g., by `region` or `event_type`) before routing to different destinations.
+
+**Q: What performance advantage does record-based processing provide over non-record approaches?**
+A: Fewer FlowFiles means less FlowFile Repository I/O, fewer provenance events, less GC pressure from object churn, and lower scheduler overhead. Benchmarks commonly show 10x–100x throughput improvements for high-volume structured data pipelines.
+
+---
+
+## 💼 Interview Tips
+
+- Frame record-based processing as a maturity leap: junior engineers split-transform-merge; senior engineers use the Record API to do the same work with far less overhead.
+- Be ready to whiteboard the Reader → Processor → Writer chain and explain how schema inference vs. explicit schema affects correctness and performance.
+- Demonstrate RecordPath fluency with at least one nested example—interviewers who use NiFi in production care whether you can navigate real-world nested JSON structures.
+- Mention schema evolution strategy: Avro's `BACKWARD`/`FORWARD` compatibility modes and how the Confluent Schema Registry enforces them when consuming Kafka topics.
+- Senior interviewers may ask about error handling in record processing: know that processors like ConvertRecord route malformed records to `failure`; you can split error records and dead-letter them separately without failing the entire batch.

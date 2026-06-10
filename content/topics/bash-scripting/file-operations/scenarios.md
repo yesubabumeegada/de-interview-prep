@@ -236,3 +236,42 @@ fi
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: How do you check if a file exists before operating on it in bash?**
+A: Use a conditional test: `[ -f /path/to/file ] && echo "exists"` or `if [ -f /path/to/file ]; then ...`. Use `-d` for directories, `-e` for any filesystem entry, and `-s` for a file that exists and is non-empty.
+
+**Q: What is the difference between `>` and `>>` when redirecting output to a file?**
+A: `>` truncates the file and writes from the beginning, overwriting any existing content. `>>` appends to the end of the file, preserving existing content. Use `>>` for logs and audit trails.
+
+**Q: How do you safely create a temporary file in a script?**
+A: Use `mktemp` to generate a uniquely named temporary file: `tmpfile=$(mktemp)`. Register cleanup with `trap "rm -f $tmpfile" EXIT` to ensure the file is deleted even if the script fails.
+
+**Q: How do you recursively find all `.csv` files modified in the last 24 hours?**
+A: Use `find`: `find /data -name "*.csv" -mtime -1`. The `-mtime -1` flag matches files modified less than 1 day ago. Add `-type f` to exclude directories named with `.csv`.
+
+**Q: What is the difference between `cp`, `mv`, and `rsync` for file operations?**
+A: `cp` copies files (source remains). `mv` moves or renames files (source is removed). `rsync` is more powerful — it supports incremental transfers, remote hosts, checksums, and bandwidth limiting, making it preferred for large or repeated data transfers.
+
+**Q: How do you read a file line by line in bash?**
+A: Use a `while read` loop: `while IFS= read -r line; do echo "$line"; done < file.txt`. `IFS=` prevents trimming of leading/trailing whitespace and `-r` prevents backslash interpretation.
+
+**Q: How do you count the number of lines, words, and bytes in a file?**
+A: Use `wc`: `wc -l file` for lines, `wc -w file` for words, `wc -c file` for bytes. Run `wc file` without flags to get all three counts at once.
+
+**Q: How do you atomically replace a file to avoid readers seeing a partial write?**
+A: Write to a temporary file in the same filesystem, then rename it: `cp newdata /tmp/file.tmp && mv /tmp/file.tmp /data/file`. The `mv` (rename syscall) is atomic on the same filesystem, so readers never see a partial state.
+
+---
+
+## 💼 Interview Tips
+
+- Atomic file replacement (write-then-rename) is a go-to answer for "how do you safely update a file that other processes read" — it shows systems-level thinking beyond basic bash.
+- Always mention `trap` for temp file cleanup; leaving temp files behind in `/tmp` is a classic mistake interviewers probe for in production-readiness discussions.
+- For data engineering file ingestion scenarios, discuss `rsync` versus `cp` and when checksums matter — it shows awareness of data integrity beyond just moving bytes.
+- Demonstrate that you know `find` deeply: `-newer`, `-mtime`, `-size`, and `-exec` flags come up constantly in DE scripts for partition management and data discovery.
+- Senior interviewers appreciate mention of filesystem permissions and ownership (`chown`, `chmod`) when discussing file operations in shared data platform environments.
+- Avoid using `ls` output in scripts for iteration — use `find` or globs instead; parsing `ls` is a well-known pitfall with filenames containing spaces or special characters.

@@ -210,3 +210,38 @@ FROM column_classifications;
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is data classification and why is it foundational to data governance?**
+A: Data classification is the process of categorizing data by sensitivity level (e.g., public, internal, confidential, restricted) and type (e.g., PII, financial, health). It is foundational because access controls, encryption requirements, retention policies, and regulatory obligations all depend on knowing what type of data you have.
+
+**Q: What is the difference between structured and unstructured data classification?**
+A: Structured data (tables, CSVs) can be classified by scanning column names and values using pattern matching and ML models. Unstructured data (documents, images, emails) requires NLP-based content inspection, OCR, or specialized tools like AWS Macie or Microsoft Purview to identify sensitive content.
+
+**Q: What are common data sensitivity tiers and what does each mean?**
+A: Typical tiers are: Public (freely shareable), Internal (for employees only), Confidential (restricted to specific teams, may include business secrets), and Restricted/Highly Confidential (PII, PHI, financial records requiring strict controls and regulatory compliance).
+
+**Q: How do you automate PII detection in a data lake?**
+A: Use scanning tools like AWS Macie, Google DLP, or Microsoft Purview that apply ML-based detectors (regex + context models) for patterns like SSNs, email addresses, and credit card numbers. Run scans on ingestion and store classification tags in the data catalog for downstream policy enforcement.
+
+**Q: What is data tagging and how does it integrate with access control?**
+A: Data tagging attaches metadata labels (e.g., `pii=true`, `sensitivity=confidential`) to tables or columns in the catalog. Access control systems (like AWS Lake Formation or Unity Catalog) read these tags and enforce policies — for example, automatically masking columns tagged as PII for non-privileged users.
+
+**Q: What regulations drive data classification requirements?**
+A: GDPR requires identifying and protecting personal data of EU residents. HIPAA mandates classification and protection of Protected Health Information (PHI). PCI-DSS requires classification and strict controls around cardholder data. SOC 2 and ISO 27001 require documented classification schemes as part of information security programs.
+
+**Q: How do you handle data reclassification when a dataset's sensitivity changes?**
+A: Establish a reclassification process: data stewards submit a change request, it is reviewed and approved, tags are updated in the catalog, and downstream access controls and encryption policies are automatically re-evaluated. Audit the reclassification event for compliance records.
+
+---
+
+## 💼 Interview Tips
+
+- Mention automated scanning tools by name (AWS Macie, Google DLP) rather than just describing manual classification — automation at scale is what interviewers at large organizations care about.
+- Connect classification directly to access control and encryption policies — show that classification is not just a labeling exercise but the trigger for concrete technical controls.
+- For senior roles, discuss the governance process around classification: who is responsible for decisions, how disputes are resolved, and how to handle edge cases where data spans multiple sensitivity levels.
+- Interviewers at regulated companies will probe your knowledge of specific regulations — know which data types are regulated under GDPR, HIPAA, and PCI-DSS at a minimum.
+- Bring up the challenge of unstructured data classification — most candidates focus only on structured data and missing this dimension signals inexperience with real data lakes.
+- Avoid implying classification is a one-time audit — emphasize continuous scanning, catalog integration, and steward review cycles to show operational maturity.

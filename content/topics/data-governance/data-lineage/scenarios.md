@@ -208,3 +208,38 @@ def check_lineage_coverage(engine) -> float:
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is data lineage and why does it matter for data engineering?**
+A: Data lineage tracks the origin, movement, and transformation of data from source systems through pipelines to final consumers. It matters because it enables impact analysis (what breaks if this source changes?), root cause investigation for data quality issues, and compliance auditing.
+
+**Q: What is the difference between column-level and table-level lineage?**
+A: Table-level lineage shows which tables feed into which other tables. Column-level lineage goes further, tracking exactly which source columns are used to derive each target column. Column-level lineage is more powerful for impact analysis but harder to capture automatically.
+
+**Q: How do you capture lineage automatically versus manually?**
+A: Automatic capture uses SQL parsers (e.g., OpenLineage, SQLLineage), query log analysis, or framework-level instrumentation in orchestrators like Airflow and dbt. Manual lineage requires engineers to document transformations, which is error-prone and goes stale. Modern platforms prefer automatic capture supplemented by manual annotations for business context.
+
+**Q: What is OpenLineage and why is it significant?**
+A: OpenLineage is an open standard (now a Linux Foundation project) for collecting and sharing lineage metadata across tools. It provides a common event schema so orchestrators, query engines, and catalogs can exchange lineage data without proprietary integrations, enabling a unified lineage graph across the stack.
+
+**Q: How does lineage support GDPR right-to-erasure (right to be forgotten) requests?**
+A: Lineage shows every location where a person's data has been copied or derived — raw tables, aggregates, ML features, and reports. Without complete lineage, erasure requests are incomplete and non-compliant. With lineage, you can systematically identify and delete or mask data in every downstream location.
+
+**Q: What is the difference between forward and backward lineage traversal?**
+A: Forward (downstream) lineage asks "what is affected if this dataset changes?" — useful for impact analysis before making schema changes. Backward (upstream) lineage asks "where did this data come from?" — useful for debugging data quality issues and tracing the origin of a value.
+
+**Q: Name two tools that support data lineage tracking in modern data stacks.**
+A: dbt exposes SQL-level lineage through its DAG. Apache Atlas and DataHub provide platform-wide lineage graphs. Marquez implements the OpenLineage standard for Airflow and Spark pipelines. Alation and Collibra include lineage in their commercial catalog offerings.
+
+---
+
+## 💼 Interview Tips
+
+- Lead impact analysis when explaining why lineage matters — the "what happens downstream if I change this column?" scenario resonates immediately with interviewers who have been burned by undocumented schema changes.
+- Mention OpenLineage by name and explain its role as a standard rather than a product — it shows you follow the ecosystem and think about interoperability.
+- For senior roles, discuss lineage in the context of data mesh: explain how lineage graphs must span domain boundaries and how a central catalog aggregates cross-domain lineage.
+- Connect lineage to GDPR and data erasure explicitly in compliance-focused interviews — it is the clearest example of why governance tooling has direct regulatory value.
+- Demonstrate awareness of the gap between logical lineage (what the code intends) and physical lineage (what actually ran) — runtime failures and conditional branches mean intent and execution can diverge.
+- Avoid claiming lineage is easy to maintain manually at scale — acknowledge the operational burden and emphasize automation through OpenLineage-compatible instrumentation.

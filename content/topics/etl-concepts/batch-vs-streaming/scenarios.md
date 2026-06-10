@@ -360,3 +360,42 @@ After:  4 core (on-demand) + 8 task (spot) x m5.xlarge
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the fundamental difference between batch and streaming processing?**
+A: Batch processing collects data over a period and processes it as a bounded dataset, while streaming processes data as an unbounded, continuous flow with low latency. Batch suits high-throughput analytical workloads; streaming suits real-time decisions.
+
+**Q: What is micro-batch processing and when is it a good trade-off?**
+A: Micro-batch (used by Spark Structured Streaming) processes small time-window chunks at fixed intervals, providing near-real-time latency while reusing batch execution semantics. It's ideal when sub-second latency isn't required but hourly batch is too slow.
+
+**Q: How do you handle late-arriving data in a streaming pipeline?**
+A: Use watermarks to define how long the system waits for late events, and buffer results in a state store until the watermark expires. Events arriving after the watermark can be dropped or routed to a correction topic.
+
+**Q: What are the Lambda and Kappa architectures?**
+A: Lambda runs parallel batch and streaming layers, merging results for correctness and speed. Kappa simplifies this by using only a streaming layer with replayable logs (e.g., Kafka), treating historical reprocessing as a replay of the stream.
+
+**Q: When would you choose streaming over batch for a data pipeline?**
+A: Choose streaming when business requirements demand low latency (fraud detection, real-time recommendations, live dashboards), when the data source is naturally event-driven, or when accumulating data before processing creates unacceptable risk.
+
+**Q: What is event time vs. processing time?**
+A: Event time is when an event actually occurred (embedded in the record), while processing time is when the system received it. Streaming systems must use event time for accurate windowed aggregations, especially with out-of-order or late data.
+
+**Q: How do you ensure exactly-once semantics in a streaming pipeline?**
+A: Combine idempotent writes at the sink (upserts keyed by event ID) with transactional sources (Kafka transactions or offset commits tied to writes), ensuring a record is neither lost nor duplicated even during failure and recovery.
+
+**Q: What are tumbling, sliding, and session windows?**
+A: Tumbling windows are fixed, non-overlapping time buckets. Sliding windows overlap based on a slide interval. Session windows group events by activity gaps, closing when inactivity exceeds a timeout — useful for user behavior analysis.
+
+---
+
+## 💼 Interview Tips
+
+- Always clarify latency requirements before recommending batch vs. streaming — jumping to Kafka without asking shows you don't gather requirements first.
+- Know the trade-offs deeply: batch is cheaper, easier to debug, and easier to reprocess; streaming is complex, stateful, and harder to test — senior interviewers want you to articulate both sides.
+- Mention watermarks and late data handling proactively; most candidates skip this and it's a key differentiator for senior roles.
+- Be ready to discuss failure modes: what happens when a streaming consumer crashes mid-window, and how does the system recover without data loss or duplication?
+- Avoid saying "streaming is always better for real-time" — cost and operational complexity are valid reasons to prefer micro-batch or even batch for many use cases.
+- If asked to design a pipeline, explicitly state your latency SLA assumption — this shows senior-level scoping before diving into implementation.

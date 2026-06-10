@@ -243,3 +243,41 @@ ORDER BY txn_date;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a recursive CTE and what are its two required components?**
+A: A recursive CTE consists of an anchor member (the base case SELECT that returns the starting rows) and a recursive member (a SELECT that references the CTE itself to extend the result). They are combined with UNION ALL. The recursion continues until the recursive member returns no rows.
+
+**Q: What is the RECURSIVE keyword and which databases require it?**
+A: PostgreSQL requires `WITH RECURSIVE` to declare a recursive CTE. SQL Server and MySQL 8+ allow it but don't require it for the CTE to work recursively. Some databases (Oracle pre-12c) use CONNECT BY instead of recursive CTEs. Always check the specific database syntax before assuming portability.
+
+**Q: How do you traverse a parent-child hierarchy (e.g., org chart) with a recursive CTE?**
+A: The anchor selects the root node(s) (e.g., `WHERE manager_id IS NULL`). The recursive member joins the CTE back to the employees table on `employees.manager_id = cte.employee_id` to find direct reports. Each recursion adds one level of the hierarchy until all nodes are found.
+
+**Q: How do you prevent infinite loops in recursive CTEs?**
+A: Recursion terminates when the recursive member returns no rows—this is the natural termination if your data is acyclic (true trees). For graphs with potential cycles, maintain a visited set (array of IDs) and add a WHERE condition excluding already-visited nodes. Some databases also support a MAXRECURSION limit (SQL Server) as a safety guard.
+
+**Q: What is the difference between breadth-first and depth-first traversal in recursive CTEs?**
+A: By default, recursive CTEs process rows in the order the recursive member produces them. Breadth-first traversal (level by level) can be achieved by tracking a depth column and ordering by it. Depth-first traversal requires maintaining a path column (string concatenation of IDs) to control ordering. Standard SQL doesn't guarantee traversal order without these techniques.
+
+**Q: What performance considerations apply to recursive CTEs?**
+A: Recursive CTEs can be expensive for deep hierarchies or large graphs because each recursion level is processed iteratively. Always add a MAXRECURSION limit as a safety net. For very deep hierarchies (thousands of levels), consider storing the hierarchy using nested sets or materialized path patterns to enable non-recursive queries.
+
+**Q: What is the PATH trick in recursive CTEs?**
+A: Maintaining a path column (e.g., concatenating IDs: `'1/3/7'`) serves two purposes: cycle detection (if the current ID already appears in the path, skip it) and capturing the full ancestry chain for each node. It's essential for graph traversal where cycles are possible and for reconstructing the full path from root to leaf.
+
+**Q: What alternatives to recursive CTEs exist for hierarchical data?**
+A: Nested Sets model (stores left/right bounds for subtree queries without recursion), Closure Table (stores all ancestor-descendant pairs), and Materialized Path (stores the full path as a string in each row). These alternatives trade write complexity for read simplicity—subtree queries become simple range or LIKE queries instead of recursive CTEs.
+
+---
+
+## 💼 Interview Tips
+
+- Write a correct recursive CTE on a whiteboard without hints—this is a must-have skill for senior DE roles at companies with hierarchical data (org charts, product categories, bill of materials).
+- Always explicitly discuss termination: when will the recursion stop? If the interviewer has a follow-up about cycles or infinite loops, you should already have raised the topic yourself.
+- Know the alternatives to recursive CTEs (closure tables, materialized paths, nested sets)—being able to say "recursive CTEs are elegant but can be slow for large graphs; here's when I'd use a different model" signals seniority.
+- Connect recursive queries to real business use cases: org chart reporting, folder hierarchies in file systems, multi-level product category trees, and network path analysis. Concrete applications make abstract SQL concepts tangible.
+- Mention the performance ceiling: for hierarchies with more than a few hundred levels or millions of nodes, recursive CTEs become impractical and you'd need a graph database or a pre-computed materialized path. Knowing these limits shows production experience.

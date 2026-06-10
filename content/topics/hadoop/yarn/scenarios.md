@@ -373,3 +373,42 @@ for user, count in user_counts.items():
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is YARN and what are its main components?**
+A: YARN (Yet Another Resource Negotiator) is Hadoop's cluster resource management layer. Its main components are the ResourceManager (cluster-wide resource arbiter), NodeManagers (per-node resource monitor and container launcher), and ApplicationMasters (per-application negotiation and task management).
+
+**Q: What is a container in YARN?**
+A: A container is an allocation of CPU and memory resources on a specific NodeManager node. YARN grants containers to applications; each Map or Reduce task (or Spark executor) runs inside a container, providing resource isolation between concurrent applications.
+
+**Q: How does YARN enable multi-tenancy?**
+A: YARN's Capacity Scheduler divides cluster resources into queues with guaranteed capacity allocations per team or application type. Multiple applications can run concurrently, each limited to its queue's share, preventing any single application from monopolizing the cluster.
+
+**Q: What is the role of the ApplicationMaster?**
+A: The ApplicationMaster is a framework-specific process (one per application) that negotiates resources from the ResourceManager, tracks task progress, handles task failures, and requests new containers for retries. MapReduce and Spark each have their own ApplicationMaster implementation.
+
+**Q: How does YARN handle node failures?**
+A: If a NodeManager stops sending heartbeats, the ResourceManager marks it as dead, reports its containers as failed to the relevant ApplicationMasters, and they request replacement containers. Tasks running on the failed node are re-scheduled on healthy nodes.
+
+**Q: What is the difference between Capacity Scheduler and Fair Scheduler in YARN?**
+A: Capacity Scheduler provides hard capacity guarantees per queue, allowing bursting to unused capacity but ensuring minimum allocations. Fair Scheduler dynamically distributes resources equally among running jobs, allowing smaller jobs to get resources quickly without fixed queue boundaries.
+
+**Q: How does YARN support different processing frameworks?**
+A: Any framework that implements the YARN ApplicationMaster protocol can run on YARN — MapReduce, Spark, Flink, Tez, and others. YARN manages resources; the framework manages its own execution logic, enabling multiple frameworks to coexist on the same cluster.
+
+**Q: What is YARN Node Label and how is it used?**
+A: Node Labels tag NodeManager nodes with attributes (e.g., GPU=true, high-memory). Queues or applications can request containers on nodes with specific labels, enabling workload routing — for example, directing ML training jobs to GPU nodes while keeping ETL jobs on standard nodes.
+
+---
+
+## 💼 Interview Tips
+
+- Be precise about YARN's three-tier architecture (ResourceManager → NodeManager → ApplicationMaster) — many candidates conflate the RM with the AM, revealing shallow understanding.
+- Know the Capacity vs. Fair Scheduler trade-off clearly: Capacity guarantees queue minimums (good for SLA-sensitive teams); Fair distributes dynamically (good for research workloads with variable job sizes).
+- Discuss resource allocation in concrete terms — memory (MB) and vCores are the two resources YARN allocates; knowing this detail separates operational knowledge from theoretical knowledge.
+- For senior roles, discuss queue configuration and capacity planning: how you'd size queues for different teams, handle peak demand bursting, and prevent resource starvation.
+- Be ready to explain what happens when a cluster is resource-constrained: new application requests queue, existing applications don't get preempted (unless preemption is enabled), and jobs wait.
+- Connect YARN to cloud alternatives: on AWS, EMR manages the cluster; on GCP, Dataproc. Showing you understand the managed service equivalent demonstrates modern relevance alongside YARN internals knowledge.

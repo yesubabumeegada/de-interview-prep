@@ -160,3 +160,41 @@ with engine.connect() as conn:
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a data SLA and what does it typically cover?**
+A: A data SLA (Service Level Agreement) is a formal commitment about data availability, freshness, quality, and completeness. It typically specifies when data will be available (e.g., "orders table updated by 8 AM"), acceptable error rates, and the consequences or escalation path when the SLA is missed.
+
+**Q: What is the difference between an SLA, SLO, and SLI in data engineering?**
+A: An SLI (Service Level Indicator) is a measured metric (e.g., pipeline completion time). An SLO (Service Level Objective) is an internal target for that metric (e.g., pipeline completes within 2 hours 99% of the time). An SLA is the external agreement with consequences for missing the SLO.
+
+**Q: How do you monitor data freshness as part of SLA monitoring?**
+A: Track the maximum timestamp or load time of the latest record in a table and compare it to the expected freshness window. Tools like dbt's `freshness` blocks, Monte Carlo, or custom SQL checks can alert when a table hasn't been updated within the SLA-defined window.
+
+**Q: What metrics should a data SLA monitoring dashboard include?**
+A: Pipeline completion time vs. SLA target, data freshness lag, row count anomalies, quality check pass rates, historical SLA compliance percentage, number of SLA breaches by severity, and mean time to detection and resolution for incidents.
+
+**Q: How do you handle a recurring SLA breach?**
+A: Investigate root cause (upstream latency, resource contention, data volume growth), implement fixes (pipeline optimization, resource scaling, priority adjustment), and re-negotiate the SLA if the target is structurally unachievable. Document the breach pattern and add proactive monitoring to detect it earlier.
+
+**Q: How do you set realistic data SLAs when first establishing them?**
+A: Baseline current pipeline performance over 30-60 days, identify the P95 completion time, set the initial SLA at P90 or P95 to be achievable while still meaningful, and plan to tighten it as reliability improves. Avoid committing to targets without historical evidence.
+
+**Q: What is the role of alerting in SLA monitoring?**
+A: Alerting should trigger before SLA breach (predictive — "pipeline is running 30% slower than usual and may miss the 8 AM SLA") and at breach time (reactive). Pre-breach alerts give engineers time to intervene; breach alerts trigger incident response and consumer notification.
+
+**Q: How do you communicate SLA breaches to business stakeholders?**
+A: Use a tiered communication plan: immediate notification to data consumers at breach time with estimated resolution, status updates at defined intervals, and a postmortem summary after resolution. Plain business language (not technical jargon) and clear impact statements maintain trust.
+
+---
+
+## 💼 Interview Tips
+
+- Use the SLI/SLO/SLA framework when discussing reliability — it shows you apply site reliability engineering principles to data platforms.
+- Be ready to discuss how you would implement SLA monitoring from scratch, including what metrics to track, what tooling to use, and how to alert.
+- Senior interviewers want to hear about stakeholder communication — technical excellence alone isn't enough if business users don't know when and how data is affected.
+- Distinguish between monitoring for SLA compliance (are we meeting commitments?) and optimization (how do we improve reliability?) — both matter.
+- Common mistake: setting overly aggressive SLAs based on best-case performance rather than realistic P95 baselines — discuss how to negotiate achievable commitments.
+- Connect SLA monitoring to cost: tighter SLAs require more infrastructure, faster pipelines, and more engineering effort — show that you understand the business tradeoff.

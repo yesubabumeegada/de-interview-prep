@@ -117,3 +117,42 @@ def handler(event, context):
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Amazon DynamoDB and when is it the right choice for data engineers?**
+A: DynamoDB is a fully managed, serverless NoSQL key-value and document database that delivers single-digit millisecond performance at any scale. It's the right choice for high-throughput operational data stores — pipeline state tracking, deduplication tables, configuration stores, and real-time lookup tables that don't require complex joins.
+
+**Q: What is the difference between partition key and sort key in DynamoDB?**
+A: The partition key determines which physical partition stores the item (it must be unique for simple primary keys). A composite primary key combines a partition key with a sort key, allowing multiple items per partition key — enabling range queries and sorted retrieval within a partition.
+
+**Q: What are Global Secondary Indexes (GSIs) and Local Secondary Indexes (LSIs)?**
+A: GSIs create an alternate partition key + optional sort key index on any attributes, enabling queries on non-primary-key attributes; they have their own read/write capacity. LSIs share the same partition key as the base table but have a different sort key; they must be defined at table creation and share the table's capacity.
+
+**Q: What is DynamoDB Streams and how is it used in data pipelines?**
+A: DynamoDB Streams captures a time-ordered sequence of item-level changes (INSERT, MODIFY, REMOVE) and retains them for 24 hours. It's used to trigger Lambda functions for real-time downstream processing — syncing changes to S3, Elasticsearch, or Redshift — enabling CDC (Change Data Capture) patterns.
+
+**Q: What is the difference between eventually consistent and strongly consistent reads?**
+A: Eventually consistent reads (default) may return slightly stale data immediately after a write, but cost half the read capacity of strongly consistent reads. Strongly consistent reads always return the latest committed data, consuming one full read capacity unit per 4KB.
+
+**Q: What is DynamoDB on-demand capacity mode vs. provisioned mode?**
+A: On-demand mode automatically scales to any request rate and charges per request — ideal for unpredictable or spiky workloads. Provisioned mode requires specifying read/write capacity units upfront (with optional Auto Scaling) and is more cost-effective for predictable, steady-state workloads.
+
+**Q: How do you handle hot partitions in DynamoDB?**
+A: Hot partitions occur when too many requests target the same partition key. Solutions include: choosing high-cardinality partition keys, adding a random suffix to distribute writes across multiple logical partitions (write sharding), or using DAX (DynamoDB Accelerator) to cache hot read items.
+
+**Q: What is DynamoDB Accelerator (DAX)?**
+A: DAX is a fully managed, in-memory cache for DynamoDB that delivers microsecond response times for read-heavy workloads. It's API-compatible with DynamoDB, so applications need minimal code changes. Use it when your read-to-write ratio is high and sub-millisecond latency matters.
+
+---
+
+## 💼 Interview Tips
+
+- Always lead with access pattern design: DynamoDB's schema must be designed around queries, not the other way around. Interviewers assess whether you understand that you model data to fit access patterns, unlike relational databases.
+- Mention the single-table design pattern for advanced discussions — storing multiple entity types in one table using composite sort keys reduces table count and enables efficient joins via query, which senior interviewers recognize as deep DynamoDB expertise.
+- Avoid the mistake of suggesting DynamoDB for complex analytical queries — it's not a replacement for Redshift or Athena. Be clear about its strengths: high-throughput, low-latency operational access.
+- Senior interviewers want to hear about cost control: choosing the right capacity mode, setting TTL (Time to Live) to automatically expire stale items and reduce storage costs, and using sparse indexes.
+- Know the hard limits that matter: item size max 400KB, partition throughput limit 3,000 RCUs or 1,000 WCUs — mention these when discussing scale.
+- Demonstrate operational thinking by describing how you'd use DynamoDB Streams with Lambda for CDC-based replication into S3/Redshift, a pattern commonly used in real-time data lake architectures.

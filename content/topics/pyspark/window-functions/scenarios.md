@@ -1203,3 +1203,41 @@ final_with_rank.write.parquet("/output/enriched_transactions/", mode="overwrite"
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a window function in PySpark and how does it differ from a GROUP BY aggregation?**
+A: A window function computes a value for each row based on a set of rows related to the current row (the "window"), without collapsing rows like GROUP BY does. Each input row produces exactly one output row with the window result alongside the original columns—essential for running totals, rankings, and lag/lead comparisons.
+
+**Q: What are the three components of a Window specification?**
+A: PARTITION BY (groups rows into independent windows, analogous to GROUP BY), ORDER BY (defines the row order within each partition for ordered functions), and FRAME (defines the sliding window of rows relative to the current row—ROWS BETWEEN / RANGE BETWEEN).
+
+**Q: What is the difference between ROWS BETWEEN and RANGE BETWEEN in a window frame?**
+A: ROWS BETWEEN counts physical rows (ROWS BETWEEN 3 PRECEDING AND CURRENT ROW = the current row and the 3 rows before it). RANGE BETWEEN uses logical value ranges based on the ORDER BY column (RANGE BETWEEN INTERVAL '7' DAYS PRECEDING AND CURRENT ROW = all rows within 7 days). RANGE requires an ordered numeric or date column.
+
+**Q: How do you calculate a 7-day rolling average in PySpark?**
+A: Define a window with partition by user, order by date (as long integer or date), and a RANGE frame of 6 days preceding to current. Then apply `avg(col("amount")).over(window_spec)`. Using RANGE is preferred over ROWS when the date column may have gaps—RANGE includes all rows within the time interval regardless of row count.
+
+**Q: What are LAG and LEAD functions used for?**
+A: `lag(col, n)` returns the value from n rows before the current row in the partition order; `lead(col, n)` returns the value from n rows after. They are used for period-over-period comparisons (e.g., current vs. previous month sales), session detection (time gap between events), and change detection (when did a status change?).
+
+**Q: What is the difference between RANK, DENSE_RANK, and ROW_NUMBER?**
+A: `row_number()` assigns unique sequential integers regardless of ties. `rank()` assigns the same rank to tied rows and skips the next ranks (1,1,3). `dense_rank()` assigns the same rank to tied rows but does not skip (1,1,2). Use `row_number()` when you need exactly one row per rank (e.g., deduplication); use `dense_rank()` when you want top-N without gaps.
+
+**Q: How does `ntile(n)` work and when is it useful?**
+A: `ntile(n)` divides the partition into n buckets and assigns each row a bucket number 1..n based on ORDER BY. It is useful for percentile binning (decile analysis, quartile reports) without computing exact percentile thresholds. Note it distributes rows as evenly as possible but may have unequal bucket sizes if the row count is not divisible by n.
+
+**Q: What performance considerations apply to window functions in Spark?**
+A: Window functions require a shuffle (on the PARTITION BY key) and a sort within each partition (on the ORDER BY key). Multiple window specs with the same partition + order can be combined into one physical sort stage—Spark's optimizer may do this automatically. Avoid large unbounded windows on high-cardinality partitions as they can cause memory pressure.
+
+---
+
+## 💼 Interview Tips
+
+- Interviewers routinely ask you to write a window function on the spot (e.g., "find the top 3 products per category by revenue"). Practice the full syntax: `F.row_number().over(Window.partitionBy("category").orderBy(F.desc("revenue")))`.
+- Distinguish ROWS vs. RANGE for rolling calculations—this is a common source of subtle bugs. ROWS is simpler; RANGE is semantically correct for time-based windows with irregular data.
+- Senior interviewers test whether you know when NOT to use window functions: if you only need a group-level aggregate (no per-row result needed), GROUP BY is more efficient and simpler.
+- Demonstrate deduplication using `row_number()`: partition by natural key, order by updated_at DESC, filter WHERE rn = 1. This pattern is ubiquitous in DE pipelines and every senior DE should execute it fluently.
+- Mention the shuffle implication: window functions always shuffle on PARTITION BY. For large tables, choosing a good partition key (high cardinality but balanced) is as important as choosing the right window function.

@@ -132,3 +132,42 @@ WHERE customer_id = 'C-NEW-999' AND is_inferred = TRUE;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a slowly changing dimension (SCD) and why does it exist?**
+A: An SCD is a dimension whose attributes change over time but not at a high frequency (e.g., customer address, product category). The SCD pattern defines how to handle these changes — whether to overwrite history, preserve it, or track it partially.
+
+**Q: What is the difference between SCD Type 1 and Type 2?**
+A: Type 1 overwrites the current value with no history retained — useful when history is irrelevant or incorrect data needs correction. Type 2 inserts a new row with a new surrogate key, preserving the full change history and enabling point-in-time accurate joins.
+
+**Q: How do you implement SCD Type 2 in a dbt model?**
+A: Use dbt's snapshot feature with a `strategy: timestamp` or `strategy: check` configuration. dbt automatically manages effective date columns (`dbt_valid_from`, `dbt_valid_to`) and the `is_current` flag, inserting new rows on change and closing out old ones.
+
+**Q: What is SCD Type 3 and what are its limitations?**
+A: Type 3 adds a "previous value" column alongside the current value column, allowing one level of history. Its limitation is that it only supports a fixed number of historical versions — typically just the most recent change — making it unsuitable for attributes that change frequently.
+
+**Q: What is SCD Type 6 (hybrid SCD)?**
+A: Type 6 combines Types 1, 2, and 3 by adding a new row for each change (Type 2), overwriting current value columns across all rows for an entity (Type 1), and maintaining a "previous value" column (Type 3). This gives both full history and easy access to the current value.
+
+**Q: How do you handle SCD in a streaming pipeline?**
+A: Use upsert/merge operations on the target table (e.g., Delta Lake MERGE) triggered by change events. Each event carries the new attribute values; the merge closes the previous record's validity window and inserts the new version with the current event timestamp.
+
+**Q: What columns are typically added to a Type 2 dimension table?**
+A: `effective_date` (or `valid_from`) marks when the record became active. `expiry_date` (or `valid_to`) marks when it was superseded (NULL or a far-future date for current records). An `is_current` boolean flag simplifies filtering for the current version.
+
+**Q: What problems arise when joining fact tables to Type 2 dimensions?**
+A: If the fact table stores only the dimension's natural key, you must join on both the natural key and the fact event date falling within the dimension's effective/expiry window — a range join that is expensive at scale. Storing the surrogate key in the fact table at load time avoids this.
+
+---
+
+## 💼 Interview Tips
+
+- Know all SCD types (1–6) and be ready to explain them with a concrete example like customer address or product price changes.
+- The most common interview mistake is not accounting for how the fact table joins to a Type 2 dimension — always discuss surrogate key assignment at load time.
+- dbt snapshots are the modern standard for SCD Type 2 implementation; mention them to show practical, production-level knowledge.
+- Discuss the operational overhead of SCD Type 2 at scale — billions of rows with many SCD columns can cause significant storage and query costs.
+- Senior interviewers will ask about late-arriving data in SCD pipelines — be prepared to explain how to retroactively insert or correct dimension versions.
+- Show awareness that not every changing attribute needs Type 2 — the decision should be driven by whether historical accuracy of that attribute affects business analysis.

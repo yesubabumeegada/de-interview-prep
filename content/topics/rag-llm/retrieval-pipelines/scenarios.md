@@ -984,3 +984,41 @@ class MultiModalRAG:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the main stages of a RAG retrieval pipeline?**
+A: A typical pipeline includes query processing (rewriting, expansion), first-stage retrieval (dense or sparse search over a vector store or BM25 index), reranking (scoring candidate passages more precisely), and context assembly (ordering and truncating passages for the prompt). Each stage refines the result set.
+
+**Q: What is the difference between dense retrieval and sparse retrieval?**
+A: Sparse retrieval (e.g., BM25) relies on exact term matching and TF-IDF-style scoring—fast and interpretable but misses synonyms. Dense retrieval uses learned embeddings to capture semantic similarity—handles paraphrases well but is slower and requires a vector index. Hybrid retrieval combines both to get the benefits of each.
+
+**Q: What is a reranker and where does it fit in the pipeline?**
+A: A reranker is a cross-encoder model that scores query-passage relevance more accurately than the initial embedding similarity. It runs after first-stage retrieval on a small candidate set (e.g., top 50), reordering them to surface the most relevant passages before they're passed to the LLM. Rerankers trade latency for precision.
+
+**Q: What is Reciprocal Rank Fusion (RRF) and when is it used?**
+A: RRF is a score-free fusion method that combines ranked lists from multiple retrievers (e.g., BM25 + dense) by summing reciprocal ranks. It's simple, parameter-free, and empirically robust—often outperforming score-based fusion because it avoids scale incompatibility between different retrieval systems.
+
+**Q: What is query rewriting and why is it used?**
+A: Query rewriting uses an LLM to reformulate the user's question into a form more likely to match the document index—e.g., expanding acronyms, adding context from prior conversation turns, or generating multiple alternative phrasings (HyDE, multi-query). It improves recall when the user's phrasing doesn't match document vocabulary.
+
+**Q: What is HyDE (Hypothetical Document Embeddings)?**
+A: HyDE generates a hypothetical answer to the query using an LLM, then embeds that answer and uses it as the search query instead of the raw question. Because the hypothetical answer resembles the style of actual documents, it often retrieves more relevant passages than embedding the question directly.
+
+**Q: How do you handle multi-hop questions in retrieval?**
+A: Multi-hop questions require information from multiple passages that must be combined. Strategies include iterative retrieval (retrieve, extract a sub-answer, use it to form a new query), graph-based retrieval (follow entity links), or decomposing the question into sub-questions and retrieving for each independently before synthesizing.
+
+**Q: How do you scale a retrieval pipeline to billions of documents?**
+A: Use approximate nearest neighbor (ANN) indexes (e.g., HNSW, IVF-PQ in Faiss/Pinecone/Weaviate) rather than exact search. Shard the index across nodes. Apply quantization to reduce vector storage. Use a cascaded retrieval architecture: fast coarse retrieval narrows to a manageable candidate set before precise reranking.
+
+---
+
+## 💼 Interview Tips
+
+- Frame your retrieval pipeline as a funnel: each stage trades coverage for precision. Showing you think in terms of recall@k at each stage demonstrates systems-level thinking.
+- Hybrid retrieval (BM25 + dense + RRF) is almost always better than either alone in production—mentioning it unprompted signals practical experience over textbook knowledge.
+- Senior interviewers will probe latency budgets. Know the rough latency of each pipeline stage and where you'd optimize first (often reranking is the bottleneck).
+- Discuss failure modes: what happens when the index is stale, when queries are adversarial, or when retrieval consistently misses for a certain query type? Having answers to these shows production readiness.
+- Bring up observability—logging retrieval scores, monitoring recall metrics, and alerting on drift lets you catch degradation before users do. This is a differentiator for senior candidates.

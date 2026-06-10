@@ -504,3 +504,42 @@ graph TD
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the primary purpose of a fact table vs. a dimension table?**
+A: Fact tables store quantitative measurements of business events (sales amount, click count) along with foreign keys to dimensions. Dimension tables store descriptive context about those events (who, what, where, when) enabling slicing and filtering of facts.
+
+**Q: What is a surrogate key and why use it instead of a natural key in dimension tables?**
+A: A surrogate key is a system-generated integer with no business meaning. It insulates the warehouse from changes to natural keys (e.g., when a customer ID format changes), supports SCD history by giving each version a unique key, and typically joins faster than composite natural keys.
+
+**Q: What are the main types of slowly changing dimensions?**
+A: SCD Type 1 overwrites the old value (no history). SCD Type 2 adds a new row with a new surrogate key (full history). SCD Type 3 adds a new column for the previous value (limited history). Type 6 combines 1, 2, and 3 for maximum flexibility.
+
+**Q: What is a role-playing dimension?**
+A: A role-playing dimension is a single dimension table used multiple times in the same fact table under different aliases — for example, a Date dimension playing the roles of Order Date, Ship Date, and Delivery Date in an orders fact table.
+
+**Q: What is a junk dimension?**
+A: A junk dimension combines low-cardinality flags and indicators (e.g., order type, payment method, promotional flag) into a single dimension table rather than storing them individually in the fact table, reducing fact table width while maintaining queryability.
+
+**Q: How do you handle null foreign keys in a fact table?**
+A: Use a special "unknown" or "not applicable" surrogate key (typically -1 or 0) in the dimension table. Storing actual NULL foreign keys breaks joins and makes filtering unpredictable; explicit unknown members are self-documenting and query-friendly.
+
+**Q: What is the difference between a transaction grain and a periodic snapshot grain?**
+A: Transaction grain captures one row per discrete event (each sale, each click). Periodic snapshot grain captures the state of a subject at regular intervals (daily inventory balance, monthly account balance), even if no transaction occurred.
+
+**Q: What is a mini-dimension and when would you use one?**
+A: A mini-dimension splits frequently changing attributes out of a large, slowly changing dimension into a separate smaller dimension that is referenced from the fact table. It avoids bloating the main dimension with SCD Type 2 rows for volatile attributes like customer demographics.
+
+---
+
+## 💼 Interview Tips
+
+- Be precise about grain — interviewers will test whether you can identify when a fact table mixes grains, which causes subtle double-counting bugs.
+- Know all SCD types (1, 2, 3, 4, 6) and their implementation tradeoffs; Type 2 is the most common but Type 6 shows senior-level depth.
+- Explain surrogate keys in terms of operational resilience, not just convention — interviewers want to know you understand the "why."
+- Show awareness of performance implications: wide fact tables with many dimension keys can hurt query performance; discuss star schema vs. snowflake tradeoffs.
+- Common mistake to avoid: adding measures to dimension tables or descriptive attributes to fact tables — always keep responsibilities clearly separated.
+- Senior interviewers appreciate discussion of how dimension design choices affect downstream BI tool behavior (drill-down paths, filter cardinality, aggregation correctness).

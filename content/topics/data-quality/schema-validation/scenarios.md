@@ -176,3 +176,41 @@ def prewarm_schema_cache(client: ResilientSchemaRegistryClient, schema_ids: list
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is schema validation and why is it important in data pipelines?**
+A: Schema validation verifies that incoming data conforms to an expected structure — correct field names, data types, nullability constraints, and required fields. It is critical because schema violations in upstream data silently corrupt downstream tables, models, and reports if not caught at ingestion.
+
+**Q: What is the difference between strict and lenient schema validation?**
+A: Strict validation rejects any record that doesn't exactly match the schema (unexpected fields, type mismatches). Lenient validation accepts data with unexpected additional fields (evolution-friendly) but still rejects type violations and missing required fields. Lenient is more common in evolving systems.
+
+**Q: What is a schema registry and when would you use one?**
+A: A schema registry (e.g., Confluent Schema Registry) is a centralized service that stores and versions serialization schemas (Avro, Protobuf, JSON Schema) for streaming data. It enforces schema compatibility rules at publish time, preventing incompatible schema changes from reaching consumers.
+
+**Q: What are the three schema compatibility modes in Confluent Schema Registry?**
+A: Backward compatibility (new schema can read old data — add optional fields, remove optional fields), forward compatibility (old schema can read new data — remove optional fields, add optional fields), and full compatibility (both backward and forward). Full compatibility is the most restrictive.
+
+**Q: How do you validate schema in a dbt project?**
+A: Use dbt's `schema.yml` files to define expected column names, data types, and tests (not_null, unique, accepted_values, relationships). dbt tests run these validations on transformed data, and `dbt compile` validates model SQL at build time.
+
+**Q: What is JSON Schema and how is it used for data validation?**
+A: JSON Schema is a vocabulary for annotating and validating JSON documents, defining required fields, types, formats, enum values, and nested structures. It is used to validate API payloads, event streams, and configuration files before they enter data pipelines.
+
+**Q: How do you handle schema evolution in a production data lake?**
+A: Use formats that support schema evolution (Delta Lake, Iceberg, Hudi) which track schema history and handle column additions, renames, and type widening safely. Define a compatibility policy (additive-only changes are non-breaking) and version schemas using semantic versioning.
+
+**Q: What happens when a schema validation check fails in a streaming pipeline?**
+A: Invalid records should be routed to a dead-letter queue or quarantine storage rather than dropped or blocking the pipeline. Alert the producing team with the specific violation, track violation rates as a metric, and implement a reprocessing mechanism once the schema issue is resolved.
+
+---
+
+## 💼 Interview Tips
+
+- Know the difference between schema validation at ingest (preventing bad data from entering) and schema testing after transformation (verifying your pipeline's output).
+- Show familiarity with Avro/Protobuf and schema registries for streaming — this is expected knowledge for senior DE roles working with Kafka.
+- Be ready to discuss schema evolution strategies: interviewers want to know how you would add a required field to a schema without breaking existing producers.
+- Mention Delta Lake or Iceberg schema evolution capabilities — these are the modern answer to schema management in data lakes.
+- Common mistake: treating schema validation as a one-time setup activity rather than an ongoing monitoring concern as sources evolve.
+- Senior interviewers appreciate discussion of the organizational challenge: producers often don't notify consumers of schema changes, making automated schema drift detection essential.

@@ -628,3 +628,41 @@ ORDER BY days_until_stockout ASC NULLS LAST;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between INNER JOIN, LEFT JOIN, RIGHT JOIN, and FULL OUTER JOIN?**
+A: INNER JOIN returns only rows with matching keys in both tables. LEFT JOIN returns all rows from the left table plus matched rows from the right (NULL for unmatched right columns). RIGHT JOIN is the mirror image. FULL OUTER JOIN returns all rows from both tables, with NULLs where no match exists.
+
+**Q: What is a CROSS JOIN and when would you use it?**
+A: A CROSS JOIN returns the Cartesian product of two tables—every row from the left paired with every row from the right (n × m rows). It's used intentionally for generating combinations (e.g., pairing every product with every region), and unintentionally when a JOIN condition is accidentally omitted.
+
+**Q: What is a self join and what is it used for?**
+A: A self join joins a table to itself, typically to compare rows within the same table. Common use cases include finding employee-manager relationships (joining the employees table to itself on manager_id = employee_id) or finding pairs of rows meeting some condition (e.g., flights with the same origin and different destinations).
+
+**Q: What is the difference between a hash join and a sort-merge join?**
+A: A hash join builds an in-memory hash table from the smaller relation and probes it with each row from the larger—O(n+m) but requires memory. A sort-merge join sorts both inputs on the join key and scans them in parallel—O(n log n + m log m) but avoids random memory access. The optimizer chooses based on table sizes, available memory, and whether data is pre-sorted.
+
+**Q: What causes a NULL in JOIN results and how do you filter for unmatched rows?**
+A: NULLs appear in OUTER JOIN results for the non-driving table's columns when no matching row exists. To find unmatched rows (the "anti-join" pattern), use `WHERE right_table.key IS NULL` after a LEFT JOIN, or use `NOT EXISTS` / `NOT IN` subqueries. The IS NULL approach is often the most readable.
+
+**Q: What is a non-equi join and when is it useful?**
+A: A non-equi join uses inequality operators (>, <, BETWEEN, !=) in the join condition instead of equality. Common uses: date range joins (joining events to applicable promotions by date range), bucketing (joining a value to a range table), and comparing rows within the same table with a condition beyond equality.
+
+**Q: What is join elimination and when does the optimizer apply it?**
+A: Join elimination is an optimizer transformation that removes a join from the query plan when the optimizer can prove it doesn't affect the result. For example, if you JOIN on a UNIQUE NOT NULL column and never SELECT any column from that table, the join can be eliminated. This is common in views and BI tool-generated queries.
+
+**Q: What is the impact of data skew on distributed join performance?**
+A: In distributed query engines (Spark, Redshift, BigQuery), joins require co-locating matching keys on the same node (shuffle). If one join key value appears in millions of rows (e.g., a NULL or a single popular category), one partition becomes a hotspot, causing a skewed shuffle that bottlenecks the entire query. Mitigations include salting the key, broadcasting the smaller table, or pre-filtering skewed values.
+
+---
+
+## 💼 Interview Tips
+
+- Be ready to write any join type on a whiteboard without hesitation—joins are tested in every DE interview and mechanical fluency is baseline.
+- The anti-join pattern (LEFT JOIN + WHERE IS NULL vs. NOT EXISTS vs. NOT IN) is a classic senior question. Know all three forms and their behavioral differences with NULLs (NOT IN behaves unexpectedly when the subquery returns a NULL).
+- When discussing join performance, always bring up the distribution of data—data skew is the most common production join performance problem in analytical systems like Spark and Redshift.
+- Senior interviewers at analytics companies often ask about non-equi joins (date range joins for slowly changing dimensions)—know how to write them and understand their performance implications (they can't use hash joins efficiently).
+- Mention join order as a optimization lever: putting the most selective filter on the driving table reduces the number of rows the hash/merge join must process. Some databases (PostgreSQL) determine this automatically; others (older Teradata) relied on query order.

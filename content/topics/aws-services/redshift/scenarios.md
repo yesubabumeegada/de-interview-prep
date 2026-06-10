@@ -215,3 +215,42 @@ $$ LANGUAGE plpgsql;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Amazon Redshift and what type of workloads is it designed for?**
+A: Redshift is a fully managed, petabyte-scale columnar data warehouse designed for OLAP (Online Analytical Processing) workloads — complex SQL queries over large datasets for BI and reporting. It uses columnar storage, data compression, and massively parallel processing (MPP) to deliver fast query performance at scale.
+
+**Q: What is the difference between Redshift Provisioned and Redshift Serverless?**
+A: Provisioned clusters have fixed node count and type, giving you control over performance and cost for steady-state workloads. Redshift Serverless automatically scales compute based on workload demand and charges per Redshift Processing Unit (RPU) per second — ideal for variable, unpredictable, or intermittent analytics workloads.
+
+**Q: What are distribution styles in Redshift and how do you choose?**
+A: Distribution styles control how table rows are distributed across cluster nodes: `EVEN` distributes rows round-robin (use for tables without clear join key), `KEY` distributes rows by a column value (use for large tables joined on that key — co-locates matching rows), `ALL` replicates the entire table to every node (use for small dimension tables), and `AUTO` lets Redshift choose based on table size.
+
+**Q: What are sort keys in Redshift and how do they improve performance?**
+A: Sort keys determine the physical order of data on disk within a node. Queries with range filters on sort key columns skip large blocks of data via zone maps (min/max per block), dramatically reducing I/O. Compound sort keys benefit queries filtering on all prefix columns; interleaved sort keys treat each column equally but have higher maintenance cost.
+
+**Q: What is Redshift Spectrum and how does it extend Redshift?**
+A: Redshift Spectrum allows Redshift queries to read external data directly from S3 without loading it into Redshift. It uses the Glue Data Catalog for schema and scales compute independently per query. It enables a hybrid architecture: hot data in Redshift tables, cold/archived data in S3 queried via Spectrum.
+
+**Q: What is VACUUM and ANALYZE in Redshift?**
+A: VACUUM reclaims space from deleted rows (Redshift uses MVCC, so deletes leave tombstones) and restores sort order for unsorted rows. ANALYZE updates table statistics used by the query planner. Both should run after large loads; Redshift Auto VACUUM and Auto ANALYZE handle these automatically in most cases but may need manual tuning for large tables.
+
+**Q: What is WLM (Workload Management) in Redshift?**
+A: WLM controls how queries are prioritized and resource-allocated in Redshift. It assigns queries to queues based on user groups or query groups, with each queue having a concurrency limit and memory allocation. Automatic WLM (default) uses ML to dynamically adjust concurrency; manual WLM gives explicit control for predictable workload isolation.
+
+**Q: How do you load data efficiently into Redshift?**
+A: Use the COPY command to load from S3 — it parallelizes across all cluster nodes for maximum throughput. Use multiple files in S3 (ideally one file per node slice), compressed Parquet or CSV, and manifest files for controlled loads. Avoid INSERT statements for bulk loads — they are orders of magnitude slower than COPY.
+
+---
+
+## 💼 Interview Tips
+
+- Always recommend COPY from S3 for bulk loading — interviewers expect you to know this is the optimal path and to explain why: parallel loading across all node slices versus single-threaded inserts.
+- Senior interviewers probe distribution key selection deeply: explain that a poor distribution key causes data skew (one node doing 90% of the work) and how to detect it with `SVV_TABLE_INFO.skew_rows`.
+- Demonstrate awareness of the VACUUM problem at scale: large tables accumulate deleted rows quickly in high-churn workloads. Describe monitoring `SVV_TABLE_INFO.unsorted_pct` and scheduling VACUUM during off-peak windows.
+- Mention Redshift Spectrum as the bridge between Redshift and S3 — use it for a tiered storage architecture where recent data lives in Redshift and historical data in S3, queryable from the same SQL interface.
+- Know Redshift's concurrency limits: default WLM supports 5 concurrent queries per queue. For high-concurrency BI dashboards, discuss Concurrency Scaling (automatically adding transient compute capacity) or query result caching.
+- Avoid treating Redshift as an OLTP database — interviewers watch for candidates who conflate OLAP and OLTP. Emphasize Redshift's strength in analytical queries and its unsuitability for high-frequency, small-row transactional writes.

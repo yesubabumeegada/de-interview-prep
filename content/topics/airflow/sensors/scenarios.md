@@ -403,3 +403,39 @@ GROUP BY classpath;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a sensor in Airflow and how does it differ from a regular operator?**
+A: A sensor inherits from `BaseSensorOperator` and repeatedly calls its `poke()` method until a condition is met or a timeout is reached. Unlike regular operators that execute once and complete, sensors wait for an external condition (file arrival, partition availability, API response) before allowing downstream tasks to proceed.
+
+**Q: What is the difference between `poke_mode` and `reschedule_mode` in sensors?**
+A: In `poke` mode, the sensor occupies a worker slot for its entire wait duration, polling on an interval. In `reschedule` mode, the sensor releases its worker slot between poke attempts and is rescheduled by the Airflow scheduler — freeing the slot for other tasks. `reschedule` is preferred for long-wait sensors to avoid worker starvation.
+
+**Q: What happens when a sensor times out?**
+A: When `timeout` seconds elapse without the condition being met, Airflow raises `AirflowSensorTimeout`, marking the task as `failed`. Configure `soft_fail=True` to mark it `skipped` instead of `failed` — useful when the condition's absence should not block the entire pipeline.
+
+**Q: What is `ExternalTaskSensor` and when would you use it?**
+A: `ExternalTaskSensor` waits for a task (or entire DAG) in a different DAG to reach a specified state (success by default). Use it to create cross-DAG dependencies without coupling DAG code together — e.g., wait for an upstream data pipeline's daily run to succeed before triggering a downstream ML pipeline.
+
+**Q: What is the `poke_interval` parameter and how do you choose an appropriate value?**
+A: `poke_interval` (seconds) controls how often the sensor checks the condition. Choose based on: how quickly the condition is expected to be met (use shorter intervals for time-sensitive waits), and the cost of checking (avoid hammering APIs with very short intervals). A typical range is 30-300 seconds.
+
+**Q: How do you implement a custom sensor for a proprietary internal API?**
+A: Subclass `BaseSensorOperator`, implement `poke(self, context)` to call the API and return `True` when the condition is met, `False` otherwise. Handle exceptions within `poke()` — unhandled exceptions cause task failure immediately rather than triggering a retry poke. Optionally use a custom Hook for connection management.
+
+**Q: What is the `deferrable` sensor mode introduced in Airflow 2.2 and why is it important?**
+A: Deferrable operators (including sensors) pause execution and defer to a Triggerer process instead of holding a worker slot. The Triggerer is an async process that can manage thousands of deferred tasks with minimal resource usage. This is the most efficient approach for high-scale environments with many waiting sensors.
+
+---
+
+## 💼 Interview Tips
+
+- The `poke` vs. `reschedule` vs. `deferrable` progression is a key interview discussion point — showing you know all three and when each is appropriate signals progressive familiarity with Airflow's evolution.
+- Always mention the worker slot starvation problem with poke-mode sensors — this is a real production incident waiting to happen and senior interviewers know to probe for it.
+- `ExternalTaskSensor` with `execution_date_fn` for non-matching schedules is an advanced but commonly needed pattern — mentioning it distinguishes you from candidates with only basic sensor knowledge.
+- When discussing deferrable operators, show awareness of the Triggerer component — it's a relatively new architectural addition that requires a separate process and is not available in all managed Airflow versions.
+- Discuss timeout strategy: always set `timeout` explicitly. A sensor without a timeout can wait forever, holding a worker slot or blocking downstream tasks indefinitely.
+- A common mistake to highlight: using sensors to poll rapidly at 5-second intervals — this generates excessive metadata database writes and API load. Discuss appropriate backoff and interval selection.

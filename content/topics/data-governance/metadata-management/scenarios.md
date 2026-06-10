@@ -234,3 +234,38 @@ Overall: ~84% — target achieved
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is metadata and what are the main types relevant to data engineering?**
+A: Metadata is data about data. Key types include: technical metadata (schema, data types, row counts, partitions), operational metadata (pipeline run times, freshness, SLAs), business metadata (descriptions, ownership, business glossary terms), and governance metadata (classification, lineage, access policies).
+
+**Q: What is the difference between a data dictionary and a business glossary?**
+A: A data dictionary documents the technical details of fields in a specific dataset — column name, type, allowed values, and a brief description. A business glossary defines enterprise-wide business terms and their canonical meanings, independent of any specific table or system.
+
+**Q: How does metadata management support data discovery?**
+A: Rich metadata — descriptions, tags, ownership, related terms — makes datasets findable in a catalog. Data consumers can search by business term, owner, or topic rather than having to know exact table names, reducing the time to find trustworthy data and reducing ad-hoc requests to data engineering teams.
+
+**Q: What is schema evolution and how should metadata management handle it?**
+A: Schema evolution is the change of a dataset's structure over time (adding, renaming, or removing columns, changing types). Metadata management should version schemas (e.g., using Schema Registry for Kafka or Delta Lake schema history), track what changed and when, and propagate change notifications to downstream consumers.
+
+**Q: What is active metadata and how does it differ from passive metadata?**
+A: Passive metadata is manually authored (descriptions, tags, ownership). Active metadata is automatically derived from system activity — query frequency, last access time, data quality scores, and pipeline run statistics. Active metadata keeps the catalog accurate without relying solely on human maintenance.
+
+**Q: How do you enforce metadata completeness at dataset publication time?**
+A: Define a metadata contract that new datasets must satisfy before being published — required fields like owner, description, sensitivity classification, and data quality rules. Enforce it as a CI/CD check in your data pipeline framework (e.g., dbt tests, Great Expectations, or a custom catalog API validation step).
+
+**Q: What is a schema registry and when would you use one?**
+A: A schema registry (e.g., Confluent Schema Registry) stores and versions schemas for event streams (Avro, Protobuf, JSON Schema). It enforces schema compatibility rules (backward, forward, full) so producers and consumers can evolve schemas without breaking each other, which is essential for Kafka-based pipelines.
+
+---
+
+## 💼 Interview Tips
+
+- Distinguish active from passive metadata fluently — it is a relatively advanced concept and demonstrates that you follow current thinking in the catalog and governance space.
+- Mention schema registry specifically for streaming pipelines; many candidates describe batch schema management but overlook the Kafka streaming context, which matters for real-time DE roles.
+- Frame metadata management as an enabler of self-service — the more complete the metadata, the less time engineers spend answering "what does this column mean?" questions.
+- For senior roles, describe governance metadata (classification, lineage, policies) as a first-class type alongside technical and business metadata — it shows you think about the full governance stack.
+- Discuss metadata quality metrics (completeness, accuracy, freshness) and how you would monitor them — interviewers want to hear that you would treat metadata as a product with its own quality standards.
+- Avoid describing metadata management as purely a documentation project; emphasize automation, active metadata collection, and enforcement at pipeline boundaries to show operational scale thinking.

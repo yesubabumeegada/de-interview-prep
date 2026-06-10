@@ -174,3 +174,41 @@ spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the two main memory regions in a Spark executor and what do they do?**
+A: Execution memory (used for shuffles, joins, sorts, aggregations) and Storage memory (used for caching RDDs/DataFrames via `cache()`/`persist()`). In unified memory management (Spark 1.6+), these two regions share a single pool and can borrow from each other, reducing waste from static allocation.
+
+**Q: What is the `spark.memory.fraction` parameter?**
+A: It controls what fraction of the JVM heap is available for Spark (execution + storage). The default is 0.6, leaving 0.4 for user data structures, Spark internal objects, and safety margin. The Spark-managed pool = `heap * spark.memory.fraction * (1 - spark.memory.storageFraction)` for execution.
+
+**Q: What causes a Spark out-of-memory (OOM) error and how do you diagnose it?**
+A: OOM can occur from: (1) too many cached DataFrames consuming storage memory, (2) a shuffle or join that spills but eventually exceeds available execution memory, (3) large Python objects in driver memory, or (4) a skewed partition that cannot fit in one executor's memory. Check the Spark UI's Executors tab for memory usage and the Stages tab for spill metrics.
+
+**Q: What is memory spilling in Spark and what are its performance implications?**
+A: When execution memory is insufficient for an operation (sort, hash aggregate, shuffle), Spark spills the overflow to disk. Spill dramatically reduces throughput (disk I/O vs. memory speeds) and can cascade to disk pressure. The Spark UI reports bytes spilled to memory and disk per stage.
+
+**Q: What is the difference between `cache()` and `persist(DISK_ONLY)`?**
+A: `cache()` is shorthand for `persist(MEMORY_AND_DISK)`, storing partitions in executor JVM heap and spilling to disk when memory is insufficient. `DISK_ONLY` stores serialized partitions only on local disk, trading speed for lower memory pressure. `MEMORY_ONLY_SER` stores serialized data in memory, using less heap but adding deserialization CPU cost.
+
+**Q: What is off-heap memory in Spark and when is it useful?**
+A: Off-heap memory is allocated outside the JVM heap using `sun.misc.Unsafe` or direct byte buffers. Enabled with `spark.memory.offHeap.enabled=true` and sized via `spark.memory.offHeap.size`. It avoids GC pressure on large datasets because the JVM garbage collector does not scan off-heap memory—useful for long-running jobs with large cached datasets.
+
+**Q: How does Tungsten fit into Spark memory management?**
+A: Tungsten is Spark's low-level physical execution engine. It uses a compact binary row format (UnsafeRow) stored in managed off-heap or on-heap memory, bypassing Java object overhead. Tungsten enables cache-efficient sort and hash operations and is the foundation for Whole-Stage CodeGen.
+
+**Q: What is the driver's memory role and what can cause driver OOM?**
+A: The driver holds the SparkContext, DAG scheduler, broadcast variables, and the results of actions like `collect()`. Driver OOM commonly occurs from: calling `collect()` on a large DataFrame, broadcasting an oversized variable (`spark.driver.maxResultSize`), or accumulating many small tasks' results. Never collect more data than fits in driver memory.
+
+---
+
+## 💼 Interview Tips
+
+- Explain unified memory management clearly—static fractions were the pre-1.6 model; knowing the evolution shows historical depth. Interviewers appreciate candidates who understand why a change was made.
+- Spill is the most common production performance issue after skew. Be ready to describe the full diagnosis path: Spark UI stage → spill metrics → executor memory tab → configuration adjustment.
+- Know the GC impact on memory: large caches in on-heap memory cause long GC pauses (stop-the-world). This is the primary motivation for off-heap storage and Tungsten's binary format.
+- Senior interviewers ask about broadcast join memory: a broadcast variable is replicated to every executor. Broadcasting a 10 GB table to 500 executors consumes 5 TB of aggregate executor memory. Size awareness is critical.
+- Always pair memory sizing advice with workload characterization: shuffle-heavy jobs need more execution memory; read-intensive cached workloads need more storage memory. Generic "increase memory" answers don't satisfy senior interviewers.

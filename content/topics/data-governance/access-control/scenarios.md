@@ -212,3 +212,38 @@ resource "snowflake_role_grants" "{combined_role.lower()}_base" {{
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between authentication and authorization?**
+A: Authentication verifies who a user is (identity), while authorization determines what that user is allowed to do (permissions). Both are required for secure data access control — authentication comes first, authorization follows.
+
+**Q: What is Role-Based Access Control (RBAC) and how does it differ from Attribute-Based Access Control (ABAC)?**
+A: RBAC assigns permissions to roles and users are assigned roles, keeping management simple and scalable. ABAC grants access based on attributes of the user, resource, and environment (e.g., department, data sensitivity, time of day), enabling finer-grained policies at the cost of complexity.
+
+**Q: What is the principle of least privilege and why does it matter in data platforms?**
+A: Least privilege means granting users and services only the minimum permissions needed to perform their tasks. It limits blast radius when credentials are compromised and reduces the risk of accidental data modification or exfiltration.
+
+**Q: How do you implement column-level security in a data warehouse?**
+A: Most modern warehouses (Snowflake, BigQuery, Redshift) support column masking policies — you define a policy that returns the real value for authorized roles and a masked/null value for others. Alternatively, create views that expose only allowed columns and grant access to the view rather than the base table.
+
+**Q: What is row-level security (RLS) and when would you use it?**
+A: RLS restricts which rows a user can see in a table based on their identity or role. Use it for multi-tenant data models where different customers or business units should only see their own data, without maintaining separate tables per tenant.
+
+**Q: How do service accounts differ from user accounts in data platform access control?**
+A: Service accounts are non-human identities used by applications, pipelines, and automated jobs. They should have tightly scoped permissions, no interactive login, and their credentials should be managed via a secrets manager and rotated regularly.
+
+**Q: What is the purpose of data access auditing?**
+A: Auditing records who accessed what data, when, and from where. It enables compliance reporting, breach investigation, anomaly detection, and demonstrating due diligence to regulators. Audit logs should be immutable and stored separately from the data they protect.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with least privilege as a design principle before diving into implementation details — it frames your answer around security-first thinking that senior interviewers respect.
+- Be specific about tools: mention Unity Catalog, AWS Lake Formation, BigQuery IAM, or Snowflake RBAC depending on the stack, rather than speaking only in abstract terms.
+- Discuss service account credential rotation and secrets management proactively — it shows you think about access control as an ongoing operational practice, not a one-time setup.
+- For senior roles, connect access control to data mesh principles: explain how domain teams own their data products and grant access through a catalog, rather than a central team managing all permissions.
+- Mention audit logging when discussing access control — interviewers at regulated companies (finance, healthcare) will specifically probe whether you know compliance requirements like SOC 2 and HIPAA.
+- Avoid describing overly permissive designs like "give the team admin access for now" — even in hypothetical scenarios it signals poor security instincts.

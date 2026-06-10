@@ -201,3 +201,38 @@ register_table(
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a data catalog and what problem does it solve?**
+A: A data catalog is a centralized inventory of an organization's data assets — tables, files, dashboards, APIs — enriched with metadata like schema, lineage, ownership, and quality metrics. It solves the "where is the data and can I trust it?" problem that plagues organizations as datasets multiply.
+
+**Q: What is the difference between a technical catalog and a business glossary?**
+A: A technical catalog stores metadata about physical data assets (table names, column types, row counts, partitions). A business glossary defines business terms and their meanings (e.g., what "active customer" means in your company). A mature catalog links both — business terms are mapped to the physical columns that represent them.
+
+**Q: What metadata should a good catalog entry include?**
+A: At minimum: schema/column definitions, data owner, steward, source system, update frequency, row count, data quality score, lineage (upstream and downstream), classification (PII, confidential), and sample queries or documentation. Richer entries include SLAs and known issues.
+
+**Q: What is the difference between passive and active metadata?**
+A: Passive metadata is static documentation that humans write and maintain (descriptions, ownership). Active metadata is automatically collected from system activity — query patterns, access frequency, freshness timestamps, data quality scores. Modern catalogs combine both to keep metadata accurate with less manual effort.
+
+**Q: How does a data catalog support data governance?**
+A: The catalog is the enforcement point for governance policies — it shows what data is classified as sensitive, who owns it, and who has access. It enables data stewards to review and approve access requests, and provides the lineage needed to assess the impact of upstream changes on downstream consumers.
+
+**Q: Name two popular open-source and two commercial data catalog tools.**
+A: Open-source: Apache Atlas and DataHub (LinkedIn). Commercial: Alation and Collibra. Cloud-native options include AWS Glue Data Catalog, Google Dataplex, and Microsoft Purview.
+
+**Q: How do you keep catalog metadata fresh and accurate over time?**
+A: Automate metadata ingestion using crawlers that scan sources on a schedule (e.g., Glue crawlers, DataHub ingestion pipelines). Supplement with active metadata from query engines. Assign data stewards who are accountable for accuracy, and surface staleness metrics so users know when entries were last verified.
+
+---
+
+## 💼 Interview Tips
+
+- Frame the data catalog as an enabler of self-service analytics — explain how it reduces the time data consumers spend asking data engineers "where is X and can I use it?"
+- Mention DataHub or Apache Atlas by name and describe how ingestion pipelines work — moving beyond buzzwords to implementation signals real experience.
+- Connect catalog to data mesh: in a mesh architecture each domain team publishes their data products to the catalog with standardized metadata, making the catalog the central discovery layer across domains.
+- Senior interviewers often ask about catalog adoption challenges — discuss cultural and process aspects (getting teams to write descriptions, assigning stewards) alongside technical ones.
+- Show awareness of active metadata: query usage patterns and access frequency surfaced in the catalog help identify high-value datasets and orphaned tables, which is a compelling business case.
+- Avoid presenting the catalog as a one-time project — emphasize ongoing governance processes, steward accountability, and automation to keep it living and accurate.

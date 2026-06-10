@@ -288,3 +288,42 @@ def relay_outbox():
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the three delivery guarantee levels in Kafka?**
+A: At-most-once (messages may be lost, never duplicated), at-least-once (messages are never lost but may be duplicated), and exactly-once (each message is processed precisely once). Exactly-once is the hardest to achieve and requires coordination between producer, broker, and consumer.
+
+**Q: How does Kafka achieve idempotent producer semantics?**
+A: With `enable.idempotence=true`, the producer assigns a unique Producer ID (PID) and sequence number to each message. The broker deduplicates retried messages from the same PID with the same sequence number, preventing duplicates from producer-side retries within a session.
+
+**Q: What is a Kafka transaction and how does it enable exactly-once?**
+A: A Kafka transaction groups produce operations (across multiple topics/partitions) and offset commits into an atomic unit. Either all writes commit or none do. The consumer reads only committed messages with `isolation.level=read_committed`, preventing it from seeing partial transaction results.
+
+**Q: What is a transactional ID and why is it important?**
+A: The `transactional.id` is a stable identifier that survives producer restarts. It allows the broker to fence out zombie producers (previous instances) by bumping the epoch, ensuring only the new producer can commit — preventing duplicate commits after a restart.
+
+**Q: How does the read_committed isolation level work?**
+A: With `isolation.level=read_committed`, a consumer only delivers messages from committed transactions. Messages from in-progress or aborted transactions are buffered at the broker and only delivered (or discarded) once the transaction outcome is known.
+
+**Q: What is a zombie producer in Kafka and how is it handled?**
+A: A zombie producer is a previous producer instance that is still running (e.g., due to a network partition) after a new instance has taken over. Kafka fences zombies using the epoch mechanism — when a new producer with the same transactional ID initializes, the broker rejects any subsequent writes from the old (lower epoch) producer.
+
+**Q: What is the performance cost of exactly-once semantics in Kafka?**
+A: Exactly-once adds latency due to transaction coordination (two-phase commit between producer and broker), increased broker storage for transaction state, and reduced throughput compared to at-least-once. The overhead is typically 10-20% depending on transaction size and frequency.
+
+**Q: When is exactly-once semantics NOT sufficient for an end-to-end guarantee?**
+A: Kafka's EOS guarantees exactly-once within the Kafka ecosystem (read from Kafka, write to Kafka). End-to-end exactly-once also requires the downstream sink (database, file system) to support idempotent or transactional writes — Kafka alone cannot guarantee exactly-once delivery to non-transactional sinks.
+
+---
+
+## 💼 Interview Tips
+
+- Know all three layers of exactly-once: idempotent producer (dedup retries), transactions (atomic multi-partition writes), and read_committed consumer (only see committed data). Missing any layer reveals incomplete understanding.
+- Distinguish exactly-once within Kafka from end-to-end exactly-once — interviewers specifically probe whether you understand that the sink must also be idempotent or transactional.
+- Explain the zombie fencing mechanism — it's the most nuanced aspect of Kafka EOS and demonstrates you understand the distributed systems challenges, not just the API.
+- Be honest about the performance overhead — claiming EOS is "free" signals you haven't used it in production. Knowing the cost helps frame when to use it vs. at-least-once with idempotent sinks.
+- For Kafka Streams and Flink, mention they have built-in EOS modes that handle transaction management automatically — knowing framework-level abstractions is valuable for senior roles.
+- Discuss when exactly-once isn't worth the complexity: for analytics pipelines where near-duplicate aggregation results are acceptable, at-least-once with deduplication post-hoc is simpler and cheaper.

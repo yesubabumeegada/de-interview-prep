@@ -1085,3 +1085,42 @@ PIPELINE_ARCHITECTURE = {
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Delta Live Tables (DLT) and what problem does it solve?**
+A: Delta Live Tables is a declarative ETL framework on Databricks where you define data transformations as SQL or Python and DLT manages pipeline execution, dependency resolution, data quality enforcement, error handling, and monitoring automatically.
+
+**Q: What is the difference between a Live Table and a Streaming Live Table in DLT?**
+A: A Live Table (materialized view) is computed from a full scan on each pipeline update — suitable for batch transformations. A Streaming Live Table processes new data incrementally using Structured Streaming — suitable for append-only sources and near-real-time pipelines.
+
+**Q: How do you define data quality expectations in DLT?**
+A: Use the `@dlt.expect`, `@dlt.expect_or_drop`, or `@dlt.expect_or_fail` decorators (Python) or `CONSTRAINT` clauses (SQL). These define named quality rules; DLT tracks pass/fail metrics automatically and can drop invalid records, quarantine them, or fail the pipeline based on severity.
+
+**Q: What is the DLT pipeline update mode and what are its types?**
+A: DLT pipelines can run in Development mode (lower cost, looser error handling, verbose logging for testing) or Production mode (restarts on failures, optimized for reliability). Triggered updates run once and stop; Continuous mode keeps the pipeline running for streaming workloads.
+
+**Q: What is the DLT event log and what can you do with it?**
+A: The DLT event log is a Delta table (`system.event_log`) storing detailed pipeline execution events: dataset updates, data quality metrics, error messages, and lineage. You can query it with SQL to build custom monitoring dashboards and audit pipeline behavior.
+
+**Q: How does DLT handle dependencies between tables?**
+A: DLT automatically infers the dependency graph from `LIVE.table_name` references in your dataset definitions. It builds a DAG and executes transformations in the correct order, parallelizing independent branches automatically — no manual dependency declaration needed.
+
+**Q: What is the difference between DLT and dbt?**
+A: dbt is a SQL-centric transformation framework that runs SQL models and tests on existing compute. DLT is a Databricks-native pipeline framework that manages compute, streaming, incremental processing, and quality enforcement as a fully managed service. DLT handles streaming and batch natively; dbt is primarily batch.
+
+**Q: How do you parameterize DLT pipelines?**
+A: Use pipeline configuration parameters defined in the DLT pipeline settings UI or via the REST API (`configuration` block). Access them in Python with `spark.conf.get("parameter_name")` or in SQL with `${parameter_name}`. This enables environment-specific configuration without code changes.
+
+---
+
+## 💼 Interview Tips
+
+- Know when DLT is a better choice than raw PySpark + Airflow: when you want managed infrastructure, built-in quality enforcement, and auto-lineage without custom orchestration code.
+- Be ready to compare DLT with dbt — they often solve overlapping problems but with different philosophies; know the tradeoffs for your target team's tech stack.
+- Show understanding of the `expect` vs. `expect_or_drop` vs. `expect_or_fail` tradeoffs — this demonstrates you understand how to balance pipeline resilience with data quality strictness.
+- Senior interviewers at Databricks shops will probe DLT's streaming vs. batch modes — show you understand when Streaming Live Tables are necessary vs. Live Tables.
+- Mention the DLT event log as a monitoring tool — most candidates know how to build pipelines but fewer know how to operate them in production.
+- Common mistake: assuming DLT replaces all pipeline orchestration needs — it handles within-pipeline dependencies well but external orchestration (cross-pipeline, cross-system) still requires Databricks Workflows or Airflow.

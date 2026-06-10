@@ -523,3 +523,42 @@ def generate_full_audit_report(models: List[tuple], spark) -> dict:
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is data versioning and why is it critical for ML reproducibility?**
+A: Data versioning tracks the exact state of datasets used to train or evaluate models — including schema, content, and lineage. It's critical because the same code on different data produces different models; without data versions you can't reproduce, audit, or roll back experiments.
+
+**Q: How does DVC differ from Git for versioning large datasets?**
+A: Git stores file content in the repository itself, making it unsuitable for large binary files. DVC stores only lightweight metadata (hash pointers) in Git, while actual data lives in remote storage (S3, GCS, Azure Blob). DVC integrates Git workflows for data alongside code.
+
+**Q: What is the difference between dataset versioning and feature store versioning?**
+A: Dataset versioning tracks raw or processed data snapshots. Feature store versioning tracks computed feature values at specific points in time, enabling point-in-time correct training sets and preventing training-serving skew.
+
+**Q: How do you handle schema evolution when versioning datasets?**
+A: Use schema registries (e.g., AWS Glue Schema Registry, Confluent Schema Registry) with compatibility rules (backward, forward, full). Version schema changes independently of data, and run schema validation checks in your pipeline before writing new dataset versions.
+
+**Q: What is data lineage and how does it complement data versioning?**
+A: Data lineage tracks the origin, transformations, and downstream usage of data through the pipeline. It complements versioning by explaining *how* a dataset version was created — enabling impact analysis when upstream data changes.
+
+**Q: How would you version a dataset that is updated incrementally (streaming or daily appends)?**
+A: Use immutable partitions (date-partitioned S3 prefixes) and snapshot the metadata/manifest at each pipeline run. Tools like Delta Lake and Apache Iceberg maintain transaction logs that serve as built-in version history for append-heavy datasets.
+
+**Q: What is training-serving skew in the context of data versioning?**
+A: Training-serving skew occurs when the data distribution or feature computation at serving time differs from what the model was trained on. Data versioning helps prevent this by pinning the exact preprocessing logic and dataset version used for training, making it reproducible at serving time.
+
+**Q: How do you roll back a bad dataset version in production?**
+A: Restore the previous dataset version from your versioned storage (DVC, Delta Lake time travel, Iceberg rollback), re-trigger the training pipeline pinned to the good version, redeploy the resulting model, and add validation checks to prevent recurrence.
+
+---
+
+## 💼 Interview Tips
+
+- Always tie data versioning to concrete problems it solves: reproducibility, auditability, rollback, and compliance — not just "best practice."
+- Mention that versioning data without versioning the preprocessing code that generated it is only half the solution; show you understand end-to-end reproducibility.
+- Senior interviewers expect you to discuss table formats like Delta Lake and Iceberg as first-class versioning solutions for large-scale data, not just DVC for smaller datasets.
+- Bring up training-serving skew unprompted — it signals you've thought about the full ML lifecycle, not just model training.
+- When asked about tooling, discuss tradeoffs: DVC is code-centric and lightweight; Delta Lake/Iceberg are better for large-scale incremental data in data lakehouse architectures.
+- Avoid saying "we just use S3 paths with dates" as a versioning strategy without acknowledging its limitations — interviewers will probe whether you understand atomicity and consistency guarantees.

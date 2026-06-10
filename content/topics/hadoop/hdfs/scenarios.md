@@ -304,3 +304,42 @@ def write_parquet(df, path, target_partitions=None):
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is HDFS and what are its design goals?**
+A: HDFS (Hadoop Distributed File System) is a distributed file system designed for storing very large files across commodity hardware. Its design goals are high throughput sequential reads, fault tolerance through replication, and write-once semantics — not low-latency random access.
+
+**Q: How does HDFS store files?**
+A: Files are split into fixed-size blocks (default 128MB). Each block is replicated (default 3 copies) and distributed across DataNodes. The NameNode maintains the mapping of files to blocks and blocks to DataNodes; DataNodes store the actual block bytes.
+
+**Q: What is the role of a DataNode vs. a NameNode?**
+A: The NameNode is the metadata master — it manages the namespace, tracks block locations, and handles client requests. DataNodes are worker nodes that store block data and periodically send heartbeats and block reports to the NameNode.
+
+**Q: What happens when a DataNode fails?**
+A: The NameNode detects the missing heartbeat and marks the DataNode as dead. It identifies all blocks that were stored there and instructs other DataNodes to replicate those blocks to new nodes, restoring the replication factor automatically.
+
+**Q: What is NameNode High Availability and why is it needed?**
+A: In standard HDFS the NameNode is a single point of failure — if it crashes, the entire cluster is unavailable. HA NameNode runs an active and standby NameNode sharing an edit log via shared storage (NFS or Quorum Journal Manager). ZooKeeper manages automatic failover.
+
+**Q: How does HDFS handle rack awareness?**
+A: HDFS places the first replica on the writer's node, the second on a different rack, and the third on a different node in the second rack (or a third rack). This balances fault tolerance (surviving a rack failure) with write performance (fewer cross-rack hops).
+
+**Q: What is the Balancer in HDFS?**
+A: The HDFS Balancer is a tool that redistributes blocks across DataNodes to equalize disk utilization. It runs as a separate process and moves blocks in the background without interrupting normal operations, useful after adding new nodes to a cluster.
+
+**Q: How does HDFS compare to Amazon S3 for data lake storage?**
+A: HDFS is co-located with compute for data locality, supports low-latency sequential I/O, and requires dedicated hardware. S3 decouples storage from compute, scales independently, costs less for cold storage, but introduces network I/O for compute. Modern pipelines favor S3/GCS/ADLS for flexibility and managed operations.
+
+---
+
+## 💼 Interview Tips
+
+- Be clear that HDFS is designed for throughput, not latency — if an interviewer describes a low-latency random-access use case, explain why HDFS is the wrong choice and suggest HBase or cloud object storage alternatives.
+- Know the NameNode HA architecture in detail — NameNode as SPOF is a classic interview trap; not mentioning HA reveals a gap in production Hadoop knowledge.
+- Discuss block size trade-offs: larger blocks (256MB+) reduce NameNode metadata pressure and improve sequential throughput; smaller blocks increase parallelism for smaller files. Knowing when to tune this shows experience.
+- Connect HDFS to modern cloud architectures — most new data lakes use S3/GCS rather than HDFS; showing you know both and can articulate the migration trade-offs is valued in 2024+ interviews.
+- For senior roles, mention small file problem: millions of small files overwhelm the NameNode's heap (each file requires ~150 bytes of metadata). Solutions include file merging, HAR archives, or using S3 instead.
+- Avoid treating HDFS as a black box — walk through the client write path (client contacts NameNode, gets block locations, writes pipeline to 3 DataNodes) to show you understand the mechanics.

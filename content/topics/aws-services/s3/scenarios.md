@@ -168,3 +168,42 @@ for prefix in prefixes_with_small_files:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Amazon S3 and why is it the foundation of modern data lakes?**
+A: S3 is an object storage service with unlimited capacity, 11 nines of durability, and native integration with virtually every AWS analytics service. It's the data lake foundation because it decouples storage from compute — EMR, Athena, Glue, and Redshift Spectrum all read from S3 independently, enabling a cost-effective, pay-per-query analytics architecture.
+
+**Q: What are S3 storage classes and how do you choose between them?**
+A: S3 Standard is for frequently accessed data; Standard-IA and One Zone-IA for infrequent access with retrieval fees; Glacier Instant Retrieval, Glacier Flexible Retrieval, and Glacier Deep Archive for archival with increasing retrieval times and lower costs. Use S3 Intelligent-Tiering to automatically move objects between tiers based on access patterns when access is unpredictable.
+
+**Q: What is S3 versioning and when should you enable it for data engineering?**
+A: Versioning keeps all versions of an object, enabling recovery from accidental overwrites or deletions. Enable it on data lake raw and curated buckets to protect against ETL bugs that overwrite or corrupt data. Combine with S3 Lifecycle Policies to automatically transition older versions to cheaper storage classes.
+
+**Q: What is S3 Select and Athena — how do they differ?**
+A: S3 Select pushes down simple filter and projection queries into S3 itself, returning a subset of object data. It's useful for single-object queries in Lambda or Glue without loading the full file. Athena is a full SQL query engine that runs across many S3 objects using the Glue Data Catalog — use Athena for cross-object analytical queries.
+
+**Q: What is the S3 consistency model?**
+A: Since December 2020, S3 offers strong read-after-write consistency for all operations (PUT, DELETE, LIST). A successful write is immediately visible to all subsequent reads and list operations — there is no longer an eventual consistency window. This simplifies ETL pipelines that immediately read or list objects after writing.
+
+**Q: How do you optimize S3 for high-throughput data pipelines?**
+A: Use multi-part upload for objects over 100MB (required over 5GB), distribute object keys with high-cardinality prefixes to avoid request rate throttling (S3 scales to 3,500 PUT/s and 5,500 GET/s per prefix), use Transfer Acceleration for cross-region uploads, and use S3 Batch Operations for bulk object processing.
+
+**Q: What is S3 Event Notifications and how is it used in pipelines?**
+A: S3 Event Notifications publish events (ObjectCreated, ObjectRemoved, etc.) to SQS, SNS, Lambda, or EventBridge when objects are created or modified. This enables event-driven pipelines: a file landing in S3 automatically triggers a Lambda function, Glue job, or Step Functions workflow without polling.
+
+**Q: What is S3 Lifecycle Policy?**
+A: Lifecycle Policies automate object transitions between storage classes and expiration. For example: transition raw data to Standard-IA after 30 days, to Glacier after 90 days, and expire after 7 years — fully automating data retention and cost optimization without manual intervention.
+
+---
+
+## 💼 Interview Tips
+
+- Always frame S3 in the context of data lake architecture: it separates storage from compute, enabling multiple analytics engines to query the same data without duplication — this is the foundational design principle interviewers want to hear.
+- Senior interviewers probe partitioning strategy: describe organizing S3 data by `year=/month=/day=/hour=` prefixes so Athena and Glue can prune partitions efficiently. The partition structure determines query performance and cost.
+- Mention the small files problem as a common production pain point: many small S3 files cause slow Athena queries and Glue job overhead. Describe compaction jobs (Glue or Spark) that merge small files into 128MB–1GB Parquet files.
+- Demonstrate security depth: bucket policies restricting access to specific VPC endpoints, Block Public Access enabled, S3 Object Lock for compliance/WORM requirements, and SSE-KMS with customer-managed keys for encryption control.
+- Know the cost implications of S3 request rates: frequent small GET requests on billions of objects can exceed storage costs. Mention caching (CloudFront, ElastiCache) for read-heavy access patterns on S3.
+- Discuss S3 versioning + lifecycle policies together as the data durability and cost management duo — enabling versioning without lifecycle policies causes unbounded storage growth, a common operational mistake.

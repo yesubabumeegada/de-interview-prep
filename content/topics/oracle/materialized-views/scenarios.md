@@ -250,3 +250,40 @@ END;
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is an Oracle Materialized View (MV) and how does it differ from a regular view?**
+A: A Materialized View stores the result of a query physically on disk, unlike a regular view which re-executes the query each time. MVs can be refreshed on demand or automatically, enabling pre-aggregated or pre-joined data to be served instantly—ideal for expensive analytics queries.
+
+**Q: What are the MV refresh modes available in Oracle?**
+A: COMPLETE (truncate and re-populate from scratch), FAST (incremental using MV logs—only changed rows are applied), FORCE (Oracle chooses FAST if possible, falls back to COMPLETE), and NEVER (no automatic refresh). FAST refresh is preferred for performance but has structural requirements.
+
+**Q: What must exist for FAST refresh to work?**
+A: The base tables must have Materialized View Logs (MVIEW LOG ON table) that capture changes via rowid or primary key. The query must follow fast-refresh restrictions: no non-aggregated subqueries, all joins must include rowid or key columns, and aggregates must be SUM/COUNT (not arbitrary functions).
+
+**Q: What is Query Rewrite and how does it benefit application performance transparently?**
+A: Query Rewrite allows Oracle's optimizer to automatically rewrite a user SQL query to use an MV instead of scanning base tables—without changing application code. It requires the MV to be enabled for query rewrite (`ENABLE QUERY REWRITE` clause) and the optimizer to determine it is equivalent and cheaper.
+
+**Q: What is `DBMS_MVIEW.EXPLAIN_REWRITE` used for?**
+A: It diagnoses why a query was or was not rewritten to use an MV. It outputs messages explaining eligibility checks—useful when you expect query rewrite to fire but it does not, e.g., the MV is not fresh enough or the query has a construct not covered by the MV.
+
+**Q: What is the REFRESH ON COMMIT option and when is it appropriate?**
+A: With `REFRESH ON COMMIT`, the MV is updated synchronously every time a DML transaction on the base table commits. It keeps the MV always fresh but adds latency to every commit—only appropriate for small, infrequently updated tables where stale reads are unacceptable.
+
+**Q: How do partitioned Materialized Views improve manageability?**
+A: A partitioned MV (or MV over a partitioned base table) allows partition-wise refresh—only the changed partitions are refreshed rather than the full MV. This drastically reduces refresh time for large historical datasets where only the most recent partition changes.
+
+**Q: What are MV refresh groups and why are they useful?**
+A: A refresh group (`DBMS_REFRESH`) bundles multiple MVs that must be refreshed atomically and consistently together. This ensures that queries across related MVs see a consistent point-in-time snapshot—critical for dashboards that join multiple pre-aggregated MVs.
+
+---
+
+## 💼 Interview Tips
+
+- Always distinguish COMPLETE vs. FAST refresh trade-offs: FAST is incremental and faster but requires MV logs and has query restrictions; COMPLETE is simpler but can take hours on large datasets.
+- Know the FAST refresh restrictions cold—interviewers commonly ask why an MV cannot use FAST refresh and the answer is usually a missing MV log, a DISTINCT in the query, or an unsupported aggregate.
+- Senior interviewers love Query Rewrite: explain that it is a transparent optimizer feature, enabling you to add MVs as performance patches without touching application code—a powerful operational benefit.
+- Demonstrate production awareness: MV logs consume space proportional to the change volume between refreshes. In high-DML environments, unrefreshed MV logs can grow enormously—monitor `USER_MVIEW_LOGS` regularly.
+- Connect MVs to modern patterns: Oracle Autonomous Database and Exadata both use MVs with Query Rewrite heavily for analytics acceleration, making this a highly relevant topic for cloud-era Oracle roles.

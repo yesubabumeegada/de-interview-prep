@@ -223,3 +223,41 @@ ALTER DATABASE weather ENABLE REPLICATION TO ACCOUNTS
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Snowflake Secure Data Sharing and how does it work?**
+A: Secure Data Sharing allows a Snowflake account to share live data objects (tables, views, UDFs) with other Snowflake accounts without copying or moving data. The provider creates a share and grants object access; the consumer creates a database from that share and queries the provider's storage directly, always seeing live data.
+
+**Q: What is a Data Exchange in Snowflake?**
+A: A Data Exchange is a private hub where organizations can share and discover data sets within a defined group of Snowflake accounts—like a private version of the Snowflake Marketplace. Companies use it to share data with partners, subsidiaries, or customers in a governed, controlled environment.
+
+**Q: What is the Snowflake Marketplace?**
+A: The Snowflake Marketplace is a public catalog of third-party datasets (weather, financial, demographic, etc.) that Snowflake customers can access directly within their account. Providers publish live datasets; consumers subscribe and query the data without ingestion, ETL, or data movement.
+
+**Q: What are the network and region constraints on Snowflake data sharing?**
+A: Data sharing is most seamless within the same cloud region and provider. Cross-region or cross-cloud sharing requires replicating the shared database to the consumer's region using database replication, which adds latency and cost. Snowflake's "auto-fulfillment" feature automates cross-region replication for Marketplace listings.
+
+**Q: How does Snowflake handle access control for shared data?**
+A: The provider grants specific privileges (SELECT on tables, USAGE on schemas) to the share. The consumer can only access what the provider explicitly grants. Row-level security and column masking policies defined on the provider side are enforced for the consumer as well, ensuring governance policies travel with the data.
+
+**Q: What is a Reader Account and when is it used?**
+A: A Reader Account is a Snowflake account created and managed by the data provider for consumers who don't have their own Snowflake account. The provider pays for the Reader Account's compute. This enables sharing data with external parties (e.g., customers) who don't have Snowflake subscriptions.
+
+**Q: What are the cost implications of data sharing for the provider and consumer?**
+A: The provider pays for storage. The consumer pays for the compute (virtual warehouse) used to query the share. There is no data transfer charge between same-region accounts because no data moves—the consumer queries the provider's storage directly through Snowflake's metadata layer.
+
+**Q: What is a Snowflake Listing and how does it extend data sharing?**
+A: A Listing is the packaging of a share with a title, description, documentation, and pricing (free or paid). Providers publish listings to the Marketplace or a Data Exchange. It's the commercial and discovery layer on top of the underlying share mechanism, enabling monetization and self-service access.
+
+---
+
+## 💼 Interview Tips
+
+- Emphasize the "no data movement" architecture as the core differentiator—traditional data sharing copies data, creating sync issues and security risks. Snowflake's model avoids both.
+- Bring up governance: row-level security and dynamic data masking policies defined by the provider are enforced for the consumer. This is critical for compliance use cases and interviewers at regulated industries will appreciate the detail.
+- When discussing cross-region sharing, mention the replication trade-off honestly—it's the one case where data does move, and there's cost and freshness lag. Showing awareness of limitations is more credible than overselling.
+- Senior interviewers may ask about monetizing data products. Frame listings and the Marketplace as a go-to-market capability, not just a technical feature—this bridges DE and business value.
+- Avoid confusing Secure Data Sharing with database replication—they serve different purposes. Sharing gives access to live data; replication copies data for HA/DR or cross-region availability.

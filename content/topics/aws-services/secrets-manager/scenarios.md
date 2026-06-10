@@ -269,3 +269,42 @@ events.put_rule(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is AWS Secrets Manager and how does it differ from SSM Parameter Store?**
+A: Secrets Manager is purpose-built for secret storage with built-in automatic rotation, cross-account access, and a higher cost per secret (~$0.40/month). SSM Parameter Store is a general configuration and secret store — SecureString parameters use KMS encryption. Use Secrets Manager when you need automatic rotation; use Parameter Store for non-rotating config values and cost-sensitive scenarios.
+
+**Q: How does Secrets Manager automatic rotation work?**
+A: Rotation uses a Lambda function (provided by AWS for supported databases or custom for others) that: creates a new secret version, updates the credentials in the target system (e.g., RDS password), tests the new credentials, and marks the new version as AWSCURRENT. The old version becomes AWSPREVIOUS and is retained briefly for in-flight connections.
+
+**Q: What is the Secrets Manager caching best practice for Lambda functions?**
+A: Calling `GetSecretValue` on every Lambda invocation adds latency and API cost. Use the AWS Secrets Manager Lambda Extension or the Secrets Manager caching client library to cache secrets in memory. The extension caches secrets for a configurable TTL, reducing API calls to Secrets Manager while keeping credentials current.
+
+**Q: How do you reference Secrets Manager secrets in CloudFormation or ECS task definitions?**
+A: In ECS task definitions, reference secrets using the ARN or name of the secret in the `secrets` block — ECS injects them as environment variables at container start. In CloudFormation, use dynamic references (`{{resolve:secretsmanager:MySecret:SecretString:username}}`) to inject secret values at stack deployment time.
+
+**Q: What IAM permissions are needed to access a secret?**
+A: The calling principal needs `secretsmanager:GetSecretValue` on the specific secret ARN. If the secret is encrypted with a customer-managed KMS key (not the default), the principal also needs `kms:Decrypt` on that key. Resource-based policies on the secret can grant cross-account access.
+
+**Q: How do you enable cross-account secret access?**
+A: Attach a resource-based policy to the secret allowing the principal from the other account (`sts:AssumeRole` or a specific role ARN) to call `GetSecretValue`. The cross-account role must also have IAM permissions to call `GetSecretValue`. If using a CMK, share KMS key access across accounts as well.
+
+**Q: What is the difference between AWSCURRENT, AWSPENDING, and AWSPREVIOUS secret versions?**
+A: During rotation, Secrets Manager uses staging labels: AWSPENDING (new credentials being rotated in), AWSCURRENT (active credentials), and AWSPREVIOUS (previous credentials, retained briefly for graceful cutover). Applications should always retrieve AWSCURRENT; the rotation Lambda manages label transitions.
+
+**Q: How do you audit secret access in Secrets Manager?**
+A: All Secrets Manager API calls are logged in AWS CloudTrail — including `GetSecretValue`, `PutSecretValue`, `RotateSecret`, and `DeleteSecret`. Set up CloudWatch alarms on unusual access patterns (e.g., unexpected `GetSecretValue` calls from unknown principals) for security monitoring.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the core principle: never store credentials in code, environment variables (in plaintext), or configuration files — Secrets Manager and SSM Parameter Store exist to externalize and manage secrets securely.
+- Know the Secrets Manager vs. Parameter Store decision criteria cold: rotation built-in → Secrets Manager; static config/non-rotating values → Parameter Store SecureString (cheaper); need cross-account secret sharing → Secrets Manager.
+- Senior interviewers probe rotation implementation: describe the four-phase rotation Lambda (create, set, test, finish) and explain why AWSPREVIOUS is retained — to handle in-flight connections still using the old password during the cutover window.
+- Mention the Lambda Extension for caching as a production best practice: calling `GetSecretValue` on every Lambda invocation adds 10-50ms latency and unnecessary API cost — caching is essential for high-throughput functions.
+- Demonstrate security awareness: discuss the blast radius of a compromised secret and how automatic rotation limits the exposure window — a 30-day rotation cycle means a leaked credential is valid for at most 30 days.
+- Avoid the anti-pattern of logging secret values: CloudTrail logs API calls but not secret contents. However, ensure your application code never logs retrieved secret values — a common accidental credential exposure vector.

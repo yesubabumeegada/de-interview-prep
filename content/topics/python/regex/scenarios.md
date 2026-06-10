@@ -418,3 +418,41 @@ print(f"Coverage: {coverage['payment-api']['coverage_pct']}%")
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between `re.match`, `re.search`, and `re.fullmatch`?**
+A: `re.match` checks for a match only at the beginning of the string. `re.search` scans through the string for the first occurrence anywhere. `re.fullmatch` requires the entire string to match the pattern. For parsing log lines or validating full field values, `re.fullmatch` or `re.search` with anchors (`^`, `$`) is typically correct.
+
+**Q: What is a compiled regex pattern and why should you compile patterns used repeatedly?**
+A: `re.compile(pattern)` pre-compiles the pattern to a regex object. Reusing the compiled object avoids re-parsing and compiling the pattern on every call—in a loop over millions of records this is a meaningful speedup. Always compile patterns that are used in hot paths.
+
+**Q: What are non-capturing groups `(?:...)` and when do you use them?**
+A: Non-capturing groups group a sub-pattern for quantifier or alternation purposes without creating a backreference. Use them when you need grouping but do not need to extract the matched text. They are faster than capturing groups because the engine does not store the match.
+
+**Q: What is a named group in Python regex?**
+A: `(?P<name>pattern)` creates a named capturing group. Access it with `match.group('name')` or `match.groupdict()`. Named groups make regex code self-documenting—`match.group('date')` is far clearer than `match.group(3)`, especially in complex patterns with many groups.
+
+**Q: What is the difference between greedy and non-greedy (lazy) quantifiers?**
+A: Greedy quantifiers (`*`, `+`, `?`) match as many characters as possible. Lazy quantifiers (`*?`, `+?`, `??`) match as few as possible. In HTML or JSON parsing, `<.*>` greedily matches the longest possible string between `<` and `>`, consuming multiple tags. `<.*?>` matches the shortest—the first complete tag.
+
+**Q: How do you extract all matches from a string (not just the first)?**
+A: Use `re.findall(pattern, string)` (returns a list of strings or tuples for groups) or `re.finditer(pattern, string)` (returns an iterator of match objects—preferred for large strings to avoid building a list of all matches in memory).
+
+**Q: What regex flags are commonly used and what do they do?**
+A: `re.IGNORECASE` (case-insensitive matching), `re.MULTILINE` (`^` and `$` match start/end of each line rather than the whole string), `re.DOTALL` (`.` matches newline characters), `re.VERBOSE` (allows whitespace and comments in the pattern for readability). Combine with `|`: `re.IGNORECASE | re.MULTILINE`.
+
+**Q: How would you use regex to extract structured fields from a log line in a DE pipeline?**
+A: Define a compiled named-group pattern matching the log format. Use `re.fullmatch` or `re.search` per line. Use `match.groupdict()` to get all fields as a dict, then feed into a Pandas DataFrame or database insert. Handle `None` match (malformed line) with a warning and route to a dead-letter queue.
+
+---
+
+## 💼 Interview Tips
+
+- Practice writing regex patterns under interview pressure: log line parsing, email/IP/date extraction, and URL parsing are the most common DE scenarios. Have these patterns memorized or be able to build them quickly.
+- Named groups are a strong signal of regex maturity—always use them for patterns with more than 2 groups. `match.groupdict()` as a clean record extraction mechanism impresses interviewers.
+- Mention `re.compile` for hot paths. Many candidates write `re.search(pattern, line)` inside a loop over millions of lines—explain why pre-compiling outside the loop is important.
+- Senior interviewers may ask about regex performance pathology: catastrophic backtracking with nested quantifiers (e.g., `(a+)+`). Know this exists and know that atomic groups or possessive quantifiers (not supported natively in Python re, but available in `regex` package) address it.
+- Know when NOT to use regex: parsing nested structures (JSON, XML, HTML) with regex is error-prone and unmaintainable—use `json.loads`, `xml.etree`, or `BeautifulSoup`. Regex is for flat line patterns, not hierarchical structures.

@@ -188,3 +188,41 @@ def handle_profile_drift(col: str, metric: str, old_val: float, new_val: float):
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is data profiling and what is its purpose?**
+A: Data profiling is the process of examining a dataset to collect statistics and metadata that describe its structure, content, and quality. Its purpose is to understand the data before building pipelines, identify quality issues early, and inform modeling decisions.
+
+**Q: What metrics are typically collected during data profiling?**
+A: Common metrics include row count, column-level null rate, cardinality (distinct value count), min/max/mean/median/stddev for numerics, most frequent values, pattern analysis for strings, referential integrity checks, and duplicate detection.
+
+**Q: What is the difference between data profiling and data validation?**
+A: Data profiling is exploratory and descriptive — it answers "what does this data look like?" Data validation is assertive — it tests whether data meets specific expectations (e.g., "null rate must be < 1%"). Profiling informs what validations to write.
+
+**Q: How does data profiling fit into the ETL development lifecycle?**
+A: Profiling happens before pipeline design to understand source data characteristics, before go-live to establish baseline quality metrics, and continuously in production to detect drift. It prevents the common mistake of building pipelines on assumptions that turn out to be wrong.
+
+**Q: What tools are commonly used for data profiling in data engineering?**
+A: Apache Griffin, Great Expectations (profiling module), dbt-profiler, Pandas Profiling (ydata-profiling), Soda, and cloud-native options like AWS Glue DataBrew and Google Cloud Dataplex all support data profiling at various scales.
+
+**Q: What is column-level profiling and what does it reveal?**
+A: Column-level profiling analyzes each column independently: data type, null rate, unique values, value distribution, min/max, pattern matching (e.g., email format), and outlier detection. It reveals type mismatches, unexpected nulls, domain violations, and cardinality surprises.
+
+**Q: How do you profile data at scale in a distributed environment?**
+A: Use distributed compute (Spark, BigQuery) to compute profiling statistics in parallel across partitions. Pre-aggregate to summary statistics rather than collecting raw samples, and schedule profiling jobs to run after each pipeline execution to track changes over time.
+
+**Q: What is data drift and how does profiling help detect it?**
+A: Data drift occurs when the statistical properties of data change over time (e.g., a new value appears in a categorical column, or a numeric distribution shifts). Continuous profiling with historical comparison detects drift before it causes downstream model or pipeline failures.
+
+---
+
+## 💼 Interview Tips
+
+- Emphasize that profiling is not a one-time activity — continuous profiling in production is what catches drift and silent data quality degradation.
+- Be ready to describe a real profiling workflow: what you would profile first for a new data source, and how you would use the results to write validation rules.
+- Senior interviewers want to hear about scale: how would you profile a 10TB table efficiently without full table scans on every run?
+- Avoid treating profiling as purely a pre-project activity — the most impactful use is ongoing production monitoring integrated with alerting.
+- Connect profiling to ML pipelines specifically: feature drift detected through profiling is critical for maintaining model performance in production.
+- Know at least one profiling tool in depth — showing familiarity with ydata-profiling for exploration and Great Expectations for production validation is a strong combination.

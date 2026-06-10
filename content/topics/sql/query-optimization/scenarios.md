@@ -565,3 +565,41 @@ SELECT * FROM mv_executive_dashboard WHERE hour >= NOW() - INTERVAL '24 hours';
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the first step in diagnosing a slow SQL query?**
+A: Run EXPLAIN ANALYZE (PostgreSQL) or examine the query profile/execution plan in your database's tooling (Snowflake query profile, Redshift EXPLAIN). Identify the highest-cost or longest-running node in the plan—whether it's a full table scan, a sort, a hash join spilling to disk, or a network shuffle—before making any changes.
+
+**Q: What is predicate pushdown and why does it matter?**
+A: Predicate pushdown moves filter conditions as early as possible in the execution plan—ideally to the scan level—so fewer rows flow through subsequent operations. Databases do this automatically, but writing queries with filters on base tables (not on outer query results) helps the optimizer apply them effectively.
+
+**Q: What are the main causes of full table scans in OLTP databases?**
+A: Missing or unused indexes, low-selectivity filter columns, functions applied to indexed columns preventing index use (e.g., `WHERE UPPER(name) = 'ALICE'` instead of storing names in normalized case), implicit type conversions causing index mismatches, and optimizer statistics being stale.
+
+**Q: What is the N+1 query problem and how do you fix it?**
+A: The N+1 problem occurs when an application executes 1 query to fetch N records, then N additional queries to fetch related data for each record (e.g., fetching each user's orders separately). Fix it with a JOIN or a batch query that retrieves all related data in one round-trip.
+
+**Q: What is the difference between WHERE and HAVING for filtering?**
+A: WHERE filters rows before aggregation and can use indexes—apply filters here whenever possible. HAVING filters after aggregation and is necessary only when filtering on aggregate values (e.g., `HAVING COUNT(*) > 10`). Using HAVING to filter non-aggregate columns is a performance anti-pattern.
+
+**Q: What is a sargable predicate and why does it matter for index usage?**
+A: A SARG-able (Search ARGument-able) predicate is one that allows the database to use an index (=, >, <, BETWEEN, LIKE 'prefix%'). Non-sargable predicates prevent index use: functions on the indexed column (`WHERE YEAR(date_col) = 2024`), leading wildcards (`WHERE name LIKE '%smith'`), and OR conditions across different columns.
+
+**Q: What is query rewriting for optimization?**
+A: Query rewriting transforms a logically equivalent query into one the optimizer can execute more efficiently. Common rewrites: replacing `NOT IN` with `NOT EXISTS` (safer with NULLs, often faster), replacing correlated subqueries with JOINs, adding LIMIT to probe queries, or pre-filtering with a CTE before joining.
+
+**Q: How do you optimize a query that aggregates over billions of rows?**
+A: Pre-aggregate at ingestion time (summary tables or materialized views), use partitioning to prune data before aggregation, use approximate aggregation functions (`APPROX_COUNT_DISTINCT`, HyperLogLog) when exactness isn't required, and choose the right warehouse/cluster size to parallelize the aggregation effectively.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with measurement: always start query optimization by profiling what's actually slow, not guessing. Interviewers who have debugged production queries respect the diagnosis-first mindset.
+- Know sargability cold. "WHERE YEAR(date_col) = 2024 prevents index use; use `WHERE date_col BETWEEN '2024-01-01' AND '2024-12-31'` instead" is exactly the kind of precise, practical answer that impresses interviewers.
+- Connect optimization to business impact—"This query ran for 45 minutes and was blocking the nightly report. After adding a composite index and rewriting the HAVING clause, it runs in 30 seconds"—is more memorable than abstract optimization theory.
+- Senior interviewers want to hear about the full lifecycle: profiling the slow query, forming a hypothesis, applying one change at a time, and measuring the impact. Changing five things at once and declaring success is not good engineering.
+- Mention that over-optimization can be harmful—an index that helps one query may hurt write performance across the table. Always validate optimization decisions against the full workload, not just the single slow query.

@@ -460,3 +460,41 @@ SELECT sensor_id, temperature FROM sensor_latest WHERE temperature > 100;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a database index and how does it speed up queries?**
+A: An index is a data structure (typically a B-tree) that maintains a sorted copy of one or more columns along with pointers to the full row. By traversing the B-tree, the database finds matching rows in O(log n) time instead of scanning the entire table in O(n) time.
+
+**Q: What is the difference between a clustered and a non-clustered index?**
+A: A clustered index defines the physical order of rows on disk—there can be only one per table (in SQL Server/MySQL InnoDB, the primary key is the clustered index by default). A non-clustered index is a separate structure with pointers back to the heap or clustered index; multiple non-clustered indexes can exist per table.
+
+**Q: What is index selectivity and why does it matter?**
+A: Selectivity measures the ratio of distinct values to total rows. High-selectivity indexes (e.g., user_id, email) return few rows per lookup—efficient. Low-selectivity indexes (e.g., a boolean flag or status with 3 values) return many rows and may cause the optimizer to prefer a full table scan. Indexes on low-selectivity columns are often counterproductive.
+
+**Q: What is a composite index and what is the leading column rule?**
+A: A composite index covers multiple columns (e.g., `(a, b, c)`). The leading column rule states that the index can only be used efficiently if the query includes the leftmost column(s) of the index. A query filtering only on `b` cannot use the `(a, b, c)` index for a range scan from the left.
+
+**Q: What is a covering index?**
+A: A covering index includes all columns referenced in a query (SELECT, WHERE, JOIN) so the database can satisfy the entire query from the index without accessing the table data. This eliminates the "heap fetch" step, significantly reducing I/O for read-heavy queries.
+
+**Q: What is an index scan vs. an index-only scan vs. a bitmap index scan?**
+A: An index scan traverses the index and fetches each matching row from the table (heap). An index-only scan satisfies the query entirely from the index (covering index). A bitmap index scan builds a bitmap of matching row locations from the index, then fetches rows in batch—efficient when the filter matches many rows across many pages.
+
+**Q: When should you NOT add an index?**
+A: Avoid indexes on low-selectivity columns, on tables that are write-heavy (each DML statement must update all indexes), on very small tables (full scan is faster than index traversal), and on columns never used in WHERE/JOIN/ORDER BY clauses. Unused indexes add write overhead and storage cost with no query benefit.
+
+**Q: What is index bloat and how do you manage it?**
+A: Index bloat occurs when DELETE and UPDATE operations leave dead entries in the index (in PostgreSQL, MVCCs create dead tuples). Over time this grows index size and degrades performance. In PostgreSQL, VACUUM reclaims dead space; `REINDEX` rebuilds the index entirely. Monitor bloat with pg_stat_user_indexes and schedule maintenance accordingly.
+
+---
+
+## 💼 Interview Tips
+
+- Always frame index recommendations with a specific query pattern in mind—never recommend an index without explaining which query it helps and what the selectivity is. Indexes for their own sake are a red flag.
+- Know the composite index leading column rule deeply: it's tested in almost every senior SQL interview. Be ready to explain why `(a, b)` helps `WHERE a = 1 AND b = 2` but not `WHERE b = 2` alone.
+- Discuss the write penalty explicitly. Interviewers at write-heavy (event ingestion, OLTP) shops will probe whether you understand that indexes slow down INSERT/UPDATE/DELETE—optimizing for reads always has a write cost.
+- Bring up covering indexes as a practical optimization: choosing to include extra columns in an index to avoid heap fetches is a concrete technique that shows production experience.
+- Senior interviewers want to hear about index maintenance: bloat, VACUUM, REINDEX, and monitoring unused indexes (pg_stat_user_indexes). Indexes degrade without maintenance and many teams neglect this.

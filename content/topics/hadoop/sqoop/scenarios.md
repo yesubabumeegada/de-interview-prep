@@ -365,3 +365,42 @@ Rollback: Revert feature flag → Oracle is untouched, no data loss
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Apache Sqoop and what is it used for?**
+A: Sqoop is a tool for bulk data transfer between Hadoop (HDFS, Hive, HBase) and relational databases (MySQL, PostgreSQL, Oracle, SQL Server). It uses JDBC to parallelize imports and exports using MapReduce tasks.
+
+**Q: How does Sqoop parallelize data imports?**
+A: Sqoop splits the import by dividing the source table's primary key (or a specified split column) into N equally-sized ranges and launches N parallel Map tasks, each responsible for importing one range. This parallelizes the JDBC reads across multiple connections.
+
+**Q: What is the difference between Sqoop import and Sqoop export?**
+A: `sqoop import` reads data from a relational database and writes it to HDFS, Hive, or HBase. `sqoop export` reads data from HDFS and writes it back to a relational database table. Exports are typically used to push processed results from Hadoop back to operational systems.
+
+**Q: How does Sqoop support incremental imports?**
+A: Sqoop's `--incremental append` mode imports only rows where a specified column (e.g., id or created_at) is greater than the last imported value (stored in a saved job's metadata). `--incremental lastmodified` imports rows where a timestamp column is newer than the last run.
+
+**Q: What are Sqoop saved jobs?**
+A: Saved jobs store Sqoop command configurations (connection URL, credentials, table, incremental parameters) in a local metastore. Running a saved job re-executes the stored configuration, automatically updating the incremental watermark after each successful run.
+
+**Q: What are the challenges of Sqoop exports?**
+A: Exports are not atomic — multiple parallel Map tasks write to the target table simultaneously, so a partial failure leaves the table in an inconsistent state. Workarounds include writing to a staging table first and swapping, or using `--staging-table` option.
+
+**Q: How does Sqoop handle special characters and NULL values?**
+A: Sqoop provides options like `--null-string`, `--null-non-string`, `--escaped-by`, and `--enclosed-by` to handle NULL representations and special delimiter characters in the exported files. Mismatch of these settings between import and export is a common source of data corruption bugs.
+
+**Q: What has largely replaced Sqoop in modern data architectures?**
+A: Cloud-native ingestion tools have largely replaced Sqoop: AWS Database Migration Service (DMS), Fivetran, Airbyte, and cloud-native JDBC connectors in Spark or Glue. Sqoop is still found in legacy Hadoop environments but is not developed actively.
+
+---
+
+## 💼 Interview Tips
+
+- Know Sqoop's parallelization mechanism (split-by primary key) and its limitation — if the split column is skewed or non-numeric, you may need `--split-by` with a custom column or reduce mappers to avoid imbalanced tasks.
+- Mention the export atomicity problem proactively — it's the most common Sqoop production pitfall and discussing the staging table workaround shows real operational experience.
+- Frame Sqoop as legacy knowledge — most modern data platforms have replaced it with CDC (Debezium), managed connectors (Fivetran), or Spark JDBC. Show you know both the tool and its modern alternatives.
+- Discuss incremental import watermark management: Sqoop stores the last imported value in its metastore, but if the metastore is lost, you must reset it manually — a common operational headache worth mentioning.
+- For senior roles, discuss performance tuning: increasing `--num-mappers`, using `--fetch-size` to control JDBC batch sizes, and choosing a well-indexed split column to avoid full table scans on the source.
+- If asked about Sqoop vs. CDC, articulate the difference: Sqoop is bulk batch import; CDC captures row-level changes in real time. Sqoop is appropriate for initial historical loads; CDC handles ongoing replication.

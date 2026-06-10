@@ -205,3 +205,41 @@ validator.assert_all_passed()  # Raises if any check fails
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between `.loc` and `.iloc` in Pandas?**
+A: `.loc` is label-based indexing—it uses the index label and column name to select data. `.iloc` is integer position-based—it uses 0-based integer positions regardless of index labels. Use `.loc` when you want to select by meaningful labels; use `.iloc` for positional slicing. Mixing them up when the index is non-integer causes subtle bugs.
+
+**Q: How do you efficiently apply a function to a DataFrame column?**
+A: In order of preference: (1) Vectorized Pandas/NumPy operations (`df['col'] * 2`), (2) `.str`/`.dt` accessor methods, (3) `.map()` for element-wise transforms using a dict or function, (4) `.apply()` with `axis=0/1`. Avoid `.apply()` in hot paths—it executes a Python loop under the hood and is 10–100x slower than vectorized operations.
+
+**Q: What is the difference between `merge` and `join` in Pandas?**
+A: `merge` is the general SQL-style join on arbitrary columns (`pd.merge(left, right, on='key', how='left')`). `join` is a convenience method that joins on the index by default (`df1.join(df2, on='key')`). `merge` is more explicit and flexible; `join` is concise when joining on indices. Both support inner, left, right, and outer joins.
+
+**Q: How do you handle memory efficiently when processing a large CSV with Pandas?**
+A: Use `pd.read_csv(path, chunksize=N)` to read in chunks (returns an iterator), specify `dtype` to avoid default object inference (e.g., `{'id': 'int32', 'amount': 'float32'}`), and use `usecols` to read only needed columns. For very large files, prefer Polars or Dask for out-of-core processing.
+
+**Q: What is `groupby` with `transform` vs. `agg` and when do you use each?**
+A: `agg` reduces groups to one row per group (produces a smaller DataFrame). `transform` returns a Series with the same index as the original DataFrame, broadcasting the group result back to each row. Use `transform` to add a group-level statistic (e.g., group mean) as a new column alongside the original data—without losing any rows.
+
+**Q: How do you handle missing values in Pandas?**
+A: Detect with `df.isna()` / `df.notna()`. Remove with `df.dropna(subset=['col'])`. Fill with `df.fillna(value)`, `df.fillna(method='ffill')` (forward fill), or `df.fillna(method='bfill')`. For imputation in ML pipelines, prefer sklearn's `SimpleImputer` over manual fillna to ensure train/test consistency.
+
+**Q: What is `pd.Categorical` and when does it save memory?**
+A: `pd.Categorical` stores a column of repeated string values as integer codes mapped to a category dictionary, rather than storing the full string for every row. For a column with 10 unique values in 10 million rows, Categorical uses ~40 MB instead of ~800 MB. Use for low-cardinality string columns (status, region, category).
+
+**Q: What is the difference between `copy()` and a view in Pandas and why does the `SettingWithCopyWarning` appear?**
+A: A slice of a DataFrame may return a view (same underlying data) or a copy (new data)—behavior depends on internal layout. Modifying a view changes the original DataFrame; modifying a copy does not. The `SettingWithCopyWarning` fires when Pandas detects you may be setting values on a copy. Always use `.copy()` explicitly after chained indexing to make intent clear, or use `.loc` to set values directly.
+
+---
+
+## 💼 Interview Tips
+
+- Vectorization is the first Pandas performance principle—always attempt vectorized operations before reaching for `.apply()`. Being able to articulate why `.apply()` is slow (Python interpreter loop, no C-level batch execution) impresses interviewers.
+- Know the memory optimization toolkit: `dtype` specification, `Categorical`, `usecols`, and `chunksize`. For a "how would you process a 50 GB CSV?" question, walk through each tool in order.
+- The `SettingWithCopyWarning` is a common gotcha in production code. Explain it clearly—it shows you understand Pandas' copy vs. view semantics, which is a genuine source of bugs in pipelines.
+- Senior interviewers ask when to move beyond Pandas: single-machine, in-memory datasets fit Pandas; multi-node or out-of-core needs Dask, Polars (single-machine but faster), or PySpark. Show you know the boundary.
+- Connect Pandas to DE pipelines: Pandas is the lingua franca for data manipulation in Python, but production DE pipelines should validate data with Pydantic/Great Expectations, log record counts, and handle exceptions per-chunk rather than loading everything then crashing.

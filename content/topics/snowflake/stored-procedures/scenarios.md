@@ -211,3 +211,41 @@ $$;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are Snowflake Stored Procedures and how do they differ from UDFs?**
+A: Stored Procedures contain procedural logic (IF/ELSE, loops, exception handling, multi-statement SQL) and can execute DDL/DML statements. UDFs are stateless scalar or tabular functions that return values and can be called within SQL expressions. Stored Procedures are used for orchestration and data manipulation; UDFs for computation within queries.
+
+**Q: What languages can be used to write Snowflake Stored Procedures?**
+A: Snowflake supports JavaScript (original), Snowflake Scripting (SQL-based procedural language), Python, Java, and Scala for stored procedures. Snowflake Scripting is now the recommended approach for most use cases due to its SQL-native syntax and lower learning curve.
+
+**Q: What is Snowflake Scripting and what control structures does it support?**
+A: Snowflake Scripting is a procedural SQL extension that adds IF/ELSE, CASE, FOR/WHILE loops, LOOP with EXIT, BEGIN/EXCEPTION/END blocks, and variable declarations to standard SQL. It runs natively in Snowflake without a JavaScript runtime, making it the simplest option for SQL-familiar data engineers.
+
+**Q: What are the caller's rights vs. owner's rights stored procedures?**
+A: Owner's rights procedures execute with the privileges of the procedure owner (the role that created it), not the caller. This allows granting controlled access to operations (e.g., INSERT into a table) without granting the caller direct table privileges. Caller's rights procedures execute with the caller's privileges, more restrictive but more transparent.
+
+**Q: How do you pass parameters to and return values from a Snowflake Stored Procedure?**
+A: Parameters are declared with name and type in the CREATE PROCEDURE signature. Return values are specified with a RETURNS clause (scalar type, table, or VARIANT). Inside Snowflake Scripting, use RETURN statement; in JavaScript, use `return`. Table-valued results use RETURNS TABLE(...).
+
+**Q: What is exception handling in Snowflake Stored Procedures?**
+A: Snowflake Scripting supports BEGIN ... EXCEPTION WHEN <error_code> THEN ... END blocks. You can catch specific SQLSTATE codes or use WHEN OTHER to handle unexpected errors. This enables robust error logging, compensating transactions, and graceful degradation within pipeline procedures.
+
+**Q: How do you call one Stored Procedure from another in Snowflake?**
+A: In Snowflake Scripting, use CALL inside the procedure body: `CALL my_other_proc(arg1, arg2)`. Return values can be captured into variables. This enables modular pipeline orchestration entirely within Snowflake without external orchestration tools.
+
+**Q: What are the limitations of Snowflake Stored Procedures for ETL orchestration?**
+A: Stored procedures lack native scheduling (you need Tasks for that), don't support parallel execution within a single procedure, have limited observability compared to dedicated orchestration tools like Airflow or dbt, and are harder to test and version-control than Python/SQL scripts. They're best for encapsulating logic, not replacing a full orchestration layer.
+
+---
+
+## 💼 Interview Tips
+
+- Know when NOT to use stored procedures: for complex DAG-based pipeline orchestration, Airflow or dbt provides better observability, testability, and version control. Stored procedures shine for self-contained operational logic.
+- Explain caller's rights vs. owner's rights concisely—it's a common interview question and the security implications (privilege escalation control) are the key point, not just the technical difference.
+- Mention Snowflake Scripting as the modern recommended approach for new procedures. If you mention JavaScript procedures, acknowledge they're the legacy approach and Scripting has largely superseded them.
+- Show that you understand testing challenges: stored procedures are harder to unit test than Python functions. Bring up strategies like parameterized test schemas, rollback-based testing, and integration testing via CI.
+- Senior interviewers will probe error handling—always discuss exception blocks and how you'd log errors (e.g., writing to an audit/error table within the exception handler) to enable post-mortem debugging.

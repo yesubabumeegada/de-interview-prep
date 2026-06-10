@@ -434,3 +434,42 @@ oozie sla -oozie http://oozie-host:11000/oozie \
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Apache Oozie and what is it used for?**
+A: Oozie is a workflow scheduler for Hadoop that orchestrates sequences of MapReduce, Hive, Pig, Spark, and shell jobs. It manages job dependencies, scheduling, and retries, similar to Airflow but tightly integrated with the Hadoop ecosystem.
+
+**Q: What is the difference between an Oozie Workflow and a Coordinator?**
+A: A Workflow defines a directed acyclic graph (DAG) of action nodes representing a single pipeline execution. A Coordinator schedules and triggers workflows based on time intervals or data availability in HDFS, enabling recurring batch pipelines.
+
+**Q: What is an Oozie Bundle?**
+A: A Bundle groups multiple Coordinators into a single unit, allowing them to be managed together — started, stopped, or rerun as a package. It's used to manage related sets of pipelines (e.g., all daily financial reports) as a cohesive application.
+
+**Q: How does Oozie handle job failures and retries?**
+A: Each action node has configurable retry count and retry interval. On failure, Oozie retries the action the specified number of times before marking the workflow as FAILED. Email notifications can be configured for failure events.
+
+**Q: How does Oozie coordinate data-dependent pipelines?**
+A: Coordinators define dataset availability conditions — a workflow triggers only when HDFS paths matching a pattern (e.g., /data/date=${YEAR}-${MONTH}-${DAY}) exist. This allows pipelines to wait for upstream data rather than relying on fixed time-based triggers.
+
+**Q: What are the main action types in an Oozie workflow?**
+A: Key actions include MapReduce, Hive, Pig, Spark, Shell, SSH, Email, Sub-workflow, and Fork/Join for parallel execution. Decision nodes enable conditional branching based on EL (Expression Language) conditions.
+
+**Q: How does Oozie compare to Apache Airflow?**
+A: Oozie is XML-based and tightly coupled to the Hadoop ecosystem; workflows are defined in XML and run on the cluster. Airflow uses Python DAGs, has a richer UI, broader connector ecosystem, and better community support. Airflow has largely replaced Oozie in modern data platforms.
+
+**Q: How do you parameterize Oozie workflows?**
+A: Parameters are defined in a `job.properties` file and referenced in workflow XML using EL expressions like `${input_path}`. Coordinators inject time-based variables (YEAR, MONTH, DAY, HOUR) automatically, enabling dynamic path and partition construction.
+
+---
+
+## 💼 Interview Tips
+
+- Position Oozie knowledge as legacy expertise — be ready to compare it to Airflow and explain why Airflow is preferred for modern platforms while showing you can maintain existing Oozie pipelines.
+- Know the Workflow → Coordinator → Bundle hierarchy clearly — interviewers use this to test conceptual depth vs. surface familiarity.
+- Discuss the data-availability trigger pattern in Coordinators — it's Oozie's most valuable feature and rarely covered well by candidates who only know time-based scheduling.
+- Be honest about Oozie's limitations: XML configuration is verbose and error-prone, debugging requires log diving through YARN, and the UI is primitive compared to Airflow.
+- For senior roles, demonstrate operational knowledge: how you'd monitor stuck workflows, force-rerun failed actions, and handle backlog when a coordinator falls behind schedule.
+- If interviewing at a company with legacy Hadoop infrastructure, knowing Oozie shows you can maintain existing systems while advocating for modern tooling — a practical balance interviewers value.

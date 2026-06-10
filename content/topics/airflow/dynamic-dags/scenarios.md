@@ -485,3 +485,39 @@ with DAG(
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are dynamic DAGs in Airflow and what problem do they solve?**
+A: Dynamic DAGs generate DAG structure (tasks, dependencies) programmatically at parse time, rather than being hardcoded. They solve the problem of maintaining many similar DAGs for different data sources, customers, or configurations — reducing duplication and enabling centralized management.
+
+**Q: What are the two main patterns for generating dynamic DAGs?**
+A: The first is a single-file loop — one Python file reads a config (JSON, YAML, database) and creates multiple DAG objects in a loop. The second is template-based — a Jinja2 or string-template DAG file is rendered per config entry, producing multiple DAG files. Single-file is simpler; template-based gives better isolation.
+
+**Q: What are Dynamic Task Mapping (DTM) and how does it differ from dynamic DAG generation?**
+A: Dynamic Task Mapping (introduced in Airflow 2.3) expands a single operator into multiple parallel task instances at runtime based on an input list — e.g., `task.expand(input=list_of_values)`. This differs from dynamic DAG generation, which creates different DAG structures at parse time. DTM is preferred for fan-out parallelism within a single DAG.
+
+**Q: What is the scheduler parse time impact of dynamic DAGs and how do you minimize it?**
+A: The Airflow scheduler re-parses all DAG files frequently. Complex dynamic DAGs that make database or API calls during parsing cause high parse time, slowing the entire scheduler. Minimize by caching configs locally (file-based), limiting generation logic complexity, and using `@dag` decorator patterns efficiently.
+
+**Q: How do you pass configuration to a dynamically generated DAG?**
+A: Read config from: a YAML/JSON file committed to the DAGs repo, an Airflow Variable (fetched at parse time — use sparingly due to metadata DB load), or an environment variable. Avoid database queries at parse time as they execute on every scheduler parse cycle.
+
+**Q: What are the downsides of generating too many dynamic DAGs?**
+A: Each DAG adds overhead to the scheduler's parse cycle, the metadata database, and the UI. Hundreds of dynamic DAGs can significantly degrade scheduler performance, UI responsiveness, and metadata DB query times. Prefer Dynamic Task Mapping or a single parameterized DAG with `dag_run.conf` for high-cardinality cases.
+
+**Q: How does `dag_run.conf` enable dynamic runtime behavior without dynamic DAG generation?**
+A: `dag_run.conf` passes a JSON config dict when triggering a DAG run (via CLI, API, or TriggerDagRunOperator). Tasks can read `{{ dag_run.conf['key'] }}` via Jinja templates or `context['dag_run'].conf` in Python callables. This enables a single static DAG to behave differently per run without parse-time generation.
+
+---
+
+## 💼 Interview Tips
+
+- Distinguish between parse-time dynamism (dynamic DAG generation) and runtime dynamism (Dynamic Task Mapping, dag_run.conf) — conflating them is a common mistake that senior interviewers will catch.
+- Dynamic Task Mapping is the modern preferred approach for fan-out parallelism in Airflow 2.3+ — if you're not familiar with `.expand()`, study it as it's increasingly common in interview discussions.
+- Always discuss the scheduler performance impact of dynamic DAGs — candidates who have operated Airflow at scale know that parse time is a real operational concern.
+- Mention config externalization: DAG generation logic that reads from a YAML file in the repo is more maintainable and auditable than logic reading from a database at parse time.
+- Senior interviewers often ask: "how would you add a new data source to your dynamic DAG pattern?" — have a clear answer about config schema evolution and backward compatibility.
+- Avoid presenting dynamic DAGs as a universal solution — sometimes 10 well-structured static DAGs are more maintainable than one overly complex dynamic DAG generator.

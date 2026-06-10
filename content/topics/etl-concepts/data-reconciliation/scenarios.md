@@ -444,3 +444,42 @@ def generate_regulatory_report(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is data reconciliation in ETL?**
+A: Data reconciliation is the process of comparing data between source and target systems to verify that the ETL pipeline transferred records completely and accurately. It detects missing rows, duplicate records, value mismatches, and aggregation discrepancies.
+
+**Q: What are common reconciliation checks you run after a load?**
+A: Row count comparison between source and target, SUM/COUNT aggregates on key numeric fields, hash-based row comparison for exact equality, and null/distinct value counts on critical columns.
+
+**Q: How do you reconcile data between systems that have different timezones?**
+A: Normalize all timestamps to UTC before comparison, and account for DST transitions. Ensure both source and target use the same timezone interpretation in their aggregation windows to avoid phantom discrepancies.
+
+**Q: What is hash-based reconciliation?**
+A: For each row, compute a deterministic hash of all column values, then compare hash sets between source and target. Matching row counts with identical hashes confirms exact equality without comparing every field individually, making it efficient for large tables.
+
+**Q: How do you handle reconciliation in incremental pipelines vs. full loads?**
+A: For full loads, compare total row counts and aggregate metrics. For incremental pipelines, reconcile only the affected partition (e.g., today's records), comparing source extract counts against target partition row counts for the same time window.
+
+**Q: What causes reconciliation failures and how do you debug them?**
+A: Common causes include timezone mismatches, type casting differences (e.g., FLOAT precision), deduplication logic applied inconsistently, filtering conditions, and late-arriving source records. Debug by bisecting — narrow the failing partition, then inspect individual row differences.
+
+**Q: How do you automate reconciliation at scale?**
+A: Build reconciliation jobs that run automatically after each ETL load, write results to a reconciliation log table, and trigger alerts when discrepancies exceed a configurable threshold. Tools like dbt tests, Great Expectations, or custom SQL scripts can power this.
+
+**Q: When is it acceptable to have a small reconciliation discrepancy?**
+A: Only when the business has explicitly agreed on a tolerance threshold (e.g., 0.01% variance for approximate aggregations) and the source of discrepancy is understood and documented (e.g., in-flight transactions, eventual consistency). Never accept unexplained discrepancies silently.
+
+---
+
+## 💼 Interview Tips
+
+- Distinguish reconciliation from data quality checks — reconciliation compares systems to each other, while quality checks validate data against business rules. Interviewers notice when candidates conflate these.
+- Always mention what happens when reconciliation fails: automated alerts, pipeline blocking, and an escalation runbook — operational maturity matters for senior roles.
+- Bring up the tolerance threshold discussion proactively — it shows you understand that perfect reconciliation isn't always achievable and that stakeholder alignment is part of the engineer's job.
+- For system design questions, place reconciliation as a post-load step in your pipeline diagram — candidates who omit it reveal gaps in their production pipeline thinking.
+- Be prepared to discuss reconciliation lag: in near-real-time pipelines, sources may not have fully committed when reconciliation runs — explain how you handle this with retry windows.
+- Mentioning specific tooling (dbt tests, custom SQL reconciliation tables, Monte Carlo anomaly detection) demonstrates hands-on production experience rather than theoretical knowledge.

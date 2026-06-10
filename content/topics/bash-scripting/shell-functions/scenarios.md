@@ -252,3 +252,42 @@ exit $?
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: How do you define and call a function in bash?**
+A: Define it with `function_name() { commands; }` or `function function_name { commands; }`. Call it by name like any other command: `function_name arg1 arg2`. Arguments are accessed as `$1`, `$2`, etc. inside the function.
+
+**Q: How do functions return values in bash?**
+A: Functions return an integer exit code via `return N` (0–255). To return a string or complex value, print it to stdout and capture it with command substitution: `result=$(my_function arg)`.
+
+**Q: What is the scope of variables inside a bash function?**
+A: By default, variables in bash functions are global and persist after the function returns. Declare a variable as local with `local varname=value` to limit its scope to the function and its children.
+
+**Q: How do you pass an array to a bash function?**
+A: Arrays cannot be passed directly. Either pass the array elements as individual arguments (`my_func "${arr[@]}"`) or use a nameref (`local -n ref=$1`) in bash 4.3+ to reference the array by name inside the function.
+
+**Q: How do you make a function available in subshells?**
+A: Export the function with `export -f function_name`. This serializes the function definition into the environment so child processes spawned with `bash -c` or via subshells can use it.
+
+**Q: What is the difference between `return` and `exit` inside a function?**
+A: `return` exits only the function and returns control to the caller with an optional exit code. `exit` terminates the entire script (or subshell if the function runs in one). Using `exit` inside a function is usually a mistake unless you explicitly intend to terminate the script.
+
+**Q: How do you write a reusable logging function for scripts?**
+A: Define a function that prepends a timestamp and level: `log() { echo "$(date '+%Y-%m-%dT%H:%M:%S') [$1] $2" >&2; }`. Call it as `log INFO "Starting job"` or `log ERROR "Failed"`. Writing to stderr keeps logs separate from function return values.
+
+**Q: How do you unit test bash functions?**
+A: Use the `bats` (Bash Automated Testing System) framework. Source the script under test in a `bats` file, call functions directly, and assert outputs and exit codes with `[ "$output" = "expected" ]` and `[ "$status" -eq 0 ]`.
+
+---
+
+## 💼 Interview Tips
+
+- Emphasize `local` variables in every function you write during a live session — it is one of the clearest signals that you write maintainable bash versus quick one-offs.
+- Connect shell functions to DRY principles: explain that centralizing logic in a shared `lib.sh` file that scripts source reduces duplication and makes maintenance easier.
+- Mention `bats` for testing bash functions; most candidates have never heard of it and it immediately differentiates you as someone who applies software engineering discipline to scripting.
+- For senior roles, discuss how you structure larger bash codebases — a `bin/` directory for entrypoints, a `lib/` directory for shared functions, and sourced utility files.
+- Show awareness of the logging function pattern; senior interviewers want to see that you would build observability into reusable functions, not just top-level scripts.
+- Avoid writing monolithic scripts during interviews — proactively decompose logic into small, named functions to demonstrate readability and testability instincts.

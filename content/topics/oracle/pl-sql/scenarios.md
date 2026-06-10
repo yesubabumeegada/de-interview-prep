@@ -295,3 +295,40 @@ COMMIT;
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between a PL/SQL procedure and a function?**
+A: A procedure performs an action and does not return a value directly (it can use OUT parameters). A function must return a value and can be called within SQL expressions. Functions used in SQL must be deterministic and should not have side effects to be optimizer-safe.
+
+**Q: What is a PL/SQL package and why is it preferred over standalone procedures?**
+A: A package groups related procedures, functions, types, and variables into a single unit with a specification (public interface) and body (implementation). Benefits: encapsulation, ability to have private subprograms, package-level (session-lifetime) variables, and reduced inter-object dependency—changing the body does not invalidate callers if the specification is unchanged.
+
+**Q: What is the BULK COLLECT / FORALL pattern and when should you use it?**
+A: BULK COLLECT fetches multiple rows into a collection with a single context switch instead of one row at a time. FORALL executes a DML statement for all collection elements in a single batch. This pattern reduces the PL/SQL-to-SQL engine context-switch overhead from N to 1, providing 10x–100x speedup for large set operations.
+
+**Q: What is an autonomous transaction in PL/SQL?**
+A: An autonomous transaction (`PRAGMA AUTONOMOUS_TRANSACTION`) is an independent transaction within a procedure that commits or rolls back independently of the calling transaction. It is used for logging/auditing (write a log record even if the main transaction rolls back) but must be used carefully to avoid orphaned data.
+
+**Q: What is the difference between implicit and explicit cursors?**
+A: An implicit cursor is created automatically by Oracle for every SQL DML/SELECT statement. An explicit cursor is declared by the developer for fine-grained row-by-row processing. Explicit cursors give control over OPEN/FETCH/CLOSE, support parameterization, and allow FOR UPDATE locking. For most cases, a cursor FOR loop is preferred—it auto-opens, fetches, and closes.
+
+**Q: How do you handle exceptions in PL/SQL and what is RAISE_APPLICATION_ERROR?**
+A: PL/SQL has named exceptions (e.g., `NO_DATA_FOUND`, `TOO_MANY_ROWS`) and user-defined exceptions. The EXCEPTION block catches them. `RAISE_APPLICATION_ERROR(-20001, 'message')` raises a custom error with an application-specific error number (between -20000 and -20999) that propagates to the calling application with a meaningful message.
+
+**Q: What is the PL/SQL %ROWTYPE and %TYPE and why use them?**
+A: `%TYPE` anchors a variable's datatype to a table column (`employee_id employees.employee_id%TYPE`). `%ROWTYPE` anchors a record variable to an entire table/cursor row. Both eliminate hard-coded type declarations, ensuring PL/SQL code automatically adapts when the underlying column type changes—a key maintainability practice.
+
+**Q: What is DBMS_SCHEDULER and how does it differ from DBMS_JOB?**
+A: DBMS_SCHEDULER is the modern Oracle job scheduler supporting cron-style schedules, named programs/schedules, job classes, windows, and chains. DBMS_JOB is the legacy, deprecated scheduler with a simpler interface but no calendar/dependency support. New code should always use DBMS_SCHEDULER.
+
+---
+
+## 💼 Interview Tips
+
+- When discussing performance, always mention BULK COLLECT + FORALL as the go-to optimization for row-by-row PL/SQL that processes large sets—it is the single highest-impact PL/SQL performance technique.
+- Know the context-switch concept: PL/SQL and SQL are separate engines; every SQL call from PL/SQL is a context switch. Bulk operations minimize switches. Interviewers appreciate this low-level explanation.
+- For packages, explain the spec-vs-body separation: a recompiled body does not invalidate dependent objects if the spec is unchanged, enabling hot-patch deployments.
+- Senior interviewers probe autonomous transactions for gotchas: they do NOT see the parent transaction's uncommitted data, and forgetting to commit inside the autonomous block causes a hang. Walk through the mechanism.
+- Demonstrate coding discipline: mention using `%TYPE`/`%ROWTYPE`, explicit exception handling with `SQLERRM`, structured logging via an autonomous-transaction log procedure, and avoiding `SELECT *` in production PL/SQL.

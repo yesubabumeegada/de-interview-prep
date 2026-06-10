@@ -1081,3 +1081,42 @@ class GovernanceAutomation:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Unity Catalog and what does it provide?**
+A: Unity Catalog is Databricks' unified governance layer that provides centralized access control, data discovery, data lineage, and audit logging across all Databricks workspaces and data assets (tables, views, functions, models, files, and external locations).
+
+**Q: What is the three-level namespace in Unity Catalog?**
+A: Unity Catalog uses a `catalog.schema.table` three-level namespace (e.g., `prod.sales.orders`). Catalogs are the top-level containers for data assets, schemas organize tables within a catalog, and tables/views are the leaf objects — enabling multi-catalog data mesh architectures.
+
+**Q: What are the key securable objects in Unity Catalog?**
+A: Catalogs, schemas, tables, views, external locations, storage credentials, and service credentials are all securable. Privileges are granted at any level and inherited downward — granting `SELECT` on a schema grants it on all tables within that schema.
+
+**Q: What is an External Location in Unity Catalog?**
+A: An External Location maps a cloud storage path (S3 bucket path, ADLS container) to a Unity Catalog-governed access control boundary. Tables stored in that path inherit the access control of the external location, ensuring cloud storage access is governed centrally rather than via raw IAM or ACLs.
+
+**Q: What is data lineage in Unity Catalog and how is it captured?**
+A: Unity Catalog automatically captures column-level lineage for SQL operations, DLT pipelines, and notebook runs — tracking how data flows from source tables through transformations to target tables. No manual instrumentation is needed; lineage is recorded transparently and queryable via the Unity Catalog UI or system tables.
+
+**Q: How does Unity Catalog support row-level and column-level security?**
+A: Row-level security is implemented through row filters (SQL expressions applied as predicates on table queries). Column-level security uses column masks (SQL expressions that transform sensitive column values based on user context, e.g., masking PII for non-privileged users). Both are enforced transparently at query time.
+
+**Q: What are Unity Catalog system tables and how are they used?**
+A: System tables (e.g., `system.access.audit`, `system.lineage.table_lineage`) are managed Delta tables that expose platform metadata — audit logs, lineage events, query history, and billing metrics. They enable SQL-based governance reporting, compliance audits, and cost analysis.
+
+**Q: How does Unity Catalog support a data mesh architecture?**
+A: The three-level namespace allows different domains to own separate catalogs (e.g., `marketing_catalog`, `finance_catalog`) while sharing cross-domain data through controlled access grants. Domain teams manage their own schemas and access policies, enabling decentralized ownership with centralized governance enforcement.
+
+---
+
+## 💼 Interview Tips
+
+- Know the three-level namespace cold — it is the first thing interviewers ask about Unity Catalog and confusing it signals lack of hands-on experience.
+- Be ready to explain how Unity Catalog improves on the legacy Hive Metastore: cross-workspace governance, column-level lineage, row/column security, and audit logging are the key differentiators.
+- Senior interviewers will probe external locations and storage credentials — these are critical for organizations migrating to Unity Catalog from legacy workspace-level storage configurations.
+- Show awareness of system tables as a monitoring and governance tool — querying `system.access.audit` for compliance reporting is a practical skill that impresses interviewers.
+- Connect Unity Catalog to data mesh: the three-level namespace enabling domain-owned catalogs is the Databricks implementation of federated governance.
+- Common mistake: treating Unity Catalog as just access control — it is equally valuable for lineage, discovery, and audit, and senior interviewers want to hear about all three dimensions.

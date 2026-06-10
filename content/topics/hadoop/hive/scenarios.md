@@ -425,3 +425,42 @@ fi
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Apache Hive and what problem does it solve?**
+A: Hive is a data warehouse system on top of Hadoop that provides SQL-like query interface (HiveQL) to data stored in HDFS. It allows analysts familiar with SQL to query large datasets without writing MapReduce or Spark jobs directly.
+
+**Q: How does Hive execute a query?**
+A: Hive parses HiveQL, generates a logical plan, optimizes it, and compiles it to a physical execution plan — historically MapReduce jobs, and with Tez or Spark as execution engines in modern Hive. The metastore provides table/partition metadata; HDFS provides the actual data.
+
+**Q: What is the Hive Metastore?**
+A: The Hive Metastore is a relational database (typically MySQL or PostgreSQL) that stores metadata about Hive tables — schema, partition definitions, storage locations, SerDe configurations. It is shared across tools (Spark, Presto, Athena) for unified metadata management.
+
+**Q: What is the difference between internal and external Hive tables?**
+A: Internal (managed) tables store data inside Hive's warehouse directory; dropping the table deletes the data. External tables point to data at a user-specified HDFS path; dropping the table removes only the metadata, preserving the data files.
+
+**Q: How does Hive partitioning improve query performance?**
+A: Partitioned tables organize data into subdirectories by partition key values (e.g., date=2024-01-01). Queries with WHERE clauses on partition keys trigger partition pruning, reading only relevant subdirectories and skipping the rest of the dataset entirely.
+
+**Q: What is a SerDe in Hive?**
+A: SerDe (Serializer/Deserializer) defines how Hive reads and writes data to/from HDFS. Different SerDes support different file formats — ORC, Parquet, JSON, CSV, Avro. The SerDe is specified in the table's storage properties.
+
+**Q: What is the difference between ORC and Parquet formats in Hive?**
+A: Both are columnar, compressed formats that dramatically improve Hive query performance. ORC originated in the Hive ecosystem with built-in ACID support; Parquet is more widely adopted across the broader Hadoop/Spark/cloud ecosystem. ORC has better compression for Hive; Parquet is preferred for cross-tool interoperability.
+
+**Q: How does Hive support ACID transactions?**
+A: Hive ACID (on ORC tables with bucketing) supports INSERT, UPDATE, DELETE, and MERGE operations. It uses delta directories and a compaction process to merge deltas into base files. It's primarily used for SCD Type 2 and CDC use cases within the Hive ecosystem.
+
+---
+
+## 💼 Interview Tips
+
+- Distinguish internal vs. external tables clearly — always recommending external tables in production (data survives accidental table drops) is a key operational best practice interviewers expect.
+- Explain partition pruning with specificity — "Hive reads only matching partition directories" is more impressive than "partitioning makes queries faster."
+- Know the Hive Metastore as a shared component — Spark, Presto, Athena, and Glue all integrate with it; showing this cross-tool awareness demonstrates architectural breadth.
+- Be ready to discuss Hive's limitations: it's slow for interactive queries (use Presto/Athena instead), lacks strong ACID guarantees by default, and doesn't support row-level updates without ORC ACID.
+- For senior roles, connect Hive to modern cloud equivalents: AWS Glue Data Catalog = managed Hive Metastore; AWS Athena = serverless Hive/Presto on S3. Showing migration awareness is valued.
+- Avoid recommending Hive for new greenfield projects without qualification — explain that Spark SQL + Delta Lake or cloud warehouses are preferred, but Hive expertise remains relevant for legacy system support.

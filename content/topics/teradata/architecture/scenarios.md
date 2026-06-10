@@ -186,3 +186,41 @@ Tier 3: Archive (Vantage object store — S3/Azure Blob)
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the core architectural principle of Teradata?**
+A: Teradata is a Massively Parallel Processing (MPP) system where data is distributed across many independent nodes (AMPs—Access Module Processors), each with its own CPU, memory, and disk. Queries are broken into parallel tasks executed simultaneously across all AMPs, with results combined by the Parsing Engine.
+
+**Q: What is an AMP in Teradata and what is its role?**
+A: An AMP (Access Module Processor) is Teradata's fundamental processing unit—a virtual processor responsible for storing and processing its share of the data. Each AMP manages a subset of the database rows determined by the Primary Index hashing. AMPs work in parallel during query execution.
+
+**Q: What is the Parsing Engine in Teradata?**
+A: The Parsing Engine (PE) receives SQL queries from clients, parses and validates them, generates an optimized query execution plan, and distributes query steps to the AMPs. It also collects and assembles results from AMPs before returning them to the client. There are typically multiple PEs for concurrency.
+
+**Q: What is BYNET in Teradata?**
+A: BYNET is Teradata's proprietary high-speed interconnect network that allows AMPs and PEs to communicate—sharing data, row hashes, and intermediate results during joins, sorts, and redistributions. Its bandwidth and latency directly affect query performance for data-intensive operations that require inter-AMP communication.
+
+**Q: What is the difference between a Teradata system with shared-nothing vs. shared-disk architecture?**
+A: Teradata uses shared-nothing: each AMP has exclusive ownership of its data and disk. No disk is shared between AMPs. This enables full parallelism without I/O contention and is the basis for Teradata's linear scalability. In contrast, shared-disk systems (e.g., Oracle RAC) share storage, introducing coordination overhead.
+
+**Q: What are the Teradata Vantage components and how do they extend the classic architecture?**
+A: Teradata Vantage is the modern platform that adds capabilities on top of the classic MPP engine: QueryGrid (federated queries across engines), Vantage Analyst (in-database ML and analytics), object storage integration (for data lake access), and connector support for cloud environments. It positions Teradata as a hybrid on-prem/cloud analytical platform.
+
+**Q: What is a fallback table in Teradata and why is it used?**
+A: A Fallback table maintains a second copy of each row on a different AMP. If an AMP fails, the fallback copy on a surviving AMP is used to maintain data availability. Fallback doubles storage cost and adds write overhead but provides automatic AMP-level fault tolerance without requiring external replication.
+
+**Q: What are Teradata's three main table types?**
+A: Permanent tables (persist until explicitly dropped), volatile tables (session-scoped temporary tables, no logging, dropped at session end), and global temporary tables (persist definition across sessions but rows are session-scoped). Volatile tables are critical for breaking complex queries into testable steps without disk I/O overhead.
+
+---
+
+## 💼 Interview Tips
+
+- Always anchor Teradata architecture answers on AMPs and parallelism—the entire system's design flows from the assumption that data is evenly distributed across AMPs and queries execute in parallel. This is the lens through which every performance discussion should be viewed.
+- Know BYNET's role: inter-AMP communication is expensive, and the best Teradata queries minimize redistribution by aligning Primary Indexes across related tables. Mentioning BYNET cost in join discussions signals architecture-level thinking.
+- Distinguish Teradata's shared-nothing model from other MPP systems (Redshift, Snowflake) to show breadth. Each system distributes work differently, and knowing why matters for cross-system design conversations.
+- Senior interviewers at Teradata-heavy shops (financial services, telecom) will probe fallback and availability design. Knowing the storage vs. availability trade-off is expected at the senior level.
+- Mention Teradata Vantage if the company is modernizing—many large enterprises are moving Teradata workloads to cloud or hybrid environments, and showing awareness of the modern platform signals you're current, not just familiar with legacy Teradata.

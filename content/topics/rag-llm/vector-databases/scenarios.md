@@ -960,3 +960,41 @@ class MigrationOrchestrator:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a vector database and how does it differ from a traditional database?**
+A: A vector database stores high-dimensional embedding vectors and is optimized for approximate nearest-neighbor (ANN) search—finding the most semantically similar vectors to a query vector. Traditional databases optimize for exact lookups and range queries on structured data, not geometric similarity search.
+
+**Q: What is HNSW and why is it widely used in vector databases?**
+A: HNSW (Hierarchical Navigable Small World) is a graph-based ANN index that builds a multi-layer graph of vectors. During search, it navigates from coarse to fine layers to find approximate nearest neighbors in O(log n) time. It offers excellent recall-latency trade-offs and is the default index in many vector databases (Weaviate, Qdrant, Pinecone).
+
+**Q: What is the trade-off between IVF-PQ and HNSW indexes?**
+A: IVF-PQ (Inverted File with Product Quantization) compresses vectors and clusters them, offering lower memory usage and good throughput but lower recall than HNSW. HNSW has higher recall and lower latency but uses more memory. IVF-PQ suits billion-scale deployments with memory constraints; HNSW suits sub-100M scales where recall is paramount.
+
+**Q: What is metadata filtering in vector search and why is it important?**
+A: Metadata filtering constrains the ANN search to vectors whose associated metadata matches a predicate (e.g., `document_type = "legal"`, `date > 2024-01-01`). Without it, results may include irrelevant documents from unintended domains, degrading both precision and the LLM's ability to generate accurate answers.
+
+**Q: What are the main managed vector database options and how do they differ?**
+A: Pinecone is fully managed and simple to use but proprietary and costly at scale. Weaviate and Qdrant are open-source with managed cloud options, offering more control and hybrid search support. pgvector adds vector search to PostgreSQL—ideal for teams that want to avoid a separate service. Choice depends on scale, existing infra, and hybrid search needs.
+
+**Q: What is the difference between exact KNN and approximate KNN search?**
+A: Exact KNN guarantees finding the true nearest neighbors but scales as O(n) per query—infeasible for large corpora. Approximate KNN (ANN) uses indexes (HNSW, IVF) to find highly likely nearest neighbors much faster, accepting a small recall drop. For RAG, ANN recall of 95-99% is typically acceptable.
+
+**Q: How do you handle index updates in a production vector database?**
+A: Most vector databases support upserts—inserting new vectors and updating existing ones by ID. Bulk re-indexing is needed after embedding model changes. Some databases (like Pinecone) support namespaces to stage new indexes before cutover. Plan for re-indexing time and cost as part of your model versioning strategy.
+
+**Q: What is a sparse-dense hybrid vector search?**
+A: Hybrid search combines dense vector similarity (semantic meaning) with sparse vector similarity (BM25-style keyword overlap) in a single query. Databases like Weaviate and Qdrant support this natively. The scores are fused (e.g., via RRF or weighted sum), capturing both semantic and lexical relevance—particularly useful for domain-specific terminology that embeddings may handle poorly.
+
+---
+
+## 💼 Interview Tips
+
+- Always discuss the ANN index type when talking about vector databases—HNSW vs. IVF-PQ trade-offs show you understand the internals, not just the API.
+- Bring up hybrid search proactively. In most production RAG systems, pure dense retrieval misses exact keyword matches; interviewers who've built real systems know this and will be impressed you do too.
+- Don't treat vector databases as interchangeable. Walk through your selection criteria: scale, latency SLAs, managed vs. self-hosted, metadata filtering capabilities, and cost.
+- Mention the operational concerns: index warm-up time after restarts, memory footprint for HNSW, replication for high availability, and backup strategies.
+- Senior interviewers want to hear about re-indexing strategy and how you'd handle a zero-downtime embedding model upgrade—this is a real operational challenge that separates people who've run these systems in production.

@@ -371,3 +371,42 @@ SLA of 4 hours met with optimized Pig. Spark migration gets to 2 hours with furt
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Apache Pig and what problem does it solve?**
+A: Pig is a high-level data flow scripting platform for Hadoop that allows data transformations using Pig Latin — a procedural language simpler than Java MapReduce but more flexible than SQL. It compiles Pig Latin scripts into MapReduce or Tez execution plans.
+
+**Q: What is Pig Latin?**
+A: Pig Latin is Pig's scripting language. It uses relation-based operations (LOAD, FILTER, GROUP, JOIN, FOREACH, STORE) to define data transformations as a sequence of steps. Unlike SQL, it is procedural, making multi-step complex transformations more readable.
+
+**Q: How does Pig differ from Hive?**
+A: Hive is SQL-based and suited for structured, schema-on-read querying. Pig Latin is procedural and better for complex multi-step data transformations, especially on semi-structured or unstructured data. Pig offers more flexibility; Hive offers more familiarity for SQL users.
+
+**Q: What is a UDF in Pig and why would you use one?**
+A: A User Defined Function (UDF) extends Pig's built-in functions with custom Java, Python, or JavaScript logic. UDFs are used for complex transformations (custom parsing, ML feature extraction, external API calls) that cannot be expressed with built-in Pig operators.
+
+**Q: How does Pig execute in lazy evaluation mode?**
+A: Pig uses lazy evaluation — it only computes results when a STORE or DUMP command is reached. Until then, it builds a logical plan. This allows the optimizer to reorder, combine, and prune operations before generating the execution plan.
+
+**Q: What is the COGROUP operation in Pig?**
+A: COGROUP groups two or more relations by a common key, producing a bag of tuples from each relation for each key — similar to a full outer join but preserving each relation's data separately. It's used for complex multi-dataset correlations that standard joins don't express cleanly.
+
+**Q: Is Apache Pig still relevant today?**
+A: Pig has largely been replaced by Spark (for processing) and SQL-on-Hadoop tools (Presto, Hive on Tez). It remains in legacy Hadoop environments. Understanding Pig is valuable for maintaining existing pipelines, but new development typically favors Spark or cloud-native alternatives.
+
+**Q: How do you debug a Pig script?**
+A: Use `DUMP` to print intermediate relation contents to the console during development. Use `EXPLAIN` to display the logical, physical, and MapReduce execution plans. Run in local mode (`-x local`) for fast iteration without a cluster.
+
+---
+
+## 💼 Interview Tips
+
+- Frame Pig as legacy knowledge — acknowledge it's largely superseded by Spark but relevant for maintaining existing Hadoop pipelines. This shows practical awareness without dismissing the technology.
+- Know the Pig Latin operators (LOAD, FILTER, FOREACH, GROUP, JOIN, ORDER, LIMIT, STORE) — interviewers may ask you to sketch a transformation, and fluency with basic operators demonstrates real experience.
+- Distinguish Pig from Hive conceptually: Pig = procedural data flow for complex transforms; Hive = SQL for structured analytics. Many candidates conflate them.
+- Mention COGROUP as a differentiator — it's a Pig-specific concept that shows deeper than surface familiarity and is harder to express in standard SQL.
+- Be ready to describe migration paths: if asked how you'd modernize a Pig pipeline, explain converting it to PySpark (procedural → procedural) is straightforward compared to rewriting as SQL.
+- For companies with legacy Hadoop stacks, demonstrating Pig knowledge alongside Spark expertise shows you can bridge old and new systems — a practical value-add interviewers appreciate.

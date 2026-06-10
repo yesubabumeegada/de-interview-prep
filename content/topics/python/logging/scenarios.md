@@ -427,3 +427,41 @@ ALERT_RULES = {
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the Python logging hierarchy and how does log propagation work?**
+A: Python's logging system uses a hierarchy of loggers identified by dotted names (e.g., `myapp.etl.loader`). Log records propagate up the hierarchy to parent loggers by default. The root logger is the ultimate ancestor. Setting `propagate=False` stops a logger from sending records to its parent—useful to prevent duplicate log entries.
+
+**Q: What is the difference between `logging.basicConfig()` and creating a logger with `logging.getLogger()`?**
+A: `basicConfig()` configures the root logger (handler, format, level) and is convenient for scripts. `getLogger(__name__)` creates a module-level named logger, enabling per-module log level control, hierarchy-based filtering, and proper library logging etiquette (libraries should never configure handlers, only log to named loggers).
+
+**Q: What are handlers and formatters and how do they interact?**
+A: A Handler determines the log destination (console, file, syslog, HTTP endpoint). A Formatter controls the output format (timestamp, level, logger name, message). Multiple handlers can be attached to one logger (e.g., INFO to stdout, ERROR to a file), each with its own formatter and level filter.
+
+**Q: How do you implement structured (JSON) logging in Python?**
+A: Use `python-json-logger` (`pythonjsonlogger.jsonlogger.JsonFormatter`) or a custom `logging.Formatter` subclass that overrides `format()` to return a JSON string. Structured logs include all log record attributes as JSON fields, making them queryable in log aggregation systems (CloudWatch Logs Insights, Elasticsearch, Splunk) without regex parsing.
+
+**Q: What is the `logging.exception()` method and when should you use it?**
+A: `logging.exception("msg")` logs at ERROR level and automatically appends the current exception's traceback. Use it exclusively inside `except` blocks. It is equivalent to `logging.error("msg", exc_info=True)`. Always use this instead of `logging.error(str(e))`—traceback context is essential for production debugging.
+
+**Q: How do you add contextual information (e.g., job run ID, batch ID) to all log records in a pipeline run?**
+A: Use `logging.LoggerAdapter` or `logging.Filter`. A `LoggerAdapter` wraps a logger and injects extra fields into every record: `logger = LoggerAdapter(base_logger, {"job_run_id": run_id})`. A custom `Filter` can add fields to all records passing through a handler. This enables filtering all logs for a specific pipeline execution in a log aggregation system.
+
+**Q: What log levels are available and how should they be used in data engineering?**
+A: DEBUG (detailed diagnostic, disabled in prod), INFO (normal operational events: job started, batch processed N records), WARNING (unexpected but recoverable: retrying after 429), ERROR (failure that was caught and handled), CRITICAL (system-level failure requiring immediate attention). In DE, log record counts and timing at INFO, data quality issues at WARNING, and pipeline failures at ERROR.
+
+**Q: How do you configure logging with a YAML or dictionary configuration for a production pipeline?**
+A: Use `logging.config.dictConfig(config_dict)` or `logging.config.fileConfig('logging.ini')`. Dictionary config is preferred (Pythonic, can be loaded from YAML, supports the full logging API). Define loggers, handlers, and formatters declaratively and inject via environment-specific config files rather than code.
+
+---
+
+## 💼 Interview Tips
+
+- Always use `logging.getLogger(__name__)` in modules—never the root logger. This is the correct library/application pattern and interviewers notice when candidates use `logging.info()` directly in non-script code.
+- Structured JSON logging is the standard in modern DE—mention it proactively. Log aggregation tools cannot parse unstructured logs efficiently, and query-ability of logs is critical for incident response.
+- Senior interviewers probe contextual logging: how do you correlate all log lines from a single pipeline run? Answer with `LoggerAdapter` + job_run_id. This shows you think about operational observability, not just syntax.
+- Never use print() for logging in production code. If you see print() in a codebase, explain why it is problematic: no level filtering, no structured output, no handler routing, no propagation control.
+- Connect logging to monitoring: logging is the source-of-truth for alerting (CloudWatch Metric Filters on ERROR count, Datadog log-based monitors). Showing you understand the logging → metrics → alerting pipeline demonstrates production maturity.

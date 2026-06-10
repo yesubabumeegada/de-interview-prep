@@ -392,3 +392,42 @@ def test_idempotency():
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between BashOperator, PythonOperator, and using a provider operator like S3ToRedshiftOperator?**
+A: BashOperator runs shell commands — simple but hard to test and debug. PythonOperator calls a Python callable — more testable and Pythonic. Provider operators (like S3ToRedshiftOperator) are purpose-built with built-in connection management, retry logic, and template fields — prefer them for standard integrations to avoid reinventing the wheel.
+
+**Q: What is the `provide_context` parameter in PythonOperator and is it still needed?**
+A: In Airflow 1.x, `provide_context=True` was required to inject the Airflow context dict into the Python callable. In Airflow 2.x, context is always provided if the callable accepts `**kwargs` or explicitly named context keys — `provide_context` is deprecated and no longer needed.
+
+**Q: What is the BranchPythonOperator and how does it work?**
+A: BranchPythonOperator calls a Python callable that returns a task_id (or list of task_ids) representing which downstream branch(es) to follow. All other downstream tasks are skipped. Used for conditional logic — e.g., choosing between a full refresh and incremental load based on a condition.
+
+**Q: How does the ShortCircuitOperator differ from BranchPythonOperator?**
+A: ShortCircuitOperator evaluates a condition and either allows all downstream tasks to proceed (if True) or skips all of them (if False). Unlike BranchPythonOperator, it doesn't route between branches — it either continues or stops the entire downstream chain.
+
+**Q: What is the DummyOperator (EmptyOperator in Airflow 2.4+) used for?**
+A: DummyOperator/EmptyOperator performs no action but acts as a logical grouping node in the DAG graph — used to create fan-in or fan-out points, label pipeline stages visually, or satisfy dependency requirements without executing any real work.
+
+**Q: What happens when a task executed by an operator raises an exception?**
+A: The task transitions to a `failed` state. If `retries` is configured, Airflow reschedules the task after `retry_delay`. After exhausting retries, it stays `failed`. `on_failure_callback` is invoked if configured. If `trigger_rule` of downstream tasks allows, they may still run despite the upstream failure.
+
+**Q: What is the `execution_timeout` parameter and when should you set it?**
+A: `execution_timeout` sets a maximum duration for a task before Airflow kills it and marks it as failed. Always set it for tasks that interact with external systems (APIs, databases, file systems) — without it, a hung task can occupy a worker slot indefinitely, starving other tasks.
+
+**Q: How do you pass data between two operators without using XCom for large payloads?**
+A: Write the data to an intermediate external store (S3, GCS, a staging database table), then pass only a reference (URI, table name, path) via XCom or a templated parameter to the downstream operator. This keeps XCom lightweight and avoids metadata database bloat.
+
+---
+
+## 💼 Interview Tips
+
+- Know the operator hierarchy: `BaseOperator` → provider operators → sensor operators → branch operators. Being able to explain this shows architectural understanding of Airflow's design.
+- When asked about PythonOperator, mention that heavy compute should run in a dedicated resource (Spark, Lambda, ECS task) triggered via an operator — not executed directly in the Airflow worker process.
+- Discuss `execution_timeout` proactively — it's a frequently overlooked parameter that causes real production issues. Senior interviewers know this and will probe for it.
+- Provider operators are increasingly the preferred answer over BashOperator/PythonOperator for standard integrations — knowing `apache-airflow-providers-*` ecosystem signals up-to-date Airflow knowledge.
+- Be ready to explain `trigger_rule` options (`all_success`, `all_done`, `one_failed`, `none_failed`) — they're closely related to operator behavior and a common advanced interview question.
+- Avoid describing operators as just "wrappers around code" — demonstrate understanding of their role in the broader DAG execution model: scheduling, retries, state management, and worker resource consumption.

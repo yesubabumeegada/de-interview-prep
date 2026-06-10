@@ -507,3 +507,42 @@ RECOMMENDATION_FAIRNESS_METRICS = {
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between disparate impact and disparate treatment in ML models?**
+A: Disparate treatment is intentional discrimination using protected attributes directly in the model. Disparate impact is unintentional — the model produces discriminatory outcomes even without using protected features, often through correlated proxy variables.
+
+**Q: What is demographic parity and when is it insufficient?**
+A: Demographic parity requires equal positive prediction rates across groups. It's insufficient when base rates differ between groups — forcing equal predictions can actually harm the minority group by ignoring legitimate statistical differences.
+
+**Q: How do you detect bias in a model's training data?**
+A: Compute group-stratified statistics (label distributions, feature distributions, sample counts) across protected attributes. Use tools like Facets or What-If Tool to visualize disparities, and audit for underrepresentation or historical labeling bias.
+
+**Q: What is equalized odds and how does it differ from equal opportunity?**
+A: Equalized odds requires equal true positive rates AND equal false positive rates across groups. Equal opportunity only requires equal true positive rates — it's a relaxation that focuses on not disadvantaging qualified individuals from any group.
+
+**Q: What is fairness through unawareness and why does it often fail?**
+A: It removes protected attributes from training data. It fails because proxy variables (zip code, name, purchase history) can reconstruct protected attributes with high accuracy, allowing bias to persist indirectly.
+
+**Q: How would you monitor a deployed model for emerging bias over time?**
+A: Track fairness metrics (TPR, FPR, precision) per demographic group in production dashboards. Set alerting thresholds on metric divergence, and periodically retrain or audit whenever data distributions shift or new demographic patterns emerge.
+
+**Q: What is calibration bias and why does it matter?**
+A: Calibration bias occurs when a model's predicted probabilities don't reflect actual outcomes equally across groups — e.g., a 70% confidence score means different things for different demographics. It matters because downstream decisions rely on well-calibrated probabilities.
+
+**Q: What techniques can reduce bias without sacrificing model performance?**
+A: Pre-processing (reweighting, resampling), in-processing (adversarial debiasing, fairness constraints in the loss function), and post-processing (threshold adjustment per group). Combining approaches typically yields better fairness-accuracy tradeoffs than any single technique.
+
+---
+
+## 💼 Interview Tips
+
+- When discussing bias, always distinguish between the type of bias (data bias vs. model bias vs. evaluation bias) and tie your answer to concrete metrics rather than abstract concepts.
+- Avoid framing fairness as simply "remove the protected attribute" — interviewers at senior levels expect you to explain proxy variables and why unawareness fails.
+- Senior interviewers want to hear about the tradeoffs between fairness definitions (you can't satisfy demographic parity and equalized odds simultaneously in most real-world settings — cite this).
+- Show familiarity with tooling: Fairlearn, AI Fairness 360, Google's What-If Tool — mentioning these signals you've worked on real bias audits.
+- Always connect bias mitigation to business and regulatory risk (ECOA, GDPR, EU AI Act) — this demonstrates senior-level thinking about why bias matters beyond accuracy metrics.
+- When asked "how would you handle bias discovered post-deployment," walk through a structured response: measure impact, communicate to stakeholders, decide on rollback vs. patch, retrain, and add monitoring — interviewers value process over just technical fixes.

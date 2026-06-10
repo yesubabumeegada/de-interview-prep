@@ -141,3 +141,42 @@ events.put_targets(Rule='after-job-b-success', Targets=[{
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Amazon EventBridge and how does it differ from SNS?**
+A: EventBridge is a serverless event bus that routes events from AWS services, SaaS applications, and custom sources to targets using content-based filtering rules. SNS is a pub/sub messaging service for fan-out delivery to multiple subscribers. EventBridge offers richer filtering on event content, a schema registry, and cross-account/cross-region routing that SNS lacks.
+
+**Q: What is an EventBridge Rule and how does event filtering work?**
+A: A Rule matches incoming events against an event pattern (a JSON filter on event fields like source, detail-type, and nested detail attributes) and routes matching events to one or more targets. Filtering is content-based — you can match on specific field values, prefixes, numeric ranges, or the existence of fields.
+
+**Q: What are EventBridge Pipes?**
+A: Pipes create point-to-point integrations between a source (SQS, DynamoDB Streams, Kinesis) and a target (Lambda, Step Functions, SQS) with optional filtering and enrichment in between. They simplify event-driven pipeline patterns without custom glue code.
+
+**Q: What is the EventBridge Schema Registry?**
+A: The Schema Registry automatically discovers and stores event schemas from your event bus. It generates code bindings (Python, Java, TypeScript) for event schemas, enabling type-safe event handling in downstream consumers.
+
+**Q: How does EventBridge handle event delivery failures?**
+A: EventBridge retries delivery for up to 24 hours using exponential backoff. You can configure a Dead Letter Queue (DLQ) on targets to capture events that exhaust retries, and use CloudWatch metrics to monitor `FailedInvocations` and set alarms.
+
+**Q: What is a custom event bus and when would you create one?**
+A: Custom event buses receive events from your own applications or cross-account sources. Creating a separate bus for custom application events keeps them isolated from the default AWS service event bus, enabling cleaner event routing and access control via resource-based policies.
+
+**Q: How do you trigger a Glue job or Step Functions workflow from an S3 file upload using EventBridge?**
+A: Enable S3 Event Notifications to EventBridge on the bucket, create a rule with an event pattern matching `aws.s3` source and `Object Created` detail-type filtered to your prefix, and set the target to a Step Functions state machine or Glue job trigger via Lambda.
+
+**Q: What is EventBridge Scheduler?**
+A: EventBridge Scheduler is a fully managed scheduler that invokes targets on a one-time or recurring schedule (cron or rate expressions). It replaces CloudWatch Events scheduled rules with higher scale limits, timezone support, and a flexible time window for delivery.
+
+---
+
+## 💼 Interview Tips
+
+- Frame EventBridge as the glue of event-driven architectures: explain how it decouples producers from consumers, allowing services to evolve independently — this is the key architectural benefit interviewers want to hear.
+- Distinguish EventBridge from SQS and SNS clearly: EventBridge for content-based routing and orchestration triggers, SNS for fan-out pub/sub, SQS for reliable point-to-point queuing with backpressure.
+- Senior interviewers appreciate hearing about cross-account event routing: sending events from a production account to a centralized observability or audit account using event bus policies — a common enterprise pattern.
+- Mention Schema Registry as a governance and developer productivity win — auto-discovery of event schemas and generated code bindings reduce integration errors.
+- Avoid treating EventBridge as a replacement for Kafka/Kinesis for high-throughput streaming: EventBridge handles thousands of events per second, not millions. Know the throughput boundaries.
+- Demonstrate end-to-end pipeline thinking: describe how S3 → EventBridge → Step Functions creates a fully event-driven ingestion pipeline with zero polling and automatic triggering on file arrival.

@@ -498,3 +498,39 @@ wait_for_marker = S3KeySensor(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the main Airflow deployment architectures and when would you use each?**
+A: Single-node (all components on one machine) is suitable for development only. Celery executor with separate workers scales out task execution horizontally for moderate workloads. Kubernetes executor runs each task in its own pod for full isolation and elastic scaling — preferred for production at scale.
+
+**Q: What is the difference between the CeleryExecutor and the KubernetesExecutor?**
+A: CeleryExecutor uses a Celery broker (Redis/RabbitMQ) and persistent worker processes — workers stay alive between tasks, which reduces startup overhead. KubernetesExecutor spins up a fresh pod per task — providing stronger isolation, dynamic resource allocation, and no long-running worker processes to manage.
+
+**Q: What is MWAA and what are its main operational tradeoffs?**
+A: MWAA (Managed Workflows for Apache Airflow) is AWS's fully managed Airflow service — it handles infrastructure, upgrades, and scaling. Tradeoffs: limited executor customization (Celery only), higher cost than self-managed, slower Airflow version upgrades, but dramatically reduced operational burden for teams without dedicated platform engineers.
+
+**Q: How do you manage DAG deployment and versioning in a production Airflow environment?**
+A: Store DAGs in a Git repository and use CI/CD (GitHub Actions, GitLab CI) to sync changes to the DAGs folder (S3 synced via DAG processor, Git-sync sidecar, or direct EFS mount). Never manually edit DAGs on the Airflow server. Tag Git commits to track which DAG version is running in production.
+
+**Q: What is Git-sync and how does it work in a Kubernetes Airflow deployment?**
+A: Git-sync is a sidecar container that continuously pulls DAG files from a Git repository and writes them to a shared volume mounted by the scheduler, webserver, and workers. It provides near-real-time DAG updates without restarting Airflow components.
+
+**Q: How do you handle secrets and environment-specific configuration across Airflow deployments?**
+A: Use a secrets backend (AWS Secrets Manager, Vault) for connection credentials and Airflow Variables. Use environment-specific Helm values files or Terraform workspaces for infrastructure configuration. Never hardcode secrets in DAG files or `airflow.cfg` — these end up in version control.
+
+**Q: What is the Airflow metadata database and what happens if it becomes a bottleneck?**
+A: The metadata database (PostgreSQL recommended for production) stores DAG definitions, task states, logs pointers, connections, and variables. At scale it can become a bottleneck from high-frequency scheduler polling and XCom storage. Mitigate with connection pooling (pgBouncer), read replicas for the UI, and storing large XCom values externally.
+
+---
+
+## 💼 Interview Tips
+
+- Frame deployment pattern choices around team size, scale requirements, and operational maturity — there's no universal "best" executor. Senior interviewers want to see you reason through tradeoffs.
+- Kubernetes executor is increasingly the expected answer for production deployments at scale — if you've worked with it, discuss pod template customization, resource requests/limits, and startup latency tradeoffs.
+- CI/CD for DAGs is a must-mention: manually copying files to an Airflow server is a red flag that signals low operational maturity. Describe your Git-to-production pipeline.
+- When discussing MWAA or Composer, balance managed service benefits (no infra ops) against limitations (version lag, customization constraints) — don't just praise managed services.
+- Senior interviewers often ask about Airflow at scale: scheduler performance, metadata DB optimization, and executor concurrency limits. Be ready with specific knobs you've tuned.
+- Mention high availability: running multiple schedulers (Airflow 2.x supports this) and webserver replicas behind a load balancer — single points of failure in the scheduler have caused production outages.

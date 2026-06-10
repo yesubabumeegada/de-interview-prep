@@ -487,3 +487,42 @@ with mlflow.start_run(run_name="fraud-distributed-v8"):
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the key stages of a production ML pipeline?**
+A: Data ingestion and validation → feature engineering → model training → model evaluation → model registration → deployment → monitoring. Each stage should be independently testable, versioned, and automated to enable reliable retraining on schedule or on trigger.
+
+**Q: What is the difference between a batch training pipeline and an online learning pipeline?**
+A: Batch training periodically retrains on accumulated historical data — simpler, more stable, but slower to adapt. Online learning updates model parameters incrementally with new data — faster to adapt to distribution shifts, but harder to debug, test, and ensure stability.
+
+**Q: How do you prevent training-serving skew in an ML pipeline?**
+A: Share preprocessing logic via a single library or feature store used by both training and serving paths. Avoid feature transformations that rely on training-time state (e.g., fitted scalers) that are inconsistently serialized. Integration tests that run the same inputs through both paths and compare outputs help catch divergence.
+
+**Q: What is a pipeline trigger strategy and what are common options?**
+A: Triggers determine when retraining runs: time-based (scheduled cron), event-based (new data arrival, data drift alert, model performance degradation), or manual. Most production systems combine time-based schedules with drift-triggered emergency retraining.
+
+**Q: How do you implement data validation in an ML pipeline?**
+A: Use schema validation (Great Expectations, TFX Data Validation) to check column types, null rates, and value ranges. Add statistical validation to detect distribution drift between the current batch and a reference dataset. Fail the pipeline on severe violations to prevent training on corrupted data.
+
+**Q: What is a shadow deployment and when would you use it in an ML pipeline?**
+A: Shadow deployment runs a new model in parallel with the production model, serving real traffic but not acting on its predictions. Use it to compare new model behavior against the champion model on live data before making it production — reduces risk of bad deployments.
+
+**Q: How do you handle pipeline failures during a retraining run without corrupting the production model?**
+A: Use atomic model registration: only promote the new model to production after it passes all evaluation gates. Keep the previous model version available for instant rollback. Design pipelines with idempotent stages so failed runs can be safely retried without side effects.
+
+**Q: What metrics would you use to automatically decide whether to promote a newly trained model?**
+A: Absolute performance thresholds (e.g., AUC > 0.85) combined with relative improvement over the current production model (e.g., ≥ 1% AUC lift). Also check business metrics (precision/recall tradeoffs for the specific use case), data coverage, and fairness metrics across demographic groups.
+
+---
+
+## 💼 Interview Tips
+
+- Always describe ML pipelines as having discrete stages with clear interfaces — this signals you understand how to test, debug, and maintain them independently.
+- Senior interviewers will probe pipeline failure modes: what happens if data is late? If the model degrades? Walk through your rollback and circuit-breaker strategies.
+- Distinguish between ML pipeline orchestrators (Airflow, Kubeflow Pipelines, Prefect, Metaflow) and their tradeoffs — using the right tool for the scale and team matters.
+- Bring up the concept of pipeline drift: not just model drift, but upstream data pipeline changes that silently break ML pipeline assumptions — this shows systems-level thinking.
+- Mention CI/CD for ML (CI/CD/CT — Continuous Training) as an evolution beyond standard software CI/CD. Interviewers at senior levels expect familiarity with automated retraining loops.
+- Avoid describing ML pipelines as just "train a model and deploy it" — demonstrate awareness of the evaluation, monitoring, and feedback loop components that make pipelines production-grade.

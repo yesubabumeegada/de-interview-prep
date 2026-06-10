@@ -176,3 +176,41 @@ result = fact_df.withColumn("clean_key", clean_key("product_code")) \
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the Catalyst Optimizer in Spark?**
+A: Catalyst is Spark SQL's extensible query optimizer. It transforms an unresolved logical plan (from a SQL string or DataFrame API call) through analysis, logical optimization, physical planning, and code generation phases to produce an efficient RDD execution plan.
+
+**Q: What are the four main phases of Catalyst?**
+A: (1) Analysis—resolves attribute references and types against the catalog. (2) Logical optimization—applies rule-based rewrites (predicate pushdown, constant folding, projection pruning). (3) Physical planning—selects physical operators (e.g., hash join vs. sort-merge join) and generates candidate plans. (4) Code generation—uses Janino to compile query fragments to Java bytecode (Whole-Stage CodeGen).
+
+**Q: What is predicate pushdown and why does it matter?**
+A: Predicate pushdown moves WHERE clause filters as close to the data source as possible. For Parquet files, this means column statistics are used to skip row groups; for JDBC sources, the filter is pushed as SQL to the database. This reduces the amount of data read and transferred into Spark, often by orders of magnitude.
+
+**Q: What is projection pruning (column pruning) in Catalyst?**
+A: Catalyst identifies which columns are actually needed by the query and removes unused columns from the scan. For columnar formats like Parquet and ORC this is extremely effective—Spark reads only the needed columns rather than all columns in the file.
+
+**Q: What is Whole-Stage Code Generation (WSCG)?**
+A: WSCG fuses multiple operators (filter, project, aggregate) within a pipeline into a single compiled Java function, eliminating virtual function dispatch overhead between operators. This can improve CPU efficiency by 2–5x for compute-bound queries by keeping data in CPU registers across operators.
+
+**Q: How can you inspect the Catalyst plans for a query?**
+A: Use `df.explain(extended=True)` to print all four plan stages (parsed, analyzed, optimized, physical) or `df.explain(mode='formatted')` in Spark 3.x for a structured output. The physical plan shows the chosen join strategies, broadcast hints, and partition counts.
+
+**Q: What is a cost-based optimizer (CBO) in Catalyst and how is it enabled?**
+A: CBO uses table and column statistics (row count, min/max, histograms) to choose between equivalent plans based on estimated cost. Enable with `spark.sql.cbo.enabled=true` and collect statistics with `ANALYZE TABLE ... COMPUTE STATISTICS FOR ALL COLUMNS`. Without statistics, Catalyst falls back to heuristic (rule-based) choices.
+
+**Q: Can you add custom optimization rules to Catalyst?**
+A: Yes. Catalyst is designed for extensibility—you can inject custom `Rule[LogicalPlan]` objects via `SparkSessionExtensions.injectOptimizerRule`. This is used by Databricks Delta Lake, Apache Iceberg, and other frameworks to add source-specific optimizations transparently.
+
+---
+
+## 💼 Interview Tips
+
+- Walk through the four phases fluently in order—analysts and junior engineers often know "Catalyst optimizes queries" but cannot enumerate the phases. Doing so signals depth.
+- Predicate pushdown is one of the highest-impact optimizations. Be ready to explain the Parquet row-group skip mechanism (min/max statistics per column chunk) as a concrete example of pushdown in action.
+- Senior interviewers often test Whole-Stage CodeGen awareness: know that not all operators participate (e.g., Python UDFs break WSCG entirely—this is a key reason to prefer Pandas UDFs or SQL expressions over Python UDFs in hot paths).
+- `df.explain()` is the most practical debugging tool—demonstrate you use it routinely, not just when something is slow.
+- Connect CBO to AQE: CBO uses static statistics pre-execution; AQE corrects decisions at runtime. Knowing how they complement each other shows a complete mental model of Spark's optimization stack.

@@ -428,3 +428,41 @@ class EnrichmentPipeline:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the structure of Python's exception hierarchy and why does it matter?**
+A: All exceptions inherit from `BaseException`. `Exception` is the base for most user-facing exceptions. `KeyboardInterrupt`, `SystemExit`, and `GeneratorExit` inherit from `BaseException` directly. Catching `Exception` does not catch `SystemExit`—always use the most specific exception class possible to avoid masking unexpected errors.
+
+**Q: What is the difference between `raise` and `raise e` in an except block?**
+A: Bare `raise` re-raises the current exception preserving the original traceback. `raise e` re-raises but resets the traceback to the current line. Use bare `raise` to propagate the original context faithfully; use `raise NewException("msg") from e` to chain exceptions and preserve the cause.
+
+**Q: What is exception chaining and how do you use it?**
+A: `raise CustomError("msg") from original_exc` sets `__cause__` on the new exception, linking it to the original. Python's traceback displays both. Use this when translating low-level exceptions (e.g., `sqlite3.OperationalError`) into domain exceptions (`DatabaseWriteError`) so callers see a meaningful error while preserving the root cause for debugging.
+
+**Q: What is the `else` clause in a try/except block and when is it useful?**
+A: The `else` block runs only if no exception was raised in the `try` block. Use it to place code that should run on success but should NOT be inside the `try` (to avoid accidentally catching exceptions from success-path code). Example: commit a transaction in `else`, rollback in `except`.
+
+**Q: How do you create a custom exception hierarchy for a data engineering application?**
+A: Create a base exception class for your application (`class DEAppError(Exception): pass`), then subclass it for specific error categories (`class SchemaValidationError(DEAppError): pass`, `class UpstreamAPIError(DEAppError): pass`). This lets callers catch the base class for all app errors or specific subclasses for targeted handling.
+
+**Q: What is `contextlib.suppress` and when should you use it vs. a bare except?**
+A: `contextlib.suppress(ExceptionType)` is a context manager that silently ignores the specified exception type. Use it for truly expected, benign conditions (e.g., deleting a file that may not exist). Prefer it over a bare `except: pass` because it explicitly names the expected exception, is self-documenting, and does not accidentally swallow other exceptions.
+
+**Q: What are the risks of catching broad exceptions like `except Exception` in a pipeline?**
+A: Broad catches can swallow programming errors (`AttributeError`, `TypeError`), mask data corruption, hide unexpected states, and make debugging extremely difficult. In pipelines, always catch specific exceptions. Use broad catches only at the top-level boundary (API handler, task runner) for logging and graceful shutdown, then re-raise or return a structured error response.
+
+**Q: How do you log exceptions properly in Python?**
+A: Use `logging.exception("message")` inside an `except` block—it automatically appends the full traceback to the log message at ERROR level. Avoid `logging.error(str(e))` which loses the traceback. For structured logging, pass the exception as `exc_info=True` to any logging call: `logger.error("Failed", exc_info=True)`.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with specificity: catching the most specific exception is the cardinal rule. Walk through the consequences of `except Exception: pass` in a production pipeline—silent data corruption or infinite retry loops are the horror stories.
+- Know exception chaining cold: translating `psycopg2.OperationalError` to a custom `DBWriteError` with `from e` is the pattern for layered architectures and comes up in senior DE interviews about error propagation.
+- Show the `try/except/else/finally` full structure: `else` (success path), `finally` (always cleanup). Many candidates have never used `else` in a try block—using it correctly signals Python fluency.
+- Senior interviewers ask about retry strategies: which exceptions are retryable (transient network, rate-limit 429) vs. non-retryable (schema validation, auth failure). Demonstrate you design retry logic with an allow-list of retryable exceptions.
+- Connect error handling to observability: a caught exception should always be logged with `exc_info=True` and ideally include context (record ID, file path, batch number) to enable post-mortem diagnosis.

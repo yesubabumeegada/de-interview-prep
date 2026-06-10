@@ -604,3 +604,39 @@ airflow dags trigger api_key_rotation_verify \
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Connection in Airflow and where are connection credentials stored?**
+A: A Connection is a named object storing connection parameters (host, login, password, port, schema, extras). By default credentials are stored in Airflow's metadata database, but production setups use secrets backends (AWS Secrets Manager, HashiCorp Vault, GCP Secret Manager) to avoid storing credentials in the database.
+
+**Q: What is a Hook in Airflow and how does it relate to a Connection?**
+A: A Hook is a Python class that abstracts the interface to an external system, using a Connection's credentials to establish the session. For example, `S3Hook` wraps boto3 and uses an `aws_default` connection. Hooks are reusable across operators and can be used directly in custom Python callables.
+
+**Q: How do you use a secrets backend in Airflow for connection credentials?**
+A: Configure `[secrets] backend` in `airflow.cfg` (e.g., `airflow.providers.amazon.aws.secrets.secrets_manager.SecretsManagerBackend`). Airflow will look up connection URIs in the secrets backend before falling back to the metadata database. No code changes are needed — operators and hooks resolve connections transparently.
+
+**Q: What is the difference between defining a connection in the UI vs. in an environment variable?**
+A: UI-defined connections are stored in the metadata database — convenient for development but a security concern in production. Environment variable connections use the format `AIRFLOW_CONN_<CONN_ID>=<connection-uri>` — useful for containerized deployments and secrets injection without UI access.
+
+**Q: How do you test a custom Hook in isolation without a running Airflow environment?**
+A: Mock the connection using `unittest.mock.patch` on `BaseHook.get_connection` to return a fake `Connection` object with test credentials. This lets you test Hook logic, connection parsing, and error handling without a live database or external service.
+
+**Q: What is the `get_hook` pattern and how do Operators use it?**
+A: Operators accept a `conn_id` parameter and call `MyHook(conn_id=self.conn_id)` internally to retrieve the hook. The hook then calls `get_connection(conn_id)` to fetch credentials. This pattern decouples credential management from operator logic, enabling connection swapping without code changes.
+
+**Q: How do you handle connection pooling for high-throughput operators hitting the same database?**
+A: Use Airflow pools to limit concurrent tasks hitting the same connection endpoint. For database connections, configure the hook's underlying connection pool size. For Postgres/MySQL, use pgBouncer or ProxySQL as a connection pooler between Airflow workers and the database to avoid connection exhaustion.
+
+---
+
+## 💼 Interview Tips
+
+- Always distinguish between Connections (credential storage) and Hooks (connection interface) — conflating them is a red flag that suggests limited Airflow depth.
+- In any production context, proactively mention secrets backends. Storing database passwords in the Airflow metadata database is a security anti-pattern that senior interviewers will probe for.
+- When describing custom hooks, mention inheriting from `BaseHook` and implementing `get_conn()` — showing you've actually built one is more convincing than describing the pattern abstractly.
+- Discuss connection testing strategies — production engineers know that connection misconfiguration is a common failure mode and write integration tests for their hooks.
+- Senior interviewers appreciate hearing about connection reuse and pooling: creating a new database connection per task execution can overwhelm downstream systems at scale.
+- Show awareness of provider packages (`apache-airflow-providers-*`) — most production hooks come from providers, and knowing how to extend them or override behavior signals Airflow maturity.

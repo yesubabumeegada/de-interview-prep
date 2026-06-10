@@ -395,3 +395,42 @@ run_pipeline_for_date 2024-01-15
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is MapReduce and what are its two core phases?**
+A: MapReduce is a distributed programming model for processing large datasets. The Map phase applies a function to each input record, emitting key-value pairs. The Reduce phase groups all values by key and applies an aggregation function to each group.
+
+**Q: What happens between the Map and Reduce phases?**
+A: The shuffle and sort phase: Map output is partitioned by key, sorted, and transferred across the network to the appropriate Reducer. Each Reducer receives a sorted list of values for its assigned keys. This is the most expensive phase due to network I/O.
+
+**Q: What is a Combiner in MapReduce?**
+A: A Combiner is a mini-reducer that runs locally on the Map output before the shuffle, pre-aggregating values for the same key on a single node. It reduces network I/O during shuffle but is only correct for commutative and associative operations (e.g., SUM, COUNT, MAX).
+
+**Q: Why is MapReduce slow for iterative algorithms?**
+A: Each MapReduce job writes intermediate results to HDFS disk between stages. Iterative algorithms (like machine learning gradient descent) require many passes over data, making the repeated disk I/O prohibitively slow. Spark solves this with in-memory computation.
+
+**Q: How does data locality improve MapReduce performance?**
+A: YARN schedules Map tasks preferentially on nodes that already hold the required HDFS blocks. This "moving compute to data" eliminates most network data transfer for the Map phase, significantly reducing job runtime.
+
+**Q: What is speculative execution in MapReduce?**
+A: If a task is running significantly slower than its peers (a straggler), the framework launches a duplicate speculative copy on another node. Whichever finishes first is used and the other is killed. This mitigates the tail latency problem from slow nodes.
+
+**Q: How does MapReduce handle fault tolerance?**
+A: If a task fails, YARN automatically retries it on another node up to a configurable maximum (default 4 attempts). If a node fails, all its running tasks are rescheduled. Completed Map tasks on a failed node are re-executed since Reducers need their output.
+
+**Q: When would you still choose MapReduce over Spark today?**
+A: MapReduce is appropriate when memory is severely constrained (it spills everything to disk so it won't OOM), for extremely long-running stable batch jobs where operational simplicity matters more than speed, or in legacy environments where Spark is not available.
+
+---
+
+## 💼 Interview Tips
+
+- Be able to trace the full MapReduce execution flow: input split → Map → combine → partition → shuffle/sort → Reduce → output — many candidates skip the shuffle step which is the performance bottleneck.
+- Know why Spark replaced MapReduce: not because MapReduce is broken, but because in-memory computation eliminates disk I/O between stages for iterative workloads. Frame it as the right tool for the right job.
+- Mention the Combiner pattern proactively when discussing performance — it demonstrates you understand the network cost of shuffle and know how to minimize it.
+- Discuss speculative execution as a production concern — stragglers are real in large clusters and knowing the framework's mitigation strategy shows operational awareness.
+- For senior roles, connect MapReduce design decisions (immutable HDFS output, task-level fault tolerance) to broader distributed systems principles (fault isolation, reproducibility).
+- Avoid dismissing MapReduce as "obsolete" — frame it as a foundational model that Spark, Flink, and cloud dataflow systems all build upon conceptually, showing intellectual depth.

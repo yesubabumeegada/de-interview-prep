@@ -906,3 +906,42 @@ Switch from continuous (24/7 cluster) to scheduled batch (trigger=availableNow) 
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Databricks Auto Loader and what problem does it solve?**
+A: Auto Loader is a Databricks Structured Streaming source that incrementally and efficiently processes new files as they arrive in cloud storage (S3, ADLS, GCS). It solves the problem of manually tracking which files have been processed, eliminating the need for expensive directory listings.
+
+**Q: What are the two file discovery modes in Auto Loader?**
+A: Directory listing mode (default for small volumes) lists files in cloud storage on each trigger. File notification mode uses cloud event notifications (SQS, EventGrid, Pub/Sub) to detect new files without repeated directory scans — dramatically more scalable for high file volumes.
+
+**Q: How does Auto Loader handle schema inference and evolution?**
+A: Auto Loader can automatically infer schema from the first batch of files and evolve the schema as new columns appear. Using `cloudFiles.schemaEvolutionMode` options (e.g., `addNewColumns`), it can handle new fields without pipeline failures, storing the inferred schema in a configurable location.
+
+**Q: What is the `cloudFiles` source format and how do you configure it?**
+A: `cloudFiles` is the Auto Loader format string used with `spark.readStream.format("cloudFiles")`. Key options include `cloudFiles.format` (csv, json, parquet), `cloudFiles.schemaLocation` (path to store inferred schema), `cloudFiles.inferColumnTypes`, and `cloudFiles.useNotifications`.
+
+**Q: How does Auto Loader maintain exactly-once processing guarantees?**
+A: Auto Loader uses a checkpoint directory to track which files have been processed. Combined with Delta Lake's transactional writes, this provides end-to-end exactly-once semantics — files are never reprocessed unless explicitly reset, even across job restarts.
+
+**Q: When would you use Auto Loader vs. a COPY INTO command?**
+A: Use Auto Loader for continuous streaming ingestion with low latency requirements. Use `COPY INTO` for batch ingestion triggered on a schedule — it is simpler but less efficient for high-volume, high-frequency file arrivals. Auto Loader scales better for large file volumes with file notification mode.
+
+**Q: What happens when Auto Loader encounters a malformed file?**
+A: By default, malformed records are collected in a `_rescued_data` column rather than failing the pipeline. You can configure `badRecordsPath` to route problematic records to a quarantine location. This resilience prevents individual bad files from blocking the entire ingestion stream.
+
+**Q: How do you monitor Auto Loader streaming jobs?**
+A: Monitor via the Structured Streaming UI in Databricks (input rate, processing rate, trigger latency), stream query metrics (numInputRows, batchDuration), and Delta Lake history for write confirmation. Set up alerts on processing lag and trigger failure rates.
+
+---
+
+## 💼 Interview Tips
+
+- Know the difference between directory listing and file notification mode — file notification mode is a key differentiator for scalable production workloads and interviewers probe this.
+- Be ready to explain schema evolution configuration: `cloudFiles.schemaEvolutionMode` and `schemaLocation` are commonly tested in Databricks-focused interviews.
+- Show awareness of cost implications: file notification mode reduces cloud API calls and Spark driver load compared to directory listing at scale.
+- Senior interviewers will ask how you handle late-arriving files or reprocessing — explain checkpoint reset procedures and the tradeoffs.
+- Mention Auto Loader in the context of the medallion architecture: it is the standard tool for Bronze layer ingestion from cloud storage in Databricks platforms.
+- Common mistake: not setting a `schemaLocation` — without it, schema is re-inferred on every restart, causing inconsistency and performance overhead.

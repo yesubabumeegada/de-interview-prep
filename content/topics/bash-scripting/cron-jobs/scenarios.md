@@ -210,3 +210,42 @@ echo "All validations passed ✓"
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What does the cron expression `0 2 * * 1-5` mean?**
+A: It means "run at 2:00 AM every weekday (Monday through Friday)." The fields are minute, hour, day of month, month, and day of week respectively.
+
+**Q: How do you prevent a cron job from running if a previous instance is still active?**
+A: Use a lockfile with `flock` — for example, `flock -n /tmp/myjob.lock ./myjob.sh` will skip execution if the lock is already held, preventing overlapping runs.
+
+**Q: Where does cron send output by default, and how do you redirect it?**
+A: By default cron sends stdout and stderr to the user's local mail. Redirect output explicitly in the crontab entry: `0 2 * * * /path/to/script.sh >> /var/log/myjob.log 2>&1` to capture both streams to a file.
+
+**Q: What is the difference between `/etc/crontab` and a user crontab created with `crontab -e`?**
+A: `/etc/crontab` is a system-wide crontab that includes a username field to specify which user runs each job. User crontabs created with `crontab -e` run as the owning user and do not include a username field.
+
+**Q: Why might a cron job fail even though the same command works fine in a terminal?**
+A: Cron runs with a minimal environment — `PATH`, shell variables, and sourced profiles differ from an interactive session. Always use absolute paths in cron jobs and explicitly source needed environment files if required.
+
+**Q: How do you run a cron job every 15 minutes?**
+A: Use `*/15 * * * * /path/to/script.sh`. The `*/n` syntax means "every n units" for the given field.
+
+**Q: What is anacron and when would you use it instead of cron?**
+A: Anacron is a cron-like scheduler designed for machines that are not always running. Unlike cron, it guarantees that missed jobs (e.g., when the machine was off) are run once the machine comes back online, making it suitable for daily/weekly maintenance tasks on laptops or intermittent servers.
+
+**Q: How do you list, edit, and remove a user's crontab?**
+A: `crontab -l` lists the current user's crontab, `crontab -e` opens it in an editor, and `crontab -r` removes it entirely. Use `crontab -u username -l` as root to inspect another user's crontab.
+
+---
+
+## 💼 Interview Tips
+
+- Always mention environment differences as the first troubleshooting step when a cron job fails — this is the most common real-world issue and shows practical experience.
+- Demonstrate that you log cron job output; interviewers want to know you can debug failures after the fact, not just set and forget.
+- Mention using `flock` or similar locking mechanisms for jobs that must not overlap — this shows awareness of production edge cases.
+- For data engineering roles, connect cron jobs to orchestration tools like Airflow: know when cron is sufficient versus when you need dependency management and retries.
+- Senior interviewers will ask about monitoring — discuss alerting on missed or failed jobs using tools like PagerDuty, CloudWatch, or custom log-based alerts.
+- Avoid saying you use cron for complex multi-step pipelines; acknowledge its limitations (no dependency tracking, no retry logic) and when to graduate to a proper orchestrator.

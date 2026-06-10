@@ -414,3 +414,42 @@ def enforce_platform_policies(data_product: DomainDataProduct, layer: str):
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the medallion architecture in data engineering?**
+A: The medallion architecture organizes data into Bronze (raw ingestion), Silver (cleaned and validated), and Gold (business-aggregated) layers. Each layer adds quality and structure, making data progressively more reliable and consumption-ready.
+
+**Q: What is the ELT pattern and how does it differ from ETL?**
+A: ELT (Extract, Load, Transform) loads raw data into the target system first and transforms it there using the warehouse's compute. ETL transforms data in a separate compute layer before loading. ELT is favored with modern cloud warehouses (Snowflake, BigQuery) because transformation compute is cheap and scalable in-warehouse.
+
+**Q: What is the fan-out pattern in pipeline design?**
+A: Fan-out routes a single source dataset to multiple parallel downstream consumers or transformations. It's used when a common cleaned dataset feeds several different aggregations, reducing redundant data reads and keeping source logic DRY.
+
+**Q: What is the staging pattern and why is it used?**
+A: The staging pattern writes pipeline output to a temporary staging table or partition first, then atomically swaps or promotes it to the production table. This prevents consumers from reading incomplete data during a long-running write.
+
+**Q: What is the idempotent partition pattern?**
+A: Data is partitioned by a natural time key (e.g., date). Each pipeline run overwrites only its target partition using INSERT OVERWRITE semantics. This makes every run idempotent — a re-run produces the same output regardless of how many times it executes.
+
+**Q: When would you use a push vs. pull pipeline pattern?**
+A: Pull pipelines query sources on a schedule (most ETL pipelines). Push pipelines have sources emit events when data is ready (CDC, webhooks, Kafka producers). Push is more responsive and reduces polling load on source systems; pull is simpler to implement and schedule.
+
+**Q: What is the circuit breaker pattern and how does it apply to data pipelines?**
+A: A circuit breaker monitors failure rates to a downstream system; if failures exceed a threshold, it stops sending requests ("opens the circuit") to prevent cascading failures. In pipelines, it routes records to a DLQ when a sink is degraded rather than backing up the entire pipeline.
+
+**Q: How does the event-driven pipeline pattern differ from scheduled pipelines?**
+A: Event-driven pipelines trigger on data arrival signals (S3 event notifications, Kafka messages, SNS/SQS events) rather than fixed cron schedules. They provide lower latency and eliminate wasted runs when no new data has arrived.
+
+---
+
+## 💼 Interview Tips
+
+- When asked to design a pipeline, state the pattern you're using and why — naming "medallion architecture" or "event-driven ELT" and justifying it shows architectural fluency, not just implementation knowledge.
+- Discuss the trade-offs of each pattern, not just the benefits — ELT centralizes compute in the warehouse, which can become a bottleneck; event-driven pipelines add operational complexity around triggering and ordering.
+- Bring up the staging pattern when discussing large production loads — it's a detail that shows you've operated pipelines where consumers read data continuously, not just in test environments.
+- Interviewers expect you to connect patterns to non-functional requirements: scalability, cost, latency, maintainability. Map each pattern to the requirements it satisfies.
+- For senior roles, discuss pattern composition — real pipelines often combine medallion layers + event-driven triggering + fan-out to multiple Gold tables + circuit breakers on sinks.
+- Avoid designing a pipeline that requires manual intervention to recover from failures — build failure recovery into the design from the start using DLQs, retries, and idempotent writes.

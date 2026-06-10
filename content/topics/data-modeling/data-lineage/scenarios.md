@@ -535,3 +535,42 @@ class LineageCICheck:
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is data lineage and why does it matter?**
+A: Data lineage tracks the origin, movement, and transformation of data across systems. It matters because it enables impact analysis, regulatory compliance, debugging, and trust in data by showing exactly how data flows from source to consumption.
+
+**Q: What is the difference between technical lineage and business lineage?**
+A: Technical lineage captures system-level details like table names, SQL transformations, and job runs. Business lineage translates this into business terms — showing how a KPI like "Monthly Revenue" is derived from source systems — making it understandable to non-technical stakeholders.
+
+**Q: How does column-level lineage differ from table-level lineage?**
+A: Table-level lineage shows which tables feed into other tables. Column-level lineage goes deeper, tracing exactly which source columns contribute to each target column, enabling precise impact analysis when a source field changes.
+
+**Q: What tools are commonly used for data lineage?**
+A: OpenLineage and Marquez are open standards and reference implementations. Commercial tools include DataHub, Apache Atlas, Collibra, Alation, and Atlan. dbt also provides native lineage through its DAG.
+
+**Q: How do you capture lineage in an ETL pipeline?**
+A: You can capture lineage by instrumenting pipelines to emit OpenLineage events at job start/complete/fail, using orchestrators like Airflow with the OpenLineage provider, or by parsing SQL to extract column-level dependencies automatically.
+
+**Q: What is impact analysis and how does lineage enable it?**
+A: Impact analysis determines which downstream datasets, reports, or consumers are affected when a source changes. Lineage graphs allow you to traverse downstream dependencies from a given node to identify all affected assets before making a change.
+
+**Q: What are common challenges in building a lineage system?**
+A: Challenges include capturing lineage from diverse sources (SQL, Python, Spark), handling dynamic SQL generation, maintaining lineage freshness as pipelines evolve, and scaling the lineage graph as the number of assets grows.
+
+**Q: How does lineage support data governance and compliance?**
+A: Lineage provides auditors with evidence of how sensitive data (PII, PCI) flows through systems, satisfies regulatory requirements like GDPR's right to erasure by identifying all copies of data, and supports data classification by propagating sensitivity tags downstream.
+
+---
+
+## 💼 Interview Tips
+
+- Distinguish between table-level and column-level lineage; senior interviewers expect you to know the tradeoffs and when each is sufficient.
+- Mention OpenLineage as the open standard — showing awareness of industry standards signals maturity beyond tool-specific knowledge.
+- Frame lineage in terms of business value: faster incident resolution, regulatory compliance, and change impact analysis resonate with hiring managers.
+- Avoid treating lineage as a "nice to have" — articulate how missing lineage causes real production incidents and slows data teams.
+- Be prepared to discuss how you would retrofit lineage onto a legacy pipeline that has none, not just greenfield designs.
+- Senior interviewers want to hear about governance integration — how lineage connects to data catalogs, access controls, and sensitivity classification.

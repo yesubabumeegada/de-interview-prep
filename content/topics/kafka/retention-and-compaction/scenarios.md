@@ -302,3 +302,42 @@ audit_producer.produce(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the two retention modes in Kafka?**
+A: Time-based retention (`log.retention.hours/ms`) deletes segments older than the configured duration. Size-based retention (`log.retention.bytes`) deletes older segments when the partition log exceeds a size limit. Both can be combined — whichever limit is reached first triggers deletion.
+
+**Q: What is log compaction in Kafka?**
+A: Log compaction is a retention policy that preserves at least the most recent value for each unique message key. Old records with the same key are removed, but the latest value is never deleted. This creates a compacted log suitable for changelog and state reconstruction use cases.
+
+**Q: When would you use log compaction vs. time-based retention?**
+A: Use time-based retention for event streams where historical records expire (e.g., clickstream, logs). Use log compaction for changelog topics (e.g., database CDC output, Kafka Streams state changelogs, user profile updates) where consumers need the current state of each key, not a complete history.
+
+**Q: How does Kafka handle tombstone records in compacted topics?**
+A: A tombstone is a message with a non-null key and a null value. It signals that the key should be deleted. After the `delete.retention.ms` period, the compaction cleaner removes the tombstone itself from the log, allowing the key to be fully purged.
+
+**Q: What is the `min.cleanable.dirty.ratio` in compaction?**
+A: It controls when the log cleaner compacts a partition — compaction begins when the ratio of dirty (uncompacted) bytes to total log bytes exceeds this threshold (default 0.5, meaning 50%). Lower values trigger more frequent compaction; higher values batch more before compacting.
+
+**Q: How do retention settings affect consumer groups that fall behind?**
+A: If a consumer group's committed offset falls behind the log start offset (due to data expiration), the consumer gets an `OffsetOutOfRangeException`. It must reset to the earliest or latest offset. This represents permanent data loss for that consumer — monitoring lag to prevent falling behind retention is critical.
+
+**Q: How do you configure different retention policies per topic?**
+A: Override retention at the topic level using `kafka-configs.sh --alter --entity-type topics --entity-name <topic> --add-config retention.ms=<value>`. Topic-level configs override broker defaults, allowing different retention windows for different data types on the same cluster.
+
+**Q: What is the difference between log segment deletion and log compaction?**
+A: Segment deletion (time/size retention) removes entire log segments based on age or size, potentially deleting many records at once. Compaction selectively removes individual records with duplicate keys within a segment, preserving the latest value per key — it is a more granular operation that runs continuously in the background.
+
+---
+
+## 💼 Interview Tips
+
+- Know the two retention modes and their combination behavior — interviewers often ask which limit triggers first and what happens to consumers that fall behind. Having a precise answer signals operational depth.
+- Explain log compaction use cases concretely: Kafka Streams changelog topics, Debezium CDC topics, and configuration/state topics are the canonical examples interviewers expect.
+- Discuss tombstones as the delete mechanism in compacted topics — it's a subtle detail that distinguishes candidates who've used compacted topics from those who've only read about them.
+- Warn about consumers falling behind retention explicitly — it's one of the most severe operational incidents in Kafka (irreversible data loss), and proactively mentioning monitoring for it shows production awareness.
+- For senior roles, discuss compaction performance tuning: `log.cleaner.threads`, `log.cleaner.io.max.bytes.per.second` (throttle compaction I/O impact), and monitoring the log cleaner thread pool for saturation.
+- Be ready to explain why compacted topics are not suitable for all use cases — they don't preserve historical records (multiple values per key), so they're wrong for audit trails, event sourcing, or any workload needing full history.

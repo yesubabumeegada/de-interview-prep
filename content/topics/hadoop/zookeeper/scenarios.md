@@ -478,3 +478,42 @@ Bottleneck would be 100K+ instances — at that scale, use etcd or Consul.
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Apache ZooKeeper and what is it used for?**
+A: ZooKeeper is a distributed coordination service that provides reliable primitives like distributed locks, leader election, configuration management, and service discovery for distributed systems. Hadoop uses it for HDFS NameNode HA failover, HBase region assignment, and Kafka broker coordination.
+
+**Q: How does ZooKeeper achieve consistency?**
+A: ZooKeeper uses the ZAB (ZooKeeper Atomic Broadcast) protocol, which is similar to Paxos. All write requests go to the elected leader, which broadcasts them to a quorum of followers before acknowledging the client. This ensures all nodes see writes in the same order.
+
+**Q: What is a ZNode?**
+A: A ZNode is a node in ZooKeeper's hierarchical namespace (similar to a filesystem tree). ZNodes store small amounts of data (up to 1MB) and can be persistent (survive restarts) or ephemeral (automatically deleted when the creating client session ends).
+
+**Q: How does ZooKeeper enable leader election?**
+A: Competing processes each create an ephemeral sequential ZNode under a common path. The process with the lowest sequence number becomes the leader. Others set watches on the ZNode immediately before them, so only the next-in-line is notified when the current leader's session expires.
+
+**Q: What is a ZooKeeper watch?**
+A: A watch is a one-time notification mechanism. A client can set a watch on a ZNode and be notified (once) when the ZNode's data changes, is deleted, or new children are created. Watches enable event-driven coordination without polling.
+
+**Q: How does ZooKeeper handle failures and ensure availability?**
+A: ZooKeeper requires a quorum (majority) of nodes to be available. With 2N+1 nodes, it can tolerate N failures. Data is persisted to a transaction log and snapshots on disk for recovery after restarts.
+
+**Q: What are the limitations of ZooKeeper?**
+A: ZooKeeper is designed for small coordination data — not large file storage. It requires an odd number of nodes (3, 5) for quorum. Write throughput is limited by the leader, and all reads and writes go through the ZooKeeper ensemble, making it a potential bottleneck in high-frequency use cases.
+
+**Q: What replaced ZooKeeper in Kafka and how does it affect data engineers?**
+A: Apache Kafka replaced ZooKeeper with KRaft (Kafka Raft metadata mode) in Kafka 3.x, eliminating the ZooKeeper dependency. For data engineers, this simplifies Kafka cluster operations (no separate ZooKeeper ensemble to manage) and improves scalability of Kafka metadata.
+
+---
+
+## 💼 Interview Tips
+
+- Know ZooKeeper's role in each Hadoop component specifically — HDFS HA failover, HBase region assignment, Kafka broker registration — showing context-aware knowledge rather than generic descriptions.
+- Explain the ephemeral ZNode pattern for leader election and distributed locking — it's the most common ZooKeeper interview question and demonstrates understanding of the core coordination primitives.
+- Be clear about ZooKeeper's data size limitation (1MB per ZNode) — it's a common misconception that ZooKeeper can store arbitrary data; it's designed only for small coordination state.
+- Discuss quorum requirements (2N+1 for N fault tolerance) — interviewers use this to test whether you understand ZooKeeper's availability model and how to size ensembles.
+- Mention KRaft as Kafka's ZooKeeper replacement for modern clusters — showing awareness of the ecosystem evolution signals you keep up with current developments.
+- For senior roles, discuss ZooKeeper operational concerns: session timeouts affecting connected clients (HBase region servers), watch thundering herd on large clusters, and the operational burden of running a separate ensemble alongside your main cluster.

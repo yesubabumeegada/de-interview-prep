@@ -283,3 +283,42 @@ Access:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is AWS Glue and what are its main components?**
+A: AWS Glue is a fully managed serverless ETL service. Its main components are: Glue Data Catalog (central metadata repository), Glue Crawlers (auto-discover schemas from data sources), Glue ETL Jobs (Spark- or Python-based data transformation), Glue Workflows (orchestrating multi-job pipelines), and Glue DataBrew (no-code data preparation).
+
+**Q: What is the Glue Data Catalog and why is it important?**
+A: The Glue Data Catalog is a central metadata repository storing database and table definitions, schemas, and partition information. It integrates natively with Athena, EMR, Redshift Spectrum, and Lake Formation, acting as a unified schema registry for your entire data lake.
+
+**Q: What is the difference between Glue DynamicFrame and Spark DataFrame?**
+A: DynamicFrame is Glue's extension of Spark DataFrame designed for semi-structured, schema-inconsistent data. It supports `choice` types (fields with multiple data types across records) and schema-on-the-fly resolution without upfront schema enforcement. You can convert between the two using `toDF()` and `fromDF()`.
+
+**Q: What are Glue job bookmarks?**
+A: Job bookmarks track which data has already been processed by a Glue job, enabling incremental loads. When enabled, a job only processes new or changed data since the last successful run, avoiding reprocessing of historical data in S3-based sources.
+
+**Q: What is the difference between Glue Trigger types: Scheduled, On-Demand, and Conditional?**
+A: Scheduled triggers run jobs on a cron schedule. On-Demand triggers start jobs manually or via API. Conditional (event-based) triggers start a job when a preceding job or crawler in a Workflow succeeds, fails, or completes — enabling dependency-based pipeline orchestration.
+
+**Q: How do you optimize Glue job performance?**
+A: Key optimizations: enable Glue auto-scaling (G.1X or G.2X workers with auto-scaling), use pushdown predicates to filter data at the source, partition source data by frequently filtered columns, use columnar formats (Parquet/ORC), enable the Glue Spark UI for profiling, and tune the number of DPUs for job size.
+
+**Q: What is AWS Glue Studio?**
+A: Glue Studio is a visual interface for building ETL pipelines using a drag-and-drop DAG editor. It generates PySpark code, supports custom transforms, and provides job monitoring. It lowers the barrier for building Glue jobs without writing code from scratch.
+
+**Q: How does Glue handle schema evolution?**
+A: Glue Crawlers detect schema changes and update the Data Catalog. Glue jobs using DynamicFrames handle column additions gracefully. For critical pipelines, you can configure crawlers with schema change policies (UPDATE_IN_DATABASE, LOG, or DEPRECATE_IN_DATABASE) to control how schema drift is handled.
+
+---
+
+## 💼 Interview Tips
+
+- Distinguish Glue from EMR clearly: Glue is serverless and managed (pay per DPU-second, no cluster setup), while EMR gives you full control with persistent or transient clusters. Glue is faster to start for standard ETL; EMR is better for complex Spark tuning.
+- Senior interviewers expect you to know job bookmarks deeply — when they work well (S3 sources, JDBC with modification timestamps) and when they don't (sources without reliable modification tracking require custom watermarking logic).
+- Mention the Glue Data Catalog's role in the broader ecosystem: it's the shared schema layer consumed by Athena, Redshift Spectrum, EMR, and Lake Formation — demonstrating this cross-service integration shows architectural breadth.
+- Avoid the mistake of always using Glue for everything: know that for lightweight Python tasks, Lambda or a simple Python script on ECS may be cheaper and faster. Glue has a 10-minute startup time for jobs.
+- Demonstrate cost awareness: Glue bills per DPU-second with a 10-minute minimum. For very short jobs, Lambda or Athena queries are more cost-efficient.
+- Show awareness of Glue's limitations: job startup latency (2-10 minutes for Spark jobs) makes it unsuitable for near-real-time processing — contrast with Kinesis Data Analytics or MSK for streaming.

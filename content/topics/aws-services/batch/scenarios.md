@@ -254,3 +254,42 @@ batch.register_job_definition(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is AWS Batch and how does it differ from Lambda?**
+A: AWS Batch is a fully managed service for running batch computing workloads on EC2 or Fargate, with no time limits on job duration. Lambda is constrained to 15 minutes max execution; Batch is designed for long-running, compute-intensive jobs like ML training, ETL, or genomics pipelines.
+
+**Q: What are the core components of AWS Batch?**
+A: The three core components are: Job Definitions (templates specifying container image, vCPUs, memory, and IAM roles), Job Queues (where jobs are submitted, with priority ordering), and Compute Environments (the EC2 or Fargate capacity that runs the jobs).
+
+**Q: What is the difference between managed and unmanaged compute environments?**
+A: In managed compute environments, AWS Batch automatically provisions, scales, and terminates EC2 instances based on job demand. In unmanaged environments, you manage the EC2 instances yourself — useful when you need specific instance configurations or pre-installed software.
+
+**Q: How does AWS Batch handle job dependencies?**
+A: Batch supports job dependencies via the `dependsOn` parameter, allowing you to create DAG-like workflows where a job only starts after specified parent jobs succeed. For complex multi-step pipelines, Step Functions is often combined with Batch.
+
+**Q: When would you choose Spot Instances in Batch, and what must you handle?**
+A: Spot Instances reduce compute costs by up to 90% and are ideal for fault-tolerant, checkpointable batch jobs. You must handle Spot interruptions by implementing checkpointing so jobs can resume from the last saved state rather than restarting from scratch.
+
+**Q: How do you pass data between Batch jobs?**
+A: The recommended pattern is S3 — each job reads inputs from S3 and writes outputs to S3. Environment variables and AWS Secrets Manager are used for configuration and credentials, not for large data payloads.
+
+**Q: What IAM roles does AWS Batch require?**
+A: Batch needs three roles: a Service Role (allows Batch to call EC2/ECS on your behalf), an Instance Role (attached to EC2 instances in the compute environment), and a Job Role (ECS task role granting the container access to S3, DynamoDB, etc.).
+
+**Q: How do you monitor AWS Batch jobs?**
+A: Jobs emit status events to CloudWatch Events/EventBridge (SUBMITTED, PENDING, RUNNABLE, STARTING, RUNNING, SUCCEEDED, FAILED). CloudWatch Logs captures container stdout/stderr. You can trigger SNS alerts or Lambda functions on FAILED events for automated alerting.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with use-case clarity: Batch is for long-running, resource-intensive compute jobs (hours, not seconds). Contrast it explicitly with Lambda (15-min limit) and ECS (long-running services) to show you understand the AWS compute spectrum.
+- Always bring up Spot Instance cost savings — senior interviewers expect you to mention checkpointing as the required companion to Spot, not just the cost benefit alone.
+- Avoid describing Batch as a workflow orchestrator — it runs individual jobs, not DAGs. For orchestration, mention integrating Batch with Step Functions or Airflow.
+- Senior interviewers want to hear about IAM least-privilege: job roles should grant only the S3 prefixes and specific actions the container needs, not `s3:*`.
+- Mention array jobs when discussing parallelism — array jobs let you fan out thousands of identical tasks (e.g., processing one file per array index) with a single API call.
+- Demonstrate operational maturity by discussing how you'd handle job failures: retry strategies in the job definition, dead-letter patterns, and CloudWatch alarms on the FAILED job count metric.

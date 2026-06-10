@@ -268,3 +268,42 @@ kafka-configs.sh --bootstrap-server broker:9092 \
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Kafka Connect and what problem does it solve?**
+A: Kafka Connect is a scalable framework for reliably moving data between Kafka and external systems (databases, file systems, cloud storage, SaaS APIs). It provides pre-built connectors and a standard configuration-driven interface, eliminating the need to write custom producer/consumer code for common integrations.
+
+**Q: What is the difference between a Source connector and a Sink connector?**
+A: Source connectors read data from external systems (databases, message queues, APIs) and publish it to Kafka topics. Sink connectors consume data from Kafka topics and write it to external systems (data warehouses, search indexes, object storage).
+
+**Q: What is a Kafka Connect worker?**
+A: A Connect worker is a JVM process that hosts and executes connector and task instances. In distributed mode, multiple workers form a cluster that shares connector workload, provides fault tolerance, and allows connectors to be managed via REST API.
+
+**Q: How does Kafka Connect achieve fault tolerance in distributed mode?**
+A: In distributed mode, connector configurations and offsets are stored in internal Kafka topics (`connect-configs`, `connect-offsets`, `connect-status`). If a worker fails, surviving workers rebalance and restart the failed worker's tasks using the stored configuration and offset state.
+
+**Q: What is a connector task and how does it relate to parallelism?**
+A: A connector is split into one or more tasks — the actual units of parallelism. Each task handles a subset of the connector's work (e.g., specific partitions or tables). Increasing the number of tasks for a connector increases throughput up to the connector's natural parallelism limit.
+
+**Q: How does Kafka Connect handle schema changes?**
+A: Connect integrates with Schema Registry via the Avro, Protobuf, or JSON Schema converters. When a source schema changes, the converter registers a new schema version. Compatibility rules (backward, forward, full) in Schema Registry determine whether the change is allowed without breaking consumers.
+
+**Q: What is Single Message Transform (SMT) in Kafka Connect?**
+A: SMTs are lightweight, chainable transformations applied to each message as it flows through a connector — before publishing (source) or before writing (sink). Examples: renaming fields, extracting timestamps, masking sensitive fields, routing to different topics based on field values.
+
+**Q: What are common alternatives to Kafka Connect for data integration?**
+A: Alternatives include Apache Flink (for stateful stream processing with more complex transformations), Debezium standalone (for CDC without Connect framework), Fivetran/Airbyte (managed ETL), and custom Kafka producer/consumer code. Connect is preferred for configuration-driven, low-code integrations at scale.
+
+---
+
+## 💼 Interview Tips
+
+- Know the distributed mode architecture cold — Connect's use of internal Kafka topics for state storage is an elegant design that interviewers ask about to test architectural understanding.
+- Explain connector task parallelism: more tasks = more throughput, but tasks are bounded by the source's natural parallelism (e.g., number of database tables or topic partitions). Knowing this ceiling matters for capacity planning.
+- Discuss SMTs for simple transforms but emphasize their limitations — SMTs are for message-level stateless transforms; complex joins, aggregations, or stateful logic require Kafka Streams or Flink.
+- Be ready to discuss connector offset management: source connectors track ingested records' positions (file offsets, DB timestamps, Kafka offsets) in the `connect-offsets` topic. Losing this state means re-ingesting from scratch.
+- For senior roles, discuss operational concerns: connector monitoring (lag, error rates), dead-letter queue configuration for failed records, and REST API management for dynamic connector lifecycle.
+- Know specific connectors by name (Debezium for CDC, JDBC Source/Sink, S3 Sink, Elasticsearch Sink) — connector familiarity signals hands-on experience rather than theoretical knowledge.

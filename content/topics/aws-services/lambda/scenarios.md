@@ -283,3 +283,42 @@ Well above the 100K/sec requirement with headroom.
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is AWS Lambda and what are its key constraints for data engineering?**
+A: Lambda is a serverless compute service that runs code in response to events without provisioning servers. Key constraints for data engineering: 15-minute max execution time, 10GB max memory, 512MB–10GB ephemeral /tmp storage, and 1,000 concurrent executions per region by default. These limits make Lambda suitable for lightweight ETL triggers and event processing, not heavy batch transformations.
+
+**Q: What is the Lambda execution model — cold starts vs. warm starts?**
+A: On a cold start, Lambda provisions a new execution environment, downloads your code, and runs initialization code outside the handler. On a warm start, a previously used environment is reused, skipping provisioning. Cold starts add 100ms–several seconds of latency; mitigations include Provisioned Concurrency, smaller deployment packages, and keeping initialization code outside the handler.
+
+**Q: How does Lambda scaling work?**
+A: Lambda scales automatically by creating new execution environments for concurrent invocations. The default burst limit is 3,000 simultaneous executions (region-dependent), scaling by 500 per minute. Reserved concurrency caps a function's maximum concurrent executions; Provisioned Concurrency pre-warms environments for latency-sensitive functions.
+
+**Q: What is the difference between synchronous and asynchronous Lambda invocations?**
+A: Synchronous invocations (API Gateway, direct invoke) wait for the function to complete and return the result; the caller handles errors. Asynchronous invocations (S3, SNS, EventBridge) place the event in an internal queue; Lambda retries failed invocations twice automatically and can route failures to a Dead Letter Queue or an on-failure destination.
+
+**Q: How do you handle Lambda function errors and retries in data pipelines?**
+A: For async invocations, configure a Dead Letter Queue (SQS or SNS) to capture failed events after retries. For event source mappings (SQS, Kinesis), configure `bisect-on-error` to split failing batches and `maximum retry attempts` to limit retries. Use structured logging and CloudWatch alarms on error metrics for operational visibility.
+
+**Q: How do you pass secrets and configuration to Lambda functions?**
+A: Use environment variables for non-sensitive config. For secrets (database passwords, API keys), use Secrets Manager or SSM Parameter Store with the Lambda execution role having `secretsmanager:GetSecretValue` access. Use the Parameters and Secrets Lambda Extension to cache secrets in-memory and avoid per-invocation API calls.
+
+**Q: What is Lambda Layers and when should you use them?**
+A: Layers are ZIP archives containing shared libraries or dependencies that can be attached to multiple functions. Use layers for large shared packages (pandas, NumPy, PySpark) to keep your function deployment package small, enable sharing across functions, and reduce iteration time during development.
+
+**Q: How does Lambda integrate with SQS for reliable event processing?**
+A: SQS as an event source mapping lets Lambda poll the queue and process batches. Messages are not deleted until Lambda successfully processes them (at-least-once delivery). Configure batch size, batch window, and maximum concurrency. Failed batches go back to the queue and retry until the visibility timeout expires or they reach the DLQ.
+
+---
+
+## 💼 Interview Tips
+
+- Always discuss Lambda's fit vs. limitations for data engineering: excellent for event-driven triggers (S3 file arrival → Glue job kick-off), lightweight transformation, and orchestration glue code; not suitable for heavy batch processing due to the 15-minute limit.
+- Senior interviewers probe cold start mitigation: know that Provisioned Concurrency is the definitive solution for latency-sensitive workloads, but it incurs costs even when idle — frame it as a cost-vs-latency tradeoff.
+- Mention the power of Lambda's event source mapping integrations: SQS, Kinesis, DynamoDB Streams, MSK, and Kafka all have native triggers — this enables sophisticated event-driven pipelines without custom polling infrastructure.
+- Avoid vague answers about "Lambda will handle it automatically" — always specify the concurrency model, retry behavior, and error destination relevant to the invocation type.
+- Demonstrate operational maturity: describe how you'd use Lambda destinations (on-success and on-failure) for async invocations to route results and errors to different downstream systems.
+- Know the /tmp storage limit (up to 10GB) and ephemeral nature — never rely on /tmp across invocations. For state sharing between invocations, use S3, DynamoDB, or ElastiCache.

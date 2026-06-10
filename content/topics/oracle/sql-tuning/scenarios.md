@@ -240,3 +240,40 @@ ORDER BY name;
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the first step when tuning a slow Oracle SQL query?**
+A: Get the execution plan using `EXPLAIN PLAN FOR ... / SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY)` or `SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY_CURSOR)` for the plan from the shared pool. Identify the most expensive operation by looking at the `Cost`, `Rows` estimate, and actual statistics with `GATHER_PLAN_STATISTICS` hint.
+
+**Q: What does a high "Rows" estimate discrepancy between estimated and actual rows indicate?**
+A: It indicates stale or missing optimizer statistics, skewed data that histogram-less statistics cannot represent, or a complex join cardinality issue. Inaccurate cardinality causes the optimizer to choose wrong join methods (nested loop vs. hash join) and wrong access paths (index vs. full scan).
+
+**Q: When should you use a nested loop join vs. a hash join?**
+A: Nested loop joins are efficient when the outer set is small and the inner table has an index on the join column—ideal for OLTP point lookups. Hash joins are efficient when both sets are large and there is no usable index—the optimizer builds a hash table from the smaller set and probes with the larger. Hash joins require memory (PGA).
+
+**Q: What is an index skip scan and when does it apply?**
+A: A skip scan allows Oracle to use a composite index even when the leading column is not in the WHERE clause. The optimizer logically splits the index into sub-indexes for each distinct leading-column value and scans each sub-index. It is only beneficial when the leading column has very few distinct values (low cardinality).
+
+**Q: What is the SQL Tuning Advisor and what does it produce?**
+A: The SQL Tuning Advisor (`DBMS_SQLTUNE`) analyzes a SQL statement and produces recommendations: create a missing index, gather statistics on a table, accept an SQL Profile (saved optimizer hints), or restructure the query. It runs automatically during maintenance windows and stores findings in `DBA_ADVISOR_RECOMMENDATIONS`.
+
+**Q: What is an SQL Baseline (SQL Plan Management) and how does it differ from an SQL Profile?**
+A: An SQL Baseline pins a specific execution plan for a SQL statement, preventing plan changes even after statistics refresh or optimizer upgrades. An SQL Profile provides supplemental statistics (hint-like corrections) that guide the optimizer toward a better plan without pinning. Baselines guarantee stability; profiles guide without locking.
+
+**Q: What is the significance of the `CARDINALITY` and `NDISTINCT` statistics and how are they collected?**
+A: Cardinality (number of distinct values) determines join order and access path selection. Collect with `DBMS_STATS.GATHER_TABLE_STATS` with appropriate `METHOD_OPT => 'FOR ALL COLUMNS SIZE AUTO'` to let Oracle decide on histogram creation. Skewed columns need histograms; uniform columns do not.
+
+**Q: What are bind variable peeking issues and how do you address them?**
+A: At first execution with peeking, Oracle optimizes for the actual bind value seen—the plan is then reused for all subsequent executions, which may be suboptimal for different bind values (e.g., a rare vs. common value). Address with Adaptive Cursor Sharing (ACS), which allows multiple plans per SQL based on bind value histograms, or with SQL Profiles/Baselines for specific plans.
+
+---
+
+## 💼 Interview Tips
+
+- Always start with the execution plan and actual vs. estimated rows—this is the correct methodology and interviewers reward structured diagnostic thinking over jumping to "add an index."
+- Know when NOT to add an index: indexes hurt DML performance (INSERT/UPDATE/DELETE must maintain the index), waste space on low-selectivity columns, and can cause the optimizer to choose a worse plan. Selectivity analysis comes first.
+- Senior interviewers often present a specific wait event (`db file sequential read` at high volume) and expect you to correlate it to the execution plan (index range scan on a large result set where a full scan + hash join would be faster).
+- Demonstrate SQL Plan Management fluency: baselines for plan stability, profiles for one-time corrections, and the ability to evolve baselines when a better plan is confirmed—this is the mature production approach.
+- Connect tuning to monitoring: know how to find top SQL from AWR (`DBA_HIST_SQLSTAT`), identify regression after a deployment by comparing AWR snapshots, and set up SQL Performance Analyzer (SPA) for change impact testing.

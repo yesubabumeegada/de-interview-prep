@@ -539,3 +539,42 @@ TRUNCATE TABLE warehouse.cumulative_daily_metrics;
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a backfill in Airflow and when would you use it?**
+A: A backfill runs a DAG for historical date ranges that were missed or need reprocessing — used when fixing a data bug, onboarding a new DAG with historical data requirements, or recovering from pipeline failures. It respects the DAG's schedule and creates one DagRun per interval.
+
+**Q: What is the difference between `catchup=True` and `catchup=False` in Airflow?**
+A: With `catchup=True`, Airflow creates DagRuns for all past intervals since the `start_date` that have not yet run. With `catchup=False`, only the most recent interval is run when the DAG is enabled — past intervals are skipped entirely.
+
+**Q: How does Airflow's backfill command work and how is it different from setting catchup=True?**
+A: `airflow dags backfill` is an explicit CLI command that triggers runs for a specified date range on demand. `catchup=True` is automatic — Airflow's scheduler creates missed runs automatically. The CLI backfill gives you explicit control over which range to reprocess.
+
+**Q: What are the risks of running a large backfill and how do you mitigate them?**
+A: Risks include overwhelming the task queue, contending with live production runs, and overloading downstream systems (databases, APIs). Mitigate by using `--max-active-runs` to throttle concurrency, scheduling backfills during off-peak hours, and setting pool limits on shared resources.
+
+**Q: How do you make a DAG idempotent so it can be safely backfilled?**
+A: Use `INSERT OVERWRITE` or `MERGE` (upsert) patterns instead of plain `INSERT`. Partition data by the execution date so reprocessing a date overwrites only that partition. Avoid side effects that can't be repeated (e.g., sending emails, incrementing counters) without idempotency guards.
+
+**Q: What is `depends_on_past` and how does it affect backfills?**
+A: `depends_on_past=True` means a task won't run unless the same task in the previous DagRun succeeded. During backfills, this creates sequential execution across runs — each date interval must complete before the next starts, which can make backfills very slow for long historical ranges.
+
+**Q: How would you handle a backfill when the DAG's logic has changed since the original runs?**
+A: Branch the DAG logic using `execution_date` or version parameters to apply different transformation logic for different date ranges. Alternatively, create a separate backfill-specific DAG with the historical logic. Avoid retroactively changing live DAG logic in ways that break past interval semantics.
+
+**Q: What Airflow pool settings would you use to prevent a backfill from starving production pipelines?**
+A: Create a dedicated pool with a limited slot count (e.g., 4-8 slots) for backfill tasks. Assign backfill DAG tasks to this pool and keep production tasks in the default pool. This ensures production tasks always have available workers regardless of backfill volume.
+
+---
+
+## 💼 Interview Tips
+
+- Always lead with idempotency when discussing backfills — the ability to rerun any interval safely is the foundational requirement. Interviewers want to see you think about this first.
+- Mention the concurrency controls (`max_active_runs`, pools, priority weights) — running an unconstrained backfill is a common production incident that experienced engineers know to prevent.
+- `depends_on_past` is a frequent interview trap: explain that it's sometimes necessary for sequential processing but creates backfill bottlenecks — and describe when you'd disable it for a backfill run.
+- Senior interviewers often ask about backfill strategy for large historical datasets — partition pruning, parallel backfill windows, and downstream impact assessment show operational depth.
+- Avoid saying "just set catchup=True" as a complete answer — discuss the operational implications of enabling it on an existing production DAG that has been paused for weeks.
+- Show awareness that backfills interact with data consumers: downstream dashboards or models reading partially reprocessed data need to be handled carefully during a large backfill operation.

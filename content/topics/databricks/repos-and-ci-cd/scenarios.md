@@ -210,3 +210,42 @@ ENTERPRISE_CICD = {
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are Databricks Repos and what problem do they solve?**
+A: Databricks Repos integrates Git repositories directly into the Databricks workspace, allowing notebooks and files to be version-controlled, branched, and collaborated on using standard Git workflows. It solves the problem of notebooks being isolated in the workspace with no version history or code review process.
+
+**Q: What is the difference between Databricks Repos and Databricks Files (workspace files)?**
+A: Repos syncs content from a remote Git repository and supports full Git operations (branch, commit, push, pull, merge). Workspace files are non-Git-backed files in the workspace. Repos is the preferred approach for production code that needs version control and CI/CD integration.
+
+**Q: How do you implement CI/CD for Databricks notebooks and jobs?**
+A: Use a Git repository as the source of truth, run automated tests in CI (unit tests with pytest, integration tests on a test cluster), deploy configuration via the Databricks REST API or Terraform, and promote code through environments (dev → staging → prod) using branch-based or tag-based deployment strategies.
+
+**Q: What is the Databricks Asset Bundles (DAB) framework?**
+A: Databricks Asset Bundles is a YAML-based configuration framework for defining, deploying, and managing Databricks resources (jobs, pipelines, clusters, permissions) as code. It replaces ad-hoc REST API scripts with a structured, version-controlled, environment-aware deployment system.
+
+**Q: How do you run automated tests for Databricks notebooks in CI?**
+A: Extract testable logic from notebooks into Python modules, write unit tests with pytest that run locally or in CI without a Databricks cluster, and write integration tests that run on a Databricks cluster via the REST API Jobs API or `databricks-connect`. Nutter is a framework specifically for testing Databricks notebooks.
+
+**Q: What is databricks-connect and how is it used in CI/CD?**
+A: `databricks-connect` is a library that redirects local Spark API calls to a remote Databricks cluster, allowing you to develop and test Spark code locally in an IDE while executing on a real cluster. In CI/CD, it enables running integration tests against a real cluster without uploading notebooks.
+
+**Q: How do you manage environment-specific configuration in a Databricks CI/CD pipeline?**
+A: Use Databricks Asset Bundles targets (dev, staging, prod) with environment-specific variable substitution for cluster sizes, table names, and secrets. Store sensitive configuration in Databricks Secrets backed by a secrets manager (AWS Secrets Manager, Azure Key Vault, HashiCorp Vault).
+
+**Q: What are the key stages of a Databricks CI/CD pipeline?**
+A: Code commit → PR/code review with static analysis (flake8, mypy) → CI: unit tests (local), integration tests (test cluster via Jobs API) → artifact build (wheel or bundle) → staging deployment (Databricks Asset Bundles deploy) → automated smoke test → production deployment with approval gate.
+
+---
+
+## 💼 Interview Tips
+
+- Show that you treat notebooks as code artifacts subject to the same engineering discipline as application code — version control, code review, testing, and deployment pipelines.
+- Know Databricks Asset Bundles — it is the modern standard for infrastructure-as-code in Databricks and asking about it is common in senior interviews.
+- Be ready to discuss testing strategy: how you separate unit-testable logic from cluster-dependent code is a key design discipline that senior interviewers probe.
+- Mention the promotion workflow through environments (dev → staging → prod) with appropriate approval gates — this shows production engineering maturity.
+- Common mistake: using the workspace UI as the source of truth for production notebooks — all production code must live in Git, deployed via CI/CD.
+- Senior interviewers at engineering-mature organizations will ask about secrets management — know how Databricks Secrets integrates with cloud key vaults.

@@ -143,3 +143,41 @@ with pipeline_step("Load") as step:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a context manager in Python and what problem does it solve?**
+A: A context manager wraps setup and teardown logic around a block of code using the `with` statement. It guarantees that cleanup (closing a file, releasing a lock, committing/rolling back a transaction) runs even if an exception is raised inside the block, eliminating resource leak patterns from try/finally boilerplate.
+
+**Q: What are the two methods required by the context manager protocol?**
+A: `__enter__` (called when entering the `with` block; its return value is bound to the `as` variable) and `__exit__` (called when leaving the block; receives exception type, value, and traceback as arguments). Returning `True` from `__exit__` suppresses the exception; returning `None` or `False` propagates it.
+
+**Q: How do you create a simple context manager using `contextlib.contextmanager`?**
+A: Decorate a generator function with `@contextlib.contextmanager`. Yield once in the try block (the yielded value becomes the `as` variable). Put cleanup in the finally block. The decorator wraps the generator into a proper `__enter__`/`__exit__` object without writing a class.
+
+**Q: When would you write a class-based context manager vs. using `@contextmanager`?**
+A: Use `@contextmanager` for simple, linear setup/teardown that reads naturally as a generator. Write a class when you need multiple methods, stateful teardown that depends on results computed during the `with` block, or when the context manager needs to be picklable or inheritable.
+
+**Q: How are context managers used for database transactions in data engineering?**
+A: A transaction context manager begins a transaction on `__enter__` and commits on clean exit or rolls back on exception in `__exit__`. This ensures no partial writes are committed and the connection is always returned to a pool, which is critical for correctness in ETL pipelines.
+
+**Q: What is `contextlib.ExitStack` and when is it useful?**
+A: `ExitStack` manages a dynamic number of context managers—you push them on to the stack at runtime. Useful when the number of resources to manage is not known at write time (e.g., opening N files from a list, acquiring locks from a variable set of resources). All pushed managers are exited in LIFO order.
+
+**Q: What does it mean to suppress an exception in `__exit__` and how do you do it?**
+A: If `__exit__` returns a truthy value, the exception that triggered the exit is swallowed and execution continues after the `with` block. Example: `contextlib.suppress(FileNotFoundError)` creates a context manager that silently ignores the specified exception type—useful for idempotent cleanup operations.
+
+**Q: How can context managers be composed (nested) and what are the risks?**
+A: Nest `with` statements or use comma-separated context managers in one `with` statement (`with A() as a, B() as b:`). If `A.__enter__` succeeds and `B.__enter__` fails, `A.__exit__` is still called. Deep nesting can obscure flow—`ExitStack` is cleaner for many resources.
+
+---
+
+## 💼 Interview Tips
+
+- Write a minimal class-based and a `@contextmanager` version of the same concept (e.g., a timer) to demonstrate both approaches. This shows you choose the right tool for the complexity.
+- Database transaction context managers are the most common DE use case—be specific about commit on success, rollback on exception, and connection pool release in `__exit__`.
+- Senior interviewers test `__exit__` exception handling: what arguments does it receive? When does returning `True` make sense (e.g., suppressing expected transient errors in retry logic)? When is it dangerous (swallowing real bugs)?
+- Mention `contextlib.AsyncContextManager` / `@asynccontextmanager` for async code—critical when using async database drivers (asyncpg, aiomysql) in FastAPI or Airflow async operators.
+- Connect context managers to the DE concept of resource governance: database connections, file handles, and network sockets are finite—context managers are the idiomatic Python mechanism for bounded resource usage.

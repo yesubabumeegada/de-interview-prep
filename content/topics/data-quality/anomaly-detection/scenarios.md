@@ -164,3 +164,41 @@ flowchart TD
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is data anomaly detection in the context of data engineering?**
+A: Data anomaly detection identifies unexpected patterns, values, or volumes in datasets that may indicate data quality issues, pipeline failures, or upstream source problems. It differs from ML anomaly detection by focusing on data health rather than business signals.
+
+**Q: What are the main types of data anomalies?**
+A: Point anomalies (a single outlier value), contextual anomalies (a value that is unusual in a specific context, e.g., zero sales on a weekday), and collective anomalies (a group of related records that together signal an issue, e.g., a missing date range).
+
+**Q: What statistical methods are commonly used for anomaly detection in data pipelines?**
+A: Z-score (standard deviations from mean), IQR (interquartile range) for outliers, moving averages for trend deviation, and time series models (ARIMA, Prophet) for seasonal patterns. Simpler threshold-based rules (row count ±20%) are often the most practical first line of defense.
+
+**Q: What is volume anomaly detection and how do you implement it?**
+A: Volume anomaly detection monitors the number of rows ingested or processed per pipeline run. Implementation typically involves storing historical run metrics and alerting when current volume deviates beyond a threshold (e.g., >3 standard deviations from a rolling 30-day average).
+
+**Q: How do tools like Monte Carlo or Bigeye approach automated anomaly detection?**
+A: These tools continuously profile tables (row counts, null rates, value distributions, freshness) and use ML models trained on historical patterns to detect deviations. They alert data teams to anomalies without requiring explicit threshold configuration for every metric.
+
+**Q: What is the difference between rule-based and ML-based anomaly detection for data quality?**
+A: Rule-based detection uses explicit thresholds (e.g., null rate > 5%) and is transparent, fast, and easy to explain. ML-based detection learns patterns automatically and adapts to seasonality but requires historical data, can produce false positives, and is harder to debug.
+
+**Q: How do you reduce alert fatigue in a data anomaly detection system?**
+A: Prioritize alerts by business impact, implement severity tiers, use ML-based adaptive thresholds that account for seasonality and trends, require human acknowledgment before auto-escalation, and continuously tune thresholds based on false positive feedback.
+
+**Q: What is freshness anomaly detection?**
+A: Freshness anomaly detection monitors whether data in a table has been updated within the expected time window. It catches silent pipeline failures where a job completes without error but produces no new data — one of the most common and dangerous data quality issues.
+
+---
+
+## 💼 Interview Tips
+
+- Start with the simplest effective approach — row count and null rate monitoring catches the majority of real-world data quality issues without complex ML.
+- Be ready to discuss how you would implement anomaly detection from scratch in a data platform that has none, including what metrics to monitor first.
+- Senior interviewers want to hear about alert fatigue — show that you understand that too many alerts are as harmful as no alerts.
+- Mention freshness monitoring specifically; it is frequently overlooked and is one of the most impactful quality checks to implement.
+- Connect anomaly detection to SLAs: anomalies only matter if they affect downstream consumers, so prioritization should be driven by business impact.
+- Know the difference between detecting anomalies in ingested data (quality checks) vs. in pipeline behavior (operational monitoring) — both are needed.

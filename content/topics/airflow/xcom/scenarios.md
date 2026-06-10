@@ -461,3 +461,39 @@ def xcom_monitoring():
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is XCom in Airflow and what is it designed for?**
+A: XCom (cross-communication) is a mechanism for tasks to share small pieces of data by pushing values to and pulling values from Airflow's metadata database. It's designed for lightweight metadata sharing — task IDs, file paths, record counts, status flags — not for transferring large datasets.
+
+**Q: How do you push and pull XCom values in Airflow?**
+A: Push: `ti.xcom_push(key='my_key', value=my_value)` or return a value from `execute()` (auto-pushed as `return_value`). Pull: `ti.xcom_pull(task_ids='upstream_task', key='my_key')` in a downstream task's callable or operator. In Jinja templates: `{{ ti.xcom_pull(task_ids='task', key='key') }}`.
+
+**Q: What is the maximum recommended XCom payload size and what happens if you exceed it?**
+A: The default XCom backend stores values in the metadata database — typically limited to a few MB before causing database performance issues. Storing large payloads (DataFrames, model artifacts, large result sets) in XCom causes database bloat and slow task state queries. The practical limit is a few kilobytes to a few hundred kilobytes.
+
+**Q: What is a custom XCom backend and when would you use one?**
+A: A custom XCom backend (Airflow 2.x) overrides where XCom values are stored — instead of the metadata database, values are stored in external systems (S3, GCS). Use it when your workflow legitimately needs to pass larger intermediate results between tasks without introducing manual storage boilerplate in every DAG.
+
+**Q: How do you access XCom values within a Jinja-templated operator parameter?**
+A: Use `{{ ti.xcom_pull(task_ids='upstream_task_id', key='return_value') }}` inside any `template_fields` parameter. For example, a SQL query can incorporate a dynamically generated table name from a previous task without Python code in the downstream operator.
+
+**Q: What are the risks of using XCom for task communication at scale?**
+A: Each XCom push/pull is a read/write to the metadata database. At high task concurrency or with large DAG runs, XCom operations can generate significant database load. Old XCom records accumulate over time — periodically clean them with `airflow db clean` or configure `xcom_expiration` to auto-delete old records.
+
+**Q: What is the `do_xcom_push` parameter on operators?**
+A: `do_xcom_push=True` (default on most operators) controls whether the operator's return value is automatically pushed to XCom. Set `do_xcom_push=False` on operators where you know the return value is large or unnecessary — preventing unintended XCom pushes that bloat the metadata database.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with XCom's design intent: it's for metadata, not data. Candidates who describe passing DataFrames through XCom signal they haven't thought through the operational implications.
+- The custom XCom backend is a strong differentiator — mentioning S3-backed XCom as the right solution for legitimately larger inter-task payloads shows you know Airflow's extensibility model.
+- Be ready to describe the anti-pattern and the fix in the same breath: "don't pass large data through XCom — instead write to S3 and push the path." This shows you've dealt with this in practice.
+- Senior interviewers will ask about XCom cleanup — accumulated XCom records are a real production database bloat issue. Know about `airflow db clean` and `xcom_expiration` settings.
+- Jinja template XCom access is a powerful pattern for dynamic SQL and operator parameters — demonstrate familiarity with `{{ ti.xcom_pull(...) }}` syntax to show Airflow template depth.
+- Avoid over-engineering simple DAGs with XCom when the data flow can be expressed through deterministic naming conventions (S3 paths based on execution_date) — showing this judgment signals senior-level DAG design thinking.

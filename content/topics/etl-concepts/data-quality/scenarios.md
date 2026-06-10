@@ -455,3 +455,42 @@ def build_escalation_context(failure: dict, lineage_graph, history: list) -> dic
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the core dimensions of data quality?**
+A: The key dimensions are completeness (no missing values), accuracy (correct values), consistency (no contradictions across systems), timeliness (data is available when needed), uniqueness (no duplicates), and validity (values conform to expected formats and ranges).
+
+**Q: How would you implement data quality checks in an ETL pipeline?**
+A: Add validation steps at ingestion (schema checks, null checks), transformation (range checks, referential integrity), and before loading (row count reconciliation, statistical profiling). Use frameworks like Great Expectations or dbt tests to codify and automate these checks.
+
+**Q: What is a data contract and how does it enforce quality?**
+A: A data contract is a formal agreement between data producers and consumers defining the schema, semantics, SLAs, and quality expectations of a dataset. Producers validate against the contract before publishing, preventing breaking changes from reaching consumers.
+
+**Q: How do you handle data quality failures in a production pipeline?**
+A: Depending on severity: block the load and alert on critical failures (e.g., primary key duplicates), quarantine suspect rows to a dead-letter table for review on warnings, and log metrics for monitoring on informational issues. Never silently drop bad data.
+
+**Q: What is Great Expectations and how does it work?**
+A: Great Expectations is a Python framework for defining, documenting, and validating data quality rules called "expectations." You define an expectation suite against a dataset, run validation, and get detailed HTML reports showing pass/fail results and data profiling.
+
+**Q: How do you detect data drift in production?**
+A: Monitor statistical properties over time — null rates, value distributions, min/max ranges, cardinality — and alert when they deviate beyond a threshold from historical baselines. Tools like Monte Carlo, Soda, and custom dbt tests automate this.
+
+**Q: What is the difference between data validation and data profiling?**
+A: Profiling is exploratory — it describes the current state of data (distributions, patterns, anomalies) without pass/fail verdicts. Validation is assertive — it checks specific rules and fails the pipeline if expectations are violated.
+
+**Q: How do dbt tests support data quality?**
+A: dbt provides built-in generic tests (not_null, unique, accepted_values, relationships) and supports custom singular SQL tests. Tests run after transformations and block downstream models from materializing if upstream data violates quality rules.
+
+---
+
+## 💼 Interview Tips
+
+- Frame data quality as a pipeline-first concern, not an afterthought — mention where checks live in the pipeline (ingestion, transform, load) rather than describing them as a post-hoc audit.
+- Interviewers want to hear about alerting and escalation paths, not just detection — explain what happens operationally when a quality check fails.
+- Mention the cost of bad data reaching consumers (wrong business decisions, SLA breaches, trust erosion) to show business impact awareness.
+- Avoid the trap of saying "we just add not_null checks" — senior engineers discuss statistical drift detection, schema evolution handling, and SLA monitoring.
+- Be ready to describe how you'd prioritize which checks to implement first — junior candidates add checks everywhere; seniors triage by business criticality and failure impact.
+- Know the difference between hard failures (pipeline stops) and soft failures (quarantine + alert) and when each is appropriate — this shows production operations experience.

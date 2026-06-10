@@ -407,3 +407,41 @@ ORDER BY step_num;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a subquery and what are the main types?**
+A: A subquery is a SELECT statement nested inside another SQL statement. Types include: scalar subquery (returns one value, used in SELECT or WHERE), row subquery (returns one row), table subquery/derived table (returns a result set used in FROM), correlated subquery (references the outer query's columns), and EXISTS subquery (tests for row existence).
+
+**Q: What is a correlated subquery and what are its performance implications?**
+A: A correlated subquery references columns from the outer query, making it re-execute for every row of the outer query. This creates O(n * m) execution behavior—for a 1M-row outer table, the subquery may execute 1M times. They're often rewritten as JOINs or window functions for better performance.
+
+**Q: When would you use EXISTS instead of IN for a subquery?**
+A: EXISTS short-circuits as soon as it finds the first matching row, making it efficient when the subquery could return many rows. IN evaluates the entire subquery and materializes the result. EXISTS is also NULL-safe—IN with NULLs in the subquery result can behave unexpectedly (it will never return rows for the NOT IN case if any NULL is present).
+
+**Q: What is a derived table and how does it differ from a CTE?**
+A: A derived table is an inline subquery in the FROM clause that acts as a temporary result set for the outer query. It differs from a CTE in that it's defined inline (harder to read for complex logic), cannot be referenced multiple times in the same query, and cannot be recursive. CTEs are generally preferred for readability.
+
+**Q: What is the NULL trap with NOT IN subqueries?**
+A: If the subquery used with NOT IN returns any NULL value, the entire NOT IN expression evaluates to UNKNOWN for every row, returning zero rows. This is a common bug: `WHERE id NOT IN (SELECT id FROM table_with_nulls)` may silently return no results. Use NOT EXISTS or filter NULLs from the subquery to avoid this.
+
+**Q: How do you convert a correlated subquery to a JOIN for performance?**
+A: Replace the correlated subquery with an equivalent JOIN. For example, `SELECT * FROM orders o WHERE amount > (SELECT AVG(amount) FROM orders WHERE customer_id = o.customer_id)` becomes a JOIN to a pre-aggregated subquery: `SELECT o.* FROM orders o JOIN (SELECT customer_id, AVG(amount) AS avg_amt FROM orders GROUP BY customer_id) a ON o.customer_id = a.customer_id WHERE o.amount > a.avg_amt`.
+
+**Q: What is a lateral join (LATERAL) and how does it relate to correlated subqueries?**
+A: LATERAL (PostgreSQL, standard SQL) or CROSS APPLY / OUTER APPLY (SQL Server) allows a subquery in the FROM clause to reference columns from a preceding table in the same FROM clause. It's like a correlated subquery in the FROM clause—useful for "top N per group" queries and functions that return rows per input row.
+
+**Q: When is a subquery more appropriate than a JOIN?**
+A: Subqueries are preferable for: EXISTS checks (cleaner than JOIN + DISTINCT), scalar lookups where a NULL result is semantically meaningful, semi-joins and anti-joins (NOT EXISTS), and cases where the subquery result is used multiple times in the SELECT list. JOINs are generally better when you need multiple columns from the related table.
+
+---
+
+## 💼 Interview Tips
+
+- Master the NOT IN / NOT EXISTS NULL trap cold—it appears in interviews at every level and catching this bug in production is a real differentiator. "NOT IN returns zero rows when the subquery includes NULLs" is a must-know fact.
+- Be prepared to rewrite a correlated subquery as a JOIN on a whiteboard. Practice this transformation until it's automatic—it's one of the most common query optimization exercises in DE interviews.
+- Show nuance when comparing subqueries to JOINs: they're often logically equivalent, but performance can differ significantly. The right choice depends on the database's optimizer, table sizes, and whether the subquery can be pushed down or must be materialized.
+- Bring up LATERAL/APPLY as a more expressive alternative to correlated subqueries for certain patterns—it shows awareness of modern SQL features beyond the basics.
+- Senior interviewers often ask "how would you optimize this?" after showing a query with a correlated subquery. Have a systematic approach: identify the correlation, convert to a JOIN or window function, check the execution plan, and measure the improvement.

@@ -240,3 +240,40 @@ EXEC DBMS_STATS.GATHER_TABLE_STATS('FINANCE_SCHEMA', 'TRANSACTIONS', degree => 1
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Oracle table partitioning and what are its primary benefits?**
+A: Partitioning divides a large table into smaller, independently managed segments called partitions based on column values. Benefits include partition pruning (queries scan only relevant partitions), partition-wise joins (parallelism in joins across matching partition keys), easier archival (drop/truncate partition instead of DELETE), and improved manageability.
+
+**Q: What are the main partitioning strategies available in Oracle?**
+A: Range (contiguous value ranges—ideal for dates), List (explicit value sets—ideal for region/category), Hash (even distribution by hash function—avoids hotspots), Composite (combination: Range-Hash, Range-List, etc.), and Interval (auto-creates range partitions as data arrives—avoids manual DDL for time-series).
+
+**Q: What is partition pruning and how does the optimizer use it?**
+A: Partition pruning is the optimizer's ability to exclude partitions that cannot satisfy a query's WHERE clause. For `WHERE sale_date = DATE '2024-01-15'` on a range-partitioned-by-month table, the optimizer accesses only the January 2024 partition. Check for pruning in execution plans—look for `PARTITION RANGE SINGLE` or `PARTITION RANGE ITERATOR`.
+
+**Q: When would you choose Interval partitioning over Range partitioning?**
+A: Interval partitioning extends Range partitioning by automatically creating new partitions as data with new key values arrives. Use it for time-series tables where you want to avoid the `ORA-14400: inserted partition key does not map to any partition` error and eliminate manual DDL to add monthly/daily partitions.
+
+**Q: What is a Global vs. Local index on a partitioned table?**
+A: A Local index is partitioned identically to the table—each partition has its own index segment. A Global index spans all partitions as a single structure. Local indexes are preferred (self-contained, partition-wise operations); Global indexes require maintenance after partition DDL (DROP, TRUNCATE, SPLIT) unless `UPDATE INDEXES` is specified.
+
+**Q: What happens to a Global index when you drop a partition?**
+A: Global indexes are marked UNUSABLE after a partition DROP/TRUNCATE unless you include `UPDATE GLOBAL INDEXES` in the DDL statement. Unusable indexes cause queries to fail or revert to full scans. The `UPDATE GLOBAL INDEXES` clause rebuilds affected portions online, maintaining availability.
+
+**Q: What is partition-wise join and how does it improve performance?**
+A: When two tables are partitioned on the same key and joined on that key, Oracle can join matching partition pairs in parallel without cross-partition data movement. This is especially powerful for large fact-dimension joins in data warehouses where both tables share a date or region partition key.
+
+**Q: How do you move data between partitions or reorganize a partition?**
+A: Use `ALTER TABLE ... MOVE PARTITION` to rebuild a partition (e.g., to reclaim space or move to a different tablespace). Use `ALTER TABLE ... EXCHANGE PARTITION WITH TABLE` to swap a partition with a non-partitioned table—a near-instant operation that enables fast bulk loads without DML.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the partition pruning execution plan check—showing you validate pruning with `EXPLAIN PLAN` rather than assuming it fires demonstrates engineering rigor.
+- Know the local vs. global index trade-off deeply: local indexes are almost always preferred in DW contexts; global indexes introduce maintenance windows. Interviewers test this frequently.
+- For DW interviews, describe the Partition Exchange Load (PEL) pattern: load data into a staging table, build indexes offline, then exchange partition—a zero-downtime bulk load technique.
+- Senior interviewers ask about sub-partitioning: Range-Hash composite partitioning for time-series with even distribution within periods. Walk through a real example (date range + hash on customer_id).
+- Connect partitioning to Exadata if relevant: partition pruning + Smart Scan together provide multiplicative performance gains—the optimizer prunes partitions, then Smart Scan filters within the remaining partitions at the storage layer.

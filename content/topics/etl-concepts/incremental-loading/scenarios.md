@@ -314,3 +314,42 @@ completeness_ts = get_global_completeness_boundary(hwm_mgr, REGIONS)
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is incremental loading and why is it preferred over full loads?**
+A: Incremental loading processes only new or changed records since the last successful run, rather than reprocessing the entire dataset. It reduces compute costs, lowers source system load, shortens pipeline runtime, and scales as data volumes grow.
+
+**Q: What are the common strategies for detecting new or changed records?**
+A: The main strategies are timestamp-based (filter by updated_at >= last_run_time), sequence/ID-based (filter by id > last_max_id), and CDC log-based (capture changes from database transaction logs). Timestamp-based is simplest; log-based is most complete.
+
+**Q: What is a watermark in incremental loading?**
+A: A watermark is the checkpoint value (timestamp or ID) recorded after each successful run. The next run uses this value as the lower bound for its query, ensuring continuity without gaps or overlaps.
+
+**Q: How do you handle records that arrive late (after the watermark was set)?**
+A: Add a configurable lookback window — query from (watermark - N hours) instead of the exact watermark — to capture late arrivals. Combine with idempotent writes so re-processing the overlap window doesn't create duplicates.
+
+**Q: What is the risk of using updated_at for incremental detection?**
+A: The updated_at column may not exist, may not be indexed (causing slow scans), or may not be set correctly by the application. Additionally, clock skew between source and ETL systems can cause records near the boundary to be missed.
+
+**Q: How do you store and manage watermarks in production?**
+A: Store watermarks in a dedicated metadata table, a key-value store, or an orchestrator's state (e.g., Airflow Variable or XCom). Never hardcode watermarks — they must be updated atomically with the pipeline output to ensure consistency.
+
+**Q: How does incremental loading interact with SCD Type 2?**
+A: In SCD Type 2, incremental loads must detect changed rows, close the current record (set end_date and is_current=false), and insert a new version of the row. The incremental pattern must capture both new inserts and updates to existing rows.
+
+**Q: What is the difference between append-only and upsert incremental loading?**
+A: Append-only incremental loading adds new records without modifying existing ones — appropriate for immutable event logs. Upsert incremental loading inserts new records and updates changed ones — necessary for source tables where rows can be modified after initial insert.
+
+---
+
+## 💼 Interview Tips
+
+- Always ask about source table characteristics before recommending a strategy — does it have an updated_at column? Is it CDC-enabled? Is it append-only? Gathering requirements first signals senior-level thinking.
+- Discuss watermark storage and atomicity explicitly — interviewers often probe whether you understand the risk of a pipeline writing data but failing before updating its watermark (causing re-processing gaps or duplicates).
+- Mention the lookback window pattern for late data — it's a practical production solution that most junior candidates overlook.
+- Be specific about the risks of timestamp-based approaches (clock skew, missing indexes, application bugs) to show real-world troubleshooting experience.
+- For senior roles, connect incremental loading to total cost of ownership — being able to quantify "incremental vs. full load reduces warehouse costs by 80%" resonates with engineering managers.
+- Avoid claiming incremental loading is always better — explain when full loads are appropriate (small tables, complex dependency chains, data corrections) to show balanced judgment.

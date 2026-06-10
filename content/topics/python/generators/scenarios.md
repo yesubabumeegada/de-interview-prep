@@ -227,3 +227,41 @@ batch_and_write(transformed, batch_size=5000)
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a generator in Python and how does it differ from a regular function?**
+A: A generator is a function that uses `yield` to return values one at a time, suspending execution between yields. Unlike a regular function that runs to completion and returns a single value, a generator is lazy—it produces values on demand and holds its local state between iterations, enabling memory-efficient processing of large sequences.
+
+**Q: What is the difference between a generator function and a generator expression?**
+A: A generator function is defined with `def` and contains `yield`. A generator expression is an inline syntax: `(x*2 for x in range(1000000))`. Both are lazy and produce a generator object, but generator expressions are limited to simple transformations; generator functions support complex logic, multiple yields, and try/finally cleanup.
+
+**Q: How do generators enable memory-efficient data processing in pipelines?**
+A: Generators process one item at a time, keeping only the current item in memory regardless of dataset size. A pipeline of generators (read_file → parse_line → filter_records → transform_record → write_to_db) processes a 100 GB file with constant memory because no stage materializes the full dataset at once.
+
+**Q: What is `yield from` and when do you use it?**
+A: `yield from iterable` delegates iteration to a sub-generator or any iterable, yielding each item in turn. It is syntactic sugar for `for item in iterable: yield item`, but also correctly propagates `.send()`, `.throw()`, and `.close()` to the sub-generator—essential for composing generators in two-way communication pipelines.
+
+**Q: What is `send()` on a generator and what does it enable?**
+A: `generator.send(value)` resumes the generator and makes `value` the result of the `yield` expression inside the generator (the generator receives the value). This enables two-way communication—the caller can inject values into the generator. It is the foundation for coroutines in Python before `async/await` was introduced.
+
+**Q: How do you create an infinite sequence with a generator?**
+A: Use a `while True` loop with `yield`. Example: a counter that increments indefinitely. The caller controls termination by stopping iteration. `itertools.count()` is the standard library implementation. Infinite generators are safe precisely because they are lazy—nothing is computed until the caller requests a value.
+
+**Q: What happens when a generator is closed and what is the finally block used for?**
+A: Calling `generator.close()` throws `GeneratorExit` at the point of the last `yield`. Code in a `finally` block runs before the generator terminates, enabling cleanup (closing files, flushing buffers, releasing connections). This makes generators usable as context managers for resource-scoped iteration.
+
+**Q: What is `itertools.chain`, `itertools.islice`, and `itertools.groupby` and how are they used in DE?**
+A: `chain(*iterables)` concatenates multiple iterables lazily—useful for streaming multiple files as one sequence. `islice(iterable, n)` takes the first n items without materializing the rest—useful for testing pipeline code with a subset. `groupby(iterable, key)` groups consecutive equal-key items—useful for processing sorted streams by key without loading all groups into memory.
+
+---
+
+## 💼 Interview Tips
+
+- Walk through a generator pipeline for reading large CSV files from S3 in chunks—generator for reading, generator for parsing, generator for transforming, final consumer writes to a database. This is a concrete DE application interviewers love.
+- Senior interviewers test memory awareness: "What happens if you call `list()` on a generator that reads a 50 GB file?" Answer: you load 50 GB into memory. The point is to never materialize large generators unnecessarily.
+- Know `itertools` module functions by name—they demonstrate that you compose lazy pipelines from standard building blocks rather than writing manual loops.
+- `yield from` for sub-generator delegation is a common gap in intermediate candidates. Demonstrate it with a recursive directory tree traversal generator as a concrete example.
+- Connect generators to async: `async def` with `await` is the modern successor for I/O-bound concurrency, but generators remain the foundation for CPU-bound streaming ETL pipelines where async buys nothing.

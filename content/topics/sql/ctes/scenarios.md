@@ -862,3 +862,41 @@ ORDER BY metric_date;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a CTE (Common Table Expression) and how does it differ from a subquery?**
+A: A CTE is a named temporary result set defined with a WITH clause that can be referenced multiple times within the same query. Unlike inline subqueries, CTEs are defined once at the top of the query, making complex logic more readable. Most databases execute them similarly, though some databases may materialize CTEs as an optimization fence.
+
+**Q: Can a CTE be referenced multiple times in the same query?**
+A: Yes. You can reference a named CTE multiple times in the main query and in subsequent CTEs within the same WITH clause. However, whether the database executes it once (materializes) or re-executes it each time (inlines) depends on the database and optimizer—PostgreSQL materializes by default in some versions; Snowflake and BigQuery typically inline.
+
+**Q: What is a recursive CTE and what is it used for?**
+A: A recursive CTE references itself to process hierarchical or graph-structured data. It consists of an anchor member (base case) and a recursive member (references the CTE itself). Common use cases include traversing org charts, bill of materials, folder hierarchies, and graph paths.
+
+**Q: What is the RECURSIVE keyword and is it required in all databases?**
+A: PostgreSQL requires `WITH RECURSIVE` to enable recursive CTEs. SQL Server, MySQL 8+, and SQLite support the keyword but some databases (like Oracle with CONNECT BY, or BigQuery) have their own syntax or don't require RECURSIVE explicitly. Always check your database's syntax requirements.
+
+**Q: How do CTEs improve query maintainability?**
+A: By naming intermediate result sets, CTEs make query intent explicit—each step of a complex transformation can be understood in isolation. This is similar to breaking a long function into named sub-functions. It also makes debugging easier: you can temporarily SELECT from an intermediate CTE to inspect intermediate results.
+
+**Q: What is the difference between a CTE and a temporary table?**
+A: A CTE exists only for the duration of the single query it's defined in and doesn't persist to disk. A temporary table persists for the session (or transaction), can be indexed, and can be referenced across multiple queries. Temp tables are better when the intermediate result is large and referenced many times; CTEs are better for single-query readability.
+
+**Q: Can you perform DML (INSERT, UPDATE, DELETE) using CTEs?**
+A: Yes, in most databases (PostgreSQL, SQL Server, Snowflake). You can use a CTE to define the rows to modify, then reference the CTE in an UPDATE, DELETE, or INSERT statement. PostgreSQL also supports `WITH ... AS (DELETE FROM ... RETURNING ...)` for complex delete-and-log patterns.
+
+**Q: What is CTE materialization and why does it matter for performance?**
+A: Materialization means the CTE's result is computed once and stored temporarily, so subsequent references read from that stored result. Inlining means the CTE definition is substituted everywhere it's referenced, potentially re-executing it. Materialization avoids redundant computation but uses memory; inlining lets the optimizer push predicates through the CTE.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with readability as a primary benefit of CTEs—experienced interviewers value code that communicates intent, and framing CTEs as a tool for writing maintainable SQL demonstrates seniority over "it's just a subquery."
+- Know your database's materialization behavior. In PostgreSQL, CTEs used to always materialize (optimization fence)—this changed in v12. In Snowflake and BigQuery, CTEs are typically inlined. Getting this right shows hands-on production experience.
+- When discussing recursive CTEs, always mention the termination condition (the base case)—interviewers will check that you know how to prevent infinite loops.
+- Show versatility: CTEs work in SELECT, INSERT, UPDATE, DELETE, and with window functions. Candidates who only associate CTEs with SELECT queries miss the full picture.
+- For performance-sensitive queries, discuss whether to use a CTE or a temp table—CTEs are syntactic sugar, but temp tables give the optimizer a materialized intermediate it can index. This trade-off question is common in senior DE interviews.

@@ -370,3 +370,41 @@ COLLECT STATISTICS ON fact_trades COLUMN (PARTITION);
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is FastLoad and what is it designed for?**
+A: FastLoad is a Teradata utility for bulk-loading data from flat files into empty tables at high speed. It bypasses transient journaling and uses multiple parallel sessions to maximize throughput. Because it requires an empty target table, it's best suited for initial loads and staging table refreshes, not incremental updates.
+
+**Q: What are the two phases of a FastLoad operation?**
+A: Phase 1 (Acquisition): FastLoad sessions read the input file, hash each row's Primary Index, and send rows to the appropriate AMP. AMPs hold rows in a work table. Phase 2 (Application): AMPs move rows from the work table to the target table. Checkpointing occurs between phases to enable restart after failure.
+
+**Q: What is MultiLoad and how does it differ from FastLoad?**
+A: MultiLoad supports high-throughput INSERT, UPDATE, DELETE, and UPSERT operations on populated tables using multiple parallel sessions. Unlike FastLoad (which requires an empty table and only does inserts), MultiLoad can perform DML on existing data. It uses a "work table" and "error tables" to stage and validate changes before applying them.
+
+**Q: What are the error tables in MultiLoad and what do they capture?**
+A: MultiLoad creates two error tables: ET (error table) capturing rows that violated Unique Primary Index constraints, and UV (unique violation table) capturing duplicate primary index rows. After a load, you must check and drop these error tables before re-running or continuing. Rows in error tables are not loaded into the target.
+
+**Q: What is the maximum number of sessions in FastLoad/MultiLoad and why does it matter?**
+A: The session count affects parallelism—more sessions mean more AMPs receiving data simultaneously, up to one session per AMP. Diminishing returns occur beyond the number of AMPs. For very large loads, maximizing sessions (up to the AMP count) minimizes load time.
+
+**Q: What is Teradata Parallel Transporter (TPT) and how does it supersede FastLoad/MultiLoad?**
+A: TPT is a unified, scriptable framework that combines the functionality of FastLoad, MultiLoad, FastExport, and BTEQ into a single, parallelizable pipeline with a consistent scripting language. TPT supports streaming (reading from source and loading simultaneously), is more flexible, and is the modern recommended approach for production data movement on Teradata.
+
+**Q: What are the table locking implications of FastLoad and MultiLoad?**
+A: FastLoad places an exclusive lock on the target table for the duration of the load, preventing any other reads or writes. MultiLoad holds a write lock during the Apply phase. This means no concurrent access to the table during loading—plan loads during maintenance windows or use a staging table pattern to minimize impact.
+
+**Q: How do you handle FastLoad restarts after a failure?**
+A: FastLoad checkpoints progress between phases. If interrupted, restarting the FastLoad script detects the checkpoint and resumes from Phase 2 (Application) without re-reading the input file. The restart log must be intact—if it's deleted, the load cannot be restarted and must begin from scratch after dropping the work tables.
+
+---
+
+## 💼 Interview Tips
+
+- Always explain the FastLoad constraint (empty target table) immediately—interviewers will probe whether you know the limitations. Jumping to "FastLoad for everything" without mentioning this signals junior experience.
+- Distinguish the use cases clearly: FastLoad for initial bulk loads into staging tables, MultiLoad for incremental DML on populated tables, TPT for modern flexible pipelines. Interviewers want to see you match the tool to the job.
+- Know the error table workflow in MultiLoad—checking error tables after every load is not optional. Many production data quality issues are silently dropped rows in error tables that teams never examined. Showing this awareness is a production readiness signal.
+- Bring up table locking: loading a 1TB table with FastLoad blocks all readers for hours. Discuss strategies like loading into a staging table and swapping with RENAME TABLE to minimize production impact.
+- Position TPT as the modern standard while showing you can maintain legacy FastLoad/MultiLoad scripts—this combination of legacy fluency and modern awareness is exactly what enterprises modernizing Teradata environments need.

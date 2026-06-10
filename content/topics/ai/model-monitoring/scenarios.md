@@ -336,3 +336,42 @@ python ml_platform/register_model.py \
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between data drift and concept drift in model monitoring?**
+A: Data drift (covariate shift) is when input feature distributions change — the model sees different inputs than it was trained on. Concept drift is when the underlying relationship between features and the target changes — the model's learned patterns become incorrect even for familiar inputs.
+
+**Q: What statistical tests are commonly used to detect feature drift?**
+A: Kolmogorov-Smirnov (KS) test for continuous features, Chi-squared test for categorical features, and Population Stability Index (PSI) for both. Jensen-Shannon divergence and Wasserstein distance are also used for more nuanced distribution comparisons.
+
+**Q: How do you monitor model performance when ground truth labels are delayed?**
+A: Use proxy metrics (business KPIs, user engagement signals) as leading indicators. Monitor input feature distributions and prediction distributions as early warning signals. Implement label collection workflows that backfill ground truth when available, and schedule retrospective performance evaluation.
+
+**Q: What is the Population Stability Index (PSI) and what thresholds are typically used?**
+A: PSI measures how much a feature's distribution has shifted compared to a reference baseline. Common thresholds: PSI < 0.1 means no significant change, 0.1–0.2 warrants investigation, > 0.2 indicates a significant shift requiring model review or retraining.
+
+**Q: What is shadow monitoring and how does it differ from A/B testing?**
+A: Shadow monitoring runs a new model on live traffic without serving its predictions — purely for observation. A/B testing actually serves both model versions to real users and measures impact on real outcomes. Shadow monitoring is safer for validating new models before any user exposure.
+
+**Q: How would you set up alerting for a production classification model?**
+A: Monitor: prediction score distribution (mean, variance), class distribution shifts, key feature PSI scores, business outcome proxy metrics, and (when labels are available) precision, recall, and AUC. Set statistical thresholds with cooldown periods to reduce alert fatigue.
+
+**Q: What is prediction drift and why is it a useful monitoring signal even without labels?**
+A: Prediction drift is when the model's output distribution shifts — e.g., more high-confidence positive predictions than usual. Since it requires no labels, it's an early warning system detectable immediately after deployment, often correlated with upstream data issues or concept drift.
+
+**Q: How do you decide when to retrain a model based on monitoring signals?**
+A: Define retraining triggers: PSI > threshold on key features, prediction drift beyond a control band, or proxy business metric degradation exceeding a threshold. Combine automated triggers with human review gates for high-stakes models. Use time-based fallback retraining if no drift-based trigger fires within a set window.
+
+---
+
+## 💼 Interview Tips
+
+- Open with the core challenge of model monitoring: unlike software systems, models degrade silently — no exceptions are thrown when a model becomes stale. This motivates why monitoring is non-negotiable.
+- Distinguish between monitoring infrastructure concerns (latency, throughput, error rates) and ML-specific concerns (data drift, prediction drift, model accuracy). Senior interviewers expect you to address both.
+- Show awareness of the label delay problem — in many domains, ground truth arrives days or weeks after inference. Having a strategy for label-free monitoring signals production experience.
+- Mention specific tooling: Evidently AI, WhyLogs/WhyLabs, Arize, SageMaker Model Monitor — and explain what problem each solves best.
+- Avoid presenting monitoring as just "set up dashboards." Discuss the operational response: who gets alerted, what the runbook says, and when automated retraining fires vs. human escalation.
+- Senior interviewers will ask about alert fatigue — be ready to discuss threshold calibration, anomaly detection approaches (vs. fixed thresholds), and how to tune sensitivity vs. specificity of alerts.

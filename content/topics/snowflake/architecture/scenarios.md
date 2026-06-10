@@ -275,3 +275,41 @@ ALTER TABLE fact_events ADD ROW ACCESS POLICY team_filter ON (team_name);
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the three layers of Snowflake's architecture?**
+A: Snowflake has a storage layer (S3/GCS/Azure Blob for columnar micro-partitions), a compute layer (virtual warehouses—independent MPP clusters), and a cloud services layer (query parsing, optimization, metadata, access control). The separation means compute and storage scale independently.
+
+**Q: What is a virtual warehouse in Snowflake and how does billing work?**
+A: A virtual warehouse is an on-demand MPP compute cluster that executes queries. Billing is by the second when the warehouse is running (minimum 60 seconds), based on warehouse size (X-Small through 6X-Large). Warehouses auto-suspend when idle and auto-resume on query, enabling pay-per-use economics.
+
+**Q: What are micro-partitions and how do they enable pruning?**
+A: Snowflake automatically divides tables into compressed columnar micro-partitions of 50-500MB of uncompressed data. Each micro-partition stores metadata about the min/max values of each column. The query optimizer uses this metadata to skip micro-partitions that cannot contain relevant rows—called partition pruning—without reading any actual data.
+
+**Q: What is the Snowflake query result cache?**
+A: Snowflake caches the results of every query for 24 hours. If an identical query is re-submitted and the underlying data hasn't changed, the result is returned instantly from cache with no warehouse compute consumed. This dramatically reduces cost for repeated dashboard queries.
+
+**Q: What is multi-cluster warehouses and when do you use them?**
+A: Multi-cluster warehouses automatically spin up additional warehouse clusters when concurrency exceeds capacity, then scale back down. They're designed for high-concurrency workloads (e.g., many BI users querying simultaneously) where a single cluster would queue requests.
+
+**Q: How does Snowflake handle semi-structured data?**
+A: Snowflake stores JSON, Avro, Parquet, and XML in a VARIANT column type. The data is stored in columnar format with auto-detected schema. You query it using dot notation and bracket syntax (e.g., `col:field.nested`), and the optimizer can extract and cache frequently accessed paths for performance.
+
+**Q: What is the difference between a Snowflake database, schema, and stage?**
+A: A database is the top-level namespace. A schema groups related tables, views, and other objects within a database. A stage is a storage location (internal to Snowflake or external like S3) used as an intermediate landing zone for loading and unloading data.
+
+**Q: What is Snowflake's separation of storage and compute and what operational benefits does it provide?**
+A: Because storage and compute are fully separated, multiple virtual warehouses can query the same data concurrently without resource contention. You can size compute independently of data volume—run a small warehouse for light queries and a large one for heavy transforms—and pay for each independently.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the three-layer architecture when asked any broad Snowflake question—it provides a framework for answering follow-up questions about performance, cost, and concurrency.
+- Be specific about billing mechanics: per-second billing, auto-suspend/resume, and result cache are the key levers for cost optimization and interviewers at cost-conscious companies will probe these.
+- Mention micro-partition pruning when discussing query performance—it shows you understand how Snowflake achieves performance without user-managed indexes, which is a key differentiator from traditional MPP databases.
+- Avoid treating Snowflake as a black box. Senior interviewers appreciate candidates who know what happens under the hood—cloud services layer coordination, columnar storage format, and how metadata drives optimization.
+- Bring up the shared-nothing compute model: each warehouse has its own compute resources, so workloads don't compete with each other—a key architectural benefit for mixed-workload environments.

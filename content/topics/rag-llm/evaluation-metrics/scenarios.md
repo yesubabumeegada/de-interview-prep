@@ -1076,3 +1076,41 @@ class EvalDrivenDecision:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the core dimensions evaluated in a RAG system?**
+A: RAG evaluation typically covers retrieval quality (are the right chunks being fetched?) and generation quality (is the answer faithful, relevant, and correct?). Each dimension has its own metrics—conflating them makes it hard to diagnose where the system is failing.
+
+**Q: What is faithfulness in RAG evaluation?**
+A: Faithfulness measures whether the generated answer is grounded in the retrieved context—i.e., the LLM doesn't hallucinate facts not present in the retrieved passages. It is distinct from correctness, which checks whether the answer matches a ground-truth answer.
+
+**Q: What is answer relevancy in RAGAS?**
+A: Answer relevancy measures how well the generated answer addresses the actual question asked, independent of whether it's factually correct. A highly relevant answer stays on topic and doesn't include unnecessary tangents.
+
+**Q: What is context recall and how is it measured?**
+A: Context recall measures how much of the ground-truth answer can be attributed to the retrieved context—i.e., did retrieval surface all the information needed to answer correctly? It is often computed by checking whether each sentence of the reference answer is supported by at least one retrieved chunk.
+
+**Q: What is MRR (Mean Reciprocal Rank) and when do you use it?**
+A: MRR measures the average of the reciprocal of the rank at which the first relevant document appears across queries. It is useful when you care most about whether the top result is relevant, commonly used to evaluate retrieval in QA systems.
+
+**Q: What is the difference between online and offline evaluation for RAG?**
+A: Offline evaluation uses a curated benchmark dataset with known query-answer pairs to measure metrics like RAGAS scores in a controlled way. Online evaluation monitors real user interactions—tracking thumbs-up/thumbs-down signals, session abandonment, or follow-up clarification queries—to catch quality issues in production.
+
+**Q: What is LLM-as-a-judge and what are its limitations?**
+A: LLM-as-a-judge uses a powerful LLM (e.g., GPT-4) to score the quality of generated answers along dimensions like faithfulness, helpfulness, or coherence. Limitations include position bias (preferring answers listed first), verbosity bias (preferring longer answers), and the cost of calling the judge LLM at scale.
+
+**Q: How do you build a golden dataset for RAG evaluation?**
+A: A golden dataset consists of representative queries paired with reference answers and relevant document passages. It can be created by domain experts, synthesized using an LLM over your corpus, or bootstrapped from user query logs with human validation. Quality and coverage of the dataset directly determine the reliability of your evaluation.
+
+---
+
+## 💼 Interview Tips
+
+- Always distinguish retrieval metrics from generation metrics when discussing RAG evaluation—treating the system as a black box and only measuring end-to-end accuracy makes root-cause analysis impossible.
+- Avoid over-relying on a single metric. Show that you use a suite (e.g., faithfulness + context recall + answer relevancy) and explain what each failure mode looks like.
+- Senior interviewers want to hear about your evaluation pipeline, not just metric formulas—how do you collect ground truth, how often do you run evals, and how do metric regressions trigger alerts?
+- Bring up the cost-quality trade-off with LLM-as-a-judge—it's expensive at scale, so discuss strategies like sampling, caching judge calls, or using smaller proxy models for continuous monitoring.
+- Mention the importance of sliced evaluation: breaking down metrics by query type, document domain, or user segment to find where the system underperforms, not just the overall average.

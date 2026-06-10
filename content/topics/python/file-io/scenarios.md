@@ -338,3 +338,41 @@ for record in processor.process("data/events.parquet"):
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the preferred way to open a file in Python and why?**
+A: Use the `with open(path, mode) as f:` context manager. It guarantees the file is closed when the block exits, even if an exception occurs—preventing file descriptor leaks in long-running processes.
+
+**Q: What is the difference between text mode and binary mode when opening files?**
+A: Text mode (`'r'`, `'w'`) decodes/encodes bytes using the platform's default encoding (or the `encoding` parameter) and translates newlines. Binary mode (`'rb'`, `'wb'`) reads/writes raw bytes without any encoding or newline translation—required for images, Parquet, compressed files, or any non-text format.
+
+**Q: How do you efficiently read a large file line by line without loading it all into memory?**
+A: Iterate directly over the file object: `for line in f:`. Python buffers reads internally and yields lines lazily—memory usage stays constant regardless of file size. Avoid `f.readlines()` which loads all lines into a list.
+
+**Q: What is `pathlib.Path` and why is it preferred over `os.path`?**
+A: `pathlib.Path` is an object-oriented, cross-platform path manipulation API. It provides intuitive operators (`/` for joining paths), attribute access (`.stem`, `.suffix`, `.parent`), and methods (`.glob()`, `.read_text()`, `.write_bytes()`) without the string manipulation boilerplate of `os.path`. It is the modern Python standard.
+
+**Q: How do you handle CSV files efficiently in Python for data engineering tasks?**
+A: Use `csv.DictReader` for simple CSV parsing (returns rows as dicts). For large files or data manipulation, use Pandas `pd.read_csv()` with appropriate `dtype`, `usecols`, and `chunksize` parameters. For highest performance, prefer Parquet over CSV—columnar storage with type metadata and compression avoids the parsing and type-inference overhead.
+
+**Q: What is the `tempfile` module used for in data engineering?**
+A: `tempfile.NamedTemporaryFile` and `tempfile.TemporaryDirectory` create temporary files/directories that are automatically deleted on context manager exit. In DE pipelines, use them for intermediate processing artifacts (unzipping an archive, staging a download before S3 upload) to avoid manual cleanup and avoid polluting shared directories.
+
+**Q: How do you atomically write a file to avoid partial reads by concurrent processes?**
+A: Write to a temporary file in the same filesystem, then `os.replace(tmp_path, final_path)`. `os.replace` is atomic on POSIX systems—readers either see the old complete file or the new complete file, never a partial write. This pattern is critical for pipelines where downstream systems poll for file completion.
+
+**Q: How do you read and write compressed files (gzip, bzip2) in Python?**
+A: Use `gzip.open(path, 'rt')` or `bz2.open(path, 'rt')` as drop-in replacements for `open()`. They support context manager protocol and streaming—you can iterate line by line over a gzipped file without decompressing the entire file into memory.
+
+---
+
+## 💼 Interview Tips
+
+- Always use `with open(...)` in interviews—bare `open` without a context manager is an automatic red flag showing you do not handle resource cleanup.
+- `pathlib` vs. `os.path` is a litmus test: using `pathlib.Path` signals modern Python fluency. Construct paths with `/` operator, use `.stem`/`.suffix`, and avoid `os.path.join` strings.
+- Senior interviewers probe large-file handling: demonstrate that you know to stream line by line and never call `.readlines()` or `.read()` on multi-GB files.
+- The atomic write pattern (`write to tmp → os.replace`) is a DE-specific requirement. Knowing it shows you think about data integrity under concurrent access—a signal of production experience.
+- Connect file I/O to cloud storage: in modern DE, local file I/O often wraps `boto3.download_file` / `s3fs` / `fsspec`. Showing you understand that the same patterns apply (context managers, streaming, atomic writes) across local and cloud storage demonstrates transferable thinking.

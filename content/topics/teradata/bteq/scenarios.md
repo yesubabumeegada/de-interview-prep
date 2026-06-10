@@ -319,3 +319,41 @@ Month 6: Full audit logging across all 15 scripts
 
 **Key principle:** Never change a working pipeline completely at once. Incremental improvements with proper testing reduce blast radius. The security fix is the only truly urgent change — everything else can be phased.
 
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is BTEQ and what is it used for?**
+A: BTEQ (Basic Teradata Query) is a Teradata command-line utility for submitting SQL queries and managing batch processing. It supports scripting with conditional logic, error handling, and export/import of data. BTEQ is the backbone of legacy Teradata ETL pipelines and administrative automation.
+
+**Q: What is the ERRORCODE variable in BTEQ and how is it used?**
+A: `ERRORCODE` is a BTEQ system variable that holds the return code of the most recently executed SQL statement (0 = success, non-zero = error). You can check it with `.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE` to halt script execution and propagate the error code to the calling shell script for error handling.
+
+**Q: What is the difference between .EXPORT and .IMPORT in BTEQ?**
+A: `.EXPORT` redirects query output to a file (flat file, CSV, or binary). `.IMPORT` reads data from a file and substitutes values into parameterized SQL statements. Neither is designed for high-throughput bulk loading—for that, FastLoad or MultiLoad is appropriate.
+
+**Q: What does the .LOGON command do in BTEQ?**
+A: `.LOGON` establishes a connection to the Teradata server with a specified host, username, and password. BTEQ scripts typically start with `.LOGON` and end with `.LOGOFF`. In production, credentials are often passed via environment variables or TDWALLET to avoid hardcoding in script files.
+
+**Q: What is the SESSIONS parameter in BTEQ and how does it affect performance?**
+A: BTEQ operates with a single session by default. Unlike FastLoad or MultiLoad, BTEQ cannot use multiple sessions to parallelize data loading—this is a fundamental limitation for bulk data movement. For multi-session parallel loading, use FastLoad, MultiLoad, or JDBC/ODBC-based tools.
+
+**Q: How does BTEQ handle multi-statement requests?**
+A: BTEQ submits SQL statements terminated by a semicolon one at a time by default, or as a multi-statement request (MSR) when multiple statements are separated by semicolons without `.QUIT` between them. MSRs are sent to Teradata as a single unit, which can improve performance by reducing round-trips.
+
+**Q: What are the main alternatives to BTEQ in modern Teradata environments?**
+A: Modern alternatives include Teradata Studio (GUI), JDBC/ODBC drivers for programmatic access, dbt-teradata for transformation pipelines, Teradata Parallel Transporter (TPT) for high-throughput data movement, and Python teradataml or teradatasql libraries. BTEQ remains common in legacy systems but new pipelines favor these more flexible options.
+
+**Q: What is the .LABEL and .GOTO directive in BTEQ?**
+A: `.LABEL` defines a named point in the BTEQ script. `.GOTO label_name` jumps execution to that label, similar to a GOTO statement. This enables simple conditional branching: check ERRORCODE after a SQL step and jump to an error-handling section or skip optional steps. It's a form of procedural control without full programming language features.
+
+---
+
+## 💼 Interview Tips
+
+- Frame BTEQ knowledge as legacy expertise that you've maintained while also modernizing pipelines. Companies still running BTEQ scripts value someone who can maintain them and knows when to migrate to TPT or Python-based tools.
+- Know ERRORCODE handling cold—it's the primary error management mechanism in BTEQ ETL scripts. Showing you've built reliable pipelines with proper error checking (`.IF ERRORCODE <> 0 THEN`) signals production experience.
+- Differentiate BTEQ from FastLoad/MultiLoad clearly: BTEQ is for interactive queries and simple scripts; FastLoad/MultiLoad are for high-throughput bulk loading. Using BTEQ for loading millions of rows is an anti-pattern that senior interviewers will probe.
+- Mention security considerations: hardcoded passwords in BTEQ scripts are a compliance risk. Discuss TDWALLET or environment variable substitution as the secure alternative.
+- If the company is modernizing, show willingness to migrate BTEQ scripts to Teradata Parallel Transporter (TPT) or dbt—this bridges legacy knowledge with modern DE practices and is a strong differentiator.

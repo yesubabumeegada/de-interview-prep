@@ -530,3 +530,42 @@ jobs:
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is experiment tracking and what core artifacts should every experiment capture?**
+A: Experiment tracking records all inputs, outputs, and metadata for ML runs to enable comparison and reproducibility. Every experiment should capture: hyperparameters, dataset version/hash, code version (git commit), environment (dependency versions), metrics over time, and the final saved model artifact.
+
+**Q: How does MLflow differ from Weights & Biases for experiment tracking?**
+A: MLflow is open-source and self-hostable, integrating tightly with the broader MLflow ecosystem (model registry, serving). W&B is a cloud-first SaaS offering richer collaboration, real-time visualization, and sweeps for hyperparameter search — better for teams that prioritize UX over self-hosting.
+
+**Q: What is a run vs. an experiment in MLflow?**
+A: An experiment is a named collection of runs grouped by project or objective. A run is a single execution with its own set of logged parameters, metrics, tags, and artifacts. Organizing runs within experiments enables clean comparison across iterations.
+
+**Q: How do you track hyperparameter search at scale?**
+A: Use sweep/tuning integrations (Optuna, Ray Tune, W&B Sweeps, SageMaker Hyperparameter Tuning). Each trial is logged as a separate run under the same experiment, with the search strategy, search space bounds, and best run identified programmatically after the sweep completes.
+
+**Q: How do you ensure experiment reproducibility when dependencies change over time?**
+A: Log the full environment: requirements.txt or conda env YAML, Docker image digest, and git commit SHA. Use a model registry to link each registered model to the exact run and artifact that produced it. DVC or dataset versioning pins the data side.
+
+**Q: What is the difference between logging metrics per step vs. per epoch, and why does it matter?**
+A: Per-step logging gives fine-grained visibility into training dynamics (loss spikes, gradient instability). Per-epoch logging reduces storage overhead and is sufficient for most comparisons. For debugging, per-step is critical; for long-running production jobs, epoch-level with periodic checkpoints is more practical.
+
+**Q: How would you handle experiment tracking in a distributed training job?**
+A: Designate rank-0 (the primary worker) as the sole logger to avoid duplicate metric writes. Use framework integrations (PyTorch Lightning, Hugging Face Trainer) that handle this automatically. Aggregate metrics from all workers before logging, or use distributed-aware tracking backends.
+
+**Q: What is a model registry and how does it relate to experiment tracking?**
+A: A model registry is a centralized store for versioned, production-ready models with lifecycle stages (Staging, Production, Archived). Experiment tracking feeds it — a promising run's artifact is promoted to the registry with metadata linking it to its originating run, enabling governance and deployment workflows.
+
+---
+
+## 💼 Interview Tips
+
+- Frame experiment tracking as a prerequisite for ML governance, not just a developer convenience — this resonates with senior interviewers focused on production reliability.
+- Show you understand the full lifecycle: tracking → model registry → deployment → monitoring. Candidates who treat experiment tracking in isolation miss the bigger picture.
+- Mention concrete tooling tradeoffs: MLflow for self-hosted/open-source needs, W&B for team collaboration, SageMaker Experiments for AWS-native workflows — choose based on organizational constraints.
+- A common mistake is tracking only final metrics. Emphasize logging intermediate metrics, system metrics (GPU utilization, throughput), and data statistics to enable richer post-hoc debugging.
+- Senior interviewers often ask about team adoption — be ready to discuss how you'd standardize experiment naming conventions, tagging schemas, and artifact storage policies across a team.
+- Avoid conflating experiment tracking with model monitoring — tracking is about the development phase; monitoring is about production behavior. Distinguish these clearly.

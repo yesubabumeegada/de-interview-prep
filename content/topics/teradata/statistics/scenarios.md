@@ -295,3 +295,41 @@ Staging tables are ephemeral — they're loaded, used for transformation, then t
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are Teradata statistics and why do you collect them?**
+A: Statistics in Teradata are column-level histograms recording the distribution of values (row count, distinct count, value ranges, null count) for tables and indexes. The Query Optimizer uses them to estimate cardinality at each plan step. Without accurate statistics, the Optimizer makes poor join, redistribution, and aggregation choices.
+
+**Q: What is the syntax for collecting statistics in Teradata?**
+A: `COLLECT STATISTICS ON database.tablename COLUMN column_name;` for a single column. For multi-column statistics: `COLLECT STATISTICS ON tablename INDEX (col1, col2);`. You can also collect on a full index: `COLLECT STATISTICS ON tablename INDEX index_name;`. Use `USING SAMPLE` to collect from a sample for very large tables.
+
+**Q: What columns should you prioritize for statistics collection?**
+A: Collect statistics on: Primary Index columns, secondary index columns, columns used in JOIN conditions, columns used in WHERE filters (especially with high cardinality or skewed distribution), and columns referenced in GROUP BY clauses. The goal is to give the Optimizer accurate cardinality at every step that influences plan choice.
+
+**Q: How often should you refresh statistics and what triggers a refresh?**
+A: Statistics should be refreshed after significant data changes—typically when more than 10-20% of rows have changed (inserts, updates, deletes). In practice, schedule `COLLECT STATISTICS` after major ETL loads. Teradata can track statistics currency via `SHOW STATISTICS` timestamps and suggest stale statistics via the Optimizer diagnostic output.
+
+**Q: What is the difference between COLLECT STATISTICS and COLLECT STATISTICS USING SAMPLE?**
+A: `COLLECT STATISTICS` scans the full table for exact statistics. `COLLECT STATISTICS USING SAMPLE` scans a percentage of rows (configurable, default ~10%) and extrapolates, using much less time and I/O for very large tables. Sample statistics are less precise but often good enough for the Optimizer to make better decisions than having no statistics at all.
+
+**Q: What does "no statistics" in an EXPLAIN output mean and what should you do?**
+A: "No statistics" means the Optimizer found no collected statistics for the referenced column and fell back to system-level defaults (random AMP estimates). This almost always leads to suboptimal plans—especially bad for join ordering and redistribution decisions. Collect statistics on those columns immediately and re-EXPLAIN the query.
+
+**Q: What is SHOW STATISTICS in Teradata?**
+A: `SHOW STATISTICS ON tablename;` displays all currently collected statistics on a table, including column(s), index name, collection date, and row count at collection time. It's used to audit which statistics exist, how recent they are, and whether critical columns are covered before diagnosing optimizer plan issues.
+
+**Q: What is the Optimizer's behavior when table data changes significantly after statistics were collected?**
+A: The Optimizer's estimates become increasingly inaccurate as the data drifts from the collected statistics. This can cause plan regressions—a query that ran efficiently with fresh statistics may switch to a Product Join or unnecessary full-table scan after statistics become stale. Monitoring statistics age relative to data change rate is an essential operational practice.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the connection between statistics freshness and Optimizer plan quality—this is the core concept, not just a technical detail. Every query optimization discussion in Teradata eventually traces back to statistics.
+- Be specific about which columns to prioritize: join keys, filter columns, PI columns, and high-cardinality GROUP BY columns. Generic advice ("collect stats on everything") shows less understanding than targeted recommendations.
+- Mention that statistics collection itself consumes system resources—full scans on large tables during peak hours can impact production. Discuss scheduling stats collection in off-peak windows or using USING SAMPLE for time-sensitive situations.
+- Know the "no statistics" EXPLAIN marker cold. It's a red flag in any EXPLAIN output and the first thing to investigate when queries are underperforming. Interviewers who've worked in production Teradata environments expect you to recognize it immediately.
+- Senior interviewers will ask about statistics management at scale—hundreds of tables, multiple ETL loads per day. Discuss automated statistics collection strategies (e.g., collecting stats as part of each ETL job, not as a separate weekly batch) and monitoring for staleness.

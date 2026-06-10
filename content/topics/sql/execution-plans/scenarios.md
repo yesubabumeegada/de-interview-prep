@@ -505,3 +505,41 @@ CREATE TABLE orders_2024_01 PARTITION OF orders
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a SQL execution plan and why is it important?**
+A: An execution plan is the sequence of operations the query optimizer chooses to execute a SQL query—including join types, index usage, sort operations, and estimated row counts. Understanding execution plans lets you diagnose why a query is slow and verify that indexes are being used as expected.
+
+**Q: What is the difference between EXPLAIN and EXPLAIN ANALYZE?**
+A: `EXPLAIN` shows the estimated execution plan (row counts and costs are estimates). `EXPLAIN ANALYZE` actually executes the query and shows actual row counts, timing, and loop counts alongside the estimates. Use EXPLAIN to preview plans; use EXPLAIN ANALYZE to compare estimated vs. actual statistics and find estimation errors.
+
+**Q: What is a nested loop join and when is it efficient?**
+A: A nested loop join iterates over the outer table row by row, and for each outer row, scans the inner table (ideally via an index). It's efficient when the outer table is small and the inner table has a supporting index. For large tables without indexes, it degrades to O(n*m) and is almost always the worst join type.
+
+**Q: What is a hash join and when does it outperform nested loops?**
+A: A hash join builds an in-memory hash table from the smaller relation, then probes it with each row from the larger relation. It's efficient for large unsorted datasets where no index exists and is the default join strategy in most analytical query engines. Performance degrades if the hash table spills to disk.
+
+**Q: What are the main cost components in a PostgreSQL execution plan?**
+A: PostgreSQL costs are in abstract units where 1.0 = reading one sequential page. Cost components include: `seq_page_cost` (sequential scan), `random_page_cost` (random I/O, default 4x more expensive), `cpu_tuple_cost` (processing each row), and `cpu_operator_cost`. The optimizer sums these to estimate total cost.
+
+**Q: What does a high actual-vs-estimated row count discrepancy indicate?**
+A: It indicates stale or inaccurate table statistics. The optimizer made a bad cardinality estimate, which likely led to a suboptimal plan (e.g., choosing a nested loop where a hash join would be better). Fix by running ANALYZE to update statistics and potentially adjusting the statistics target for frequently skewed columns.
+
+**Q: What is a merge join and when is it used?**
+A: A merge join requires both inputs to be sorted on the join key. It then scans both sorted inputs in parallel, matching rows—O(n+m) time. It's efficient when both sides are already sorted (e.g., via an index scan) or when sorting cost is low. Often used for equality joins on indexed columns in OLTP databases.
+
+**Q: What does "rows removed by filter" mean in an EXPLAIN ANALYZE output?**
+A: It shows how many rows were read from storage but then discarded by a filter condition applied after the scan. A high number relative to rows returned indicates a poor index—the query is reading many rows it doesn't need. The fix is typically a more selective index that includes the filter column.
+
+---
+
+## 💼 Interview Tips
+
+- Practice reading real EXPLAIN ANALYZE output from PostgreSQL or Snowflake query profiles before interviews—being able to interpret actual plans (not just describe them theoretically) is a strong differentiator.
+- When asked about a slow query, structure your answer as a diagnostic process: run EXPLAIN ANALYZE, look at the highest-cost node, check actual vs. estimated rows, then apply the appropriate fix. This signals systematic thinking.
+- Know the three join types (nested loop, hash, merge) cold: when each is chosen, when each is efficient, and when each is bad. This is a frequent interview question at all levels.
+- Mention statistics and ANALYZE as a root cause for bad plans—the optimizer is only as good as its statistics. Senior engineers understand that keeping statistics fresh is an operational responsibility.
+- Avoid presenting execution plans as academic knowledge. Connect every concept to a real scenario: "I saw this in production when our users table grew 10x and the nested loop join that was fast for 10K rows became catastrophic at 10M rows."

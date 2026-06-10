@@ -225,3 +225,38 @@ daily_governance_audit()  # From real-world pattern
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Unity Catalog and what problem does it solve?**
+A: Unity Catalog is Databricks' unified governance layer for all data and AI assets — tables, files, ML models, and dashboards — across multiple Databricks workspaces. It solves the challenge of managing access control, lineage, and auditing consistently across a multi-workspace Lakehouse environment.
+
+**Q: What is the three-level namespace in Unity Catalog?**
+A: Unity Catalog organizes assets as `catalog.schema.table`. The catalog is the top-level container (typically representing a domain, environment, or business unit), the schema groups related tables, and the table is the leaf asset. This hierarchy maps cleanly to access control policies applied at each level.
+
+**Q: How does Unity Catalog handle access control differently from legacy Hive metastore?**
+A: Legacy Hive metastore is workspace-scoped with inconsistent permissions. Unity Catalog provides account-level governance — permissions are defined once and apply across all attached workspaces. It supports fine-grained GRANT/REVOKE SQL syntax, column masking, and row filters natively.
+
+**Q: What are column masks and row filters in Unity Catalog?**
+A: Column masks are policies that dynamically replace a column's value based on the querying user's role — for example, returning the real SSN for privileged users and a masked value for others. Row filters restrict which rows a user sees, enabling multi-tenant or regional data isolation without separate tables.
+
+**Q: How does Unity Catalog capture data lineage?**
+A: Unity Catalog automatically captures column-level lineage for queries run in Databricks SQL and notebooks — no manual instrumentation required. Lineage is viewable in the Catalog Explorer UI and queryable via the system tables (`system.access.column_lineage`), enabling impact analysis and compliance reporting.
+
+**Q: What are Unity Catalog system tables and what can you do with them?**
+A: System tables are built-in tables in the `system` catalog that expose audit logs, lineage events, billing data, and access history. You can query them with SQL to build compliance reports, detect anomalous access patterns, track compute costs by team, and audit who accessed sensitive data and when.
+
+**Q: How do you implement data isolation between environments (dev/staging/prod) in Unity Catalog?**
+A: Use separate catalogs per environment (e.g., `dev`, `staging`, `prod`) within the same metastore. Apply environment-specific permissions at the catalog level — dev engineers can write to `dev`, read-only access to `staging`, and only CI/CD service accounts can write to `prod`.
+
+---
+
+## 💼 Interview Tips
+
+- Demonstrate the three-level namespace fluently — catalog.schema.table — and explain the governance implications at each level; it shows you have used Unity Catalog in practice, not just read the docs.
+- Mention column masks and row filters as the modern alternative to managing separate views per user group — it shows awareness of Unity Catalog's advanced features beyond basic GRANT statements.
+- Connect system tables to observability: explaining how you would use `system.access.audit` to detect unauthorized access or `system.billing` to chargeback teams by compute usage signals operational maturity.
+- For senior roles, discuss the account-metastore-workspace hierarchy and when you would use multiple metastores versus multiple catalogs within one — this is a real architectural decision in large Databricks deployments.
+- Bring up Delta Sharing in the context of Unity Catalog — the ability to share data externally across clouds and organizations without copying it is a differentiating governance capability.
+- Avoid describing Unity Catalog as just "Databricks permissions" — frame it as a complete governance platform covering access, lineage, audit, and data sharing to show breadth of understanding.

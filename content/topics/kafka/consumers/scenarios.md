@@ -143,3 +143,42 @@ for message in consumer:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Kafka consumer group and why is it important?**
+A: A consumer group is a set of consumers that jointly consume a topic, each assigned to exclusive partitions. This enables parallel consumption — adding more consumers in a group increases throughput up to the number of partitions. Different groups each receive all messages independently.
+
+**Q: How does Kafka partition assignment work in a consumer group?**
+A: The group coordinator (a Kafka broker) manages partition assignment using a group leader (the first consumer to join). When consumers join or leave, a rebalance is triggered, redistributing partitions among active consumers using an assignor strategy (RangeAssignor, RoundRobinAssignor, StickyAssignor).
+
+**Q: What is a consumer offset and how is it committed?**
+A: A consumer offset is the position of the next record to read in a partition. Consumers commit offsets to the `__consumer_offsets` internal Kafka topic. Commits can be automatic (auto.commit.enable=true at intervals) or manual (commitSync/commitAsync after processing).
+
+**Q: What is the difference between at-least-once and at-most-once delivery in consumers?**
+A: At-most-once commits offsets before processing — if processing fails, the record is skipped (data loss possible). At-least-once commits offsets after processing — if the consumer crashes before committing, records are reprocessed (duplicates possible). Exactly-once requires idempotent sinks or Kafka transactions.
+
+**Q: What causes consumer lag and how do you monitor it?**
+A: Consumer lag is the difference between the latest offset in a partition and the consumer group's committed offset. It indicates backlog buildup. Monitor with `kafka-consumer-groups.sh --describe`, CloudWatch Consumer Lag metrics, or Burrow. High lag signals the consumer is too slow for the producer rate.
+
+**Q: What is a rebalance and why can it be disruptive?**
+A: A rebalance reassigns partitions among consumers in a group (triggered by joins, leaves, or crashes). During rebalance, all consumers stop processing — this "stop the world" pause can cause processing delays and offset commit issues. Sticky assignor and incremental cooperative rebalancing reduce disruption.
+
+**Q: What is the `max.poll.interval.ms` setting and why does it matter?**
+A: It defines the maximum time between consumer poll calls. If a consumer takes longer than this to process a batch, the group coordinator assumes it's dead and triggers a rebalance, even if the consumer is healthy but slow. Increase this setting for slow-processing consumers or reduce batch sizes.
+
+**Q: How do you handle poison pill messages in Kafka consumers?**
+A: A poison pill is a message that consistently causes processing errors. Handle by catching exceptions per-message, logging and routing failed messages to a dead-letter topic, and continuing with the next message. Avoid retrying indefinitely on the same message, which blocks all subsequent records in the partition.
+
+---
+
+## 💼 Interview Tips
+
+- Know offset management deeply — the difference between auto-commit and manual commit, and when each risks data loss vs. duplication, is a central Kafka consumer interview topic.
+- Explain consumer group scaling limits clearly: you cannot have more active consumers in a group than partitions — excess consumers sit idle. This limit is frequently misunderstood by junior candidates.
+- Discuss rebalance disruption and its mitigations (sticky assignor, incremental cooperative rebalance) — it shows you've operated consumers in production where rebalances caused processing gaps.
+- Bring up the poison pill / dead-letter topic pattern proactively — failing to handle it means a single bad message blocks an entire partition, a classic production incident.
+- For senior roles, discuss exactly-once consumer semantics: combine Kafka transactions with transactional sink writes, or use idempotent consumers with Kafka's EOS producer API.
+- Mention `max.poll.interval.ms` and `session.timeout.ms` tuning together — misunderstanding these settings is a common source of spurious rebalances in production, and knowing them signals operational depth.

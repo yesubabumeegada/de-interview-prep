@@ -537,3 +537,42 @@ CREATE TABLE streaming.real_time_orders (
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the most common schema design patterns in data warehousing?**
+A: The main patterns are star schema (fact table surrounded by denormalized dimensions), snowflake schema (normalized dimensions), galaxy/fact constellation (multiple fact tables sharing dimensions), and One Big Table (fully denormalized flat table for simple analytical use cases).
+
+**Q: What is the medallion architecture and how does it relate to schema design?**
+A: The medallion architecture organizes data into Bronze (raw ingested data), Silver (cleaned and conformed data), and Gold (aggregated, business-ready data) layers. Each layer has a distinct schema design philosophy: Bronze mirrors source schemas, Silver applies normalization and quality rules, Gold is optimized for consumption.
+
+**Q: What is a wide table pattern and when is it used?**
+A: A wide table (or One Big Table) pre-joins all relevant dimensions and facts into a single denormalized table. It is used in self-serve analytics environments where simplicity and query speed matter more than storage efficiency, and where a single business process dominates.
+
+**Q: What is an entity-attribute-value (EAV) model and what are its drawbacks?**
+A: EAV stores data as rows of entity/attribute/value triples instead of columns, allowing flexible schema for unknown attributes. Drawbacks include poor query performance, loss of type safety, difficulty enforcing constraints, and complex pivoting logic needed for consumption.
+
+**Q: How do schema-on-read and schema-on-write differ?**
+A: Schema-on-write enforces structure at ingestion time (traditional data warehouses). Schema-on-read defers schema interpretation to query time (data lakes). Schema-on-write provides better data quality and query performance; schema-on-read offers more flexibility for raw storage.
+
+**Q: What is a hub-and-spoke schema pattern in enterprise data architecture?**
+A: A hub-and-spoke pattern uses a central integrated data store (the hub) that feeds multiple downstream data marts (the spokes) tailored for specific business domains. It supports enterprise consistency while allowing domain-specific optimization.
+
+**Q: When would you use a slowly changing dimension Type 2 vs. a snapshot table?**
+A: SCD Type 2 is best when you need to track attribute changes for individual entities over time and join historical facts to the correct dimension version. Periodic snapshots are better when you need to analyze population-level state at regular intervals without needing per-entity history.
+
+**Q: What is schema versioning and how do you manage it in production?**
+A: Schema versioning tracks changes to a data model over time using migration scripts (e.g., Flyway, Liquibase, dbt schema migrations). In production, backward-compatible changes (adding columns) are preferred over breaking changes, and versioned schemas allow consumers to migrate at their own pace.
+
+---
+
+## 💼 Interview Tips
+
+- Be able to walk through the tradeoffs of star vs. snowflake vs. OBT for a given scenario — interviewers want to see judgment, not memorized rules.
+- Mention the medallion architecture by name when discussing layered data platform design; it is the de facto standard in modern Lakehouse architectures.
+- Avoid dogmatism — the right schema pattern depends on query patterns, team size, tooling, and organizational maturity.
+- Senior interviewers expect you to discuss schema evolution proactively: how do you handle adding columns, changing types, or renaming fields without breaking downstream consumers?
+- Connect schema design to the consumer experience: BI analysts, data scientists, and application developers all have different needs that should influence your design choices.
+- Show awareness of storage format implications (Parquet columnar vs. row-based) and how they interact with schema design choices in cloud data warehouses.

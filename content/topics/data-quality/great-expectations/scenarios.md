@@ -205,3 +205,41 @@ for table_name in tables_to_onboard:
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Great Expectations and what problem does it solve?**
+A: Great Expectations (GX) is an open-source data quality framework that lets you define, document, and validate expectations about your data using Python. It solves the problem of undocumented data assumptions by making quality checks explicit, versioned, and runnable in CI/CD and production pipelines.
+
+**Q: What is an Expectation Suite in Great Expectations?**
+A: An Expectation Suite is a named collection of expectations for a specific dataset or table. It defines all the quality rules that data must satisfy (e.g., column must not be null, values must be in a set) and can be run against a Data Asset using a Checkpoint.
+
+**Q: What is a Checkpoint in Great Expectations?**
+A: A Checkpoint is a runnable configuration that pairs one or more Expectation Suites with a Batch Request (specifying which data to validate) and optionally defines Actions (e.g., send Slack alert, update Data Docs) to execute based on validation results.
+
+**Q: How do you generate expectations automatically vs. writing them manually?**
+A: Great Expectations supports automated profiling via `UserConfigurableProfiler` or `OnboardingDataAssistant`, which analyze sample data and suggest expectations. Manual authoring gives more precision and business context; automated profiling is faster for initial onboarding but often needs pruning.
+
+**Q: What are Data Docs in Great Expectations?**
+A: Data Docs are auto-generated HTML documentation sites that display your Expectation Suites, validation results, and data asset documentation. They make quality rules human-readable and shareable, acting as living documentation for your data quality standards.
+
+**Q: How do you integrate Great Expectations into an Airflow pipeline?**
+A: Use the `GreatExpectationsOperator` from the `airflow-provider-great-expectations` package, or call a GX Checkpoint within a PythonOperator. Configure the operator to raise an exception on validation failure, causing the DAG task to fail and alerting on-call engineers.
+
+**Q: What is the difference between a Batch Request and a full table validation in Great Expectations?**
+A: A Batch Request lets you validate a subset of data — a specific partition, date range, or file — rather than the entire table. This makes validation efficient in incremental pipelines by checking only the newly loaded data rather than re-scanning historical records.
+
+**Q: What are the limitations of Great Expectations?**
+A: GX can be verbose to configure, has a learning curve for complex multi-table checks, Data Docs require hosting infrastructure, and cross-table referential integrity checks are not natively supported. For very large datasets, running validations can be expensive without sampling.
+
+---
+
+## 💼 Interview Tips
+
+- Show that you understand the GX primitives (Data Context, Data Source, Expectation Suite, Checkpoint) and how they compose — interviewers can tell who has actually used it vs. read the docs.
+- Be ready to discuss integration: GX is most valuable when embedded in CI/CD and production pipelines, not run manually — emphasize automation.
+- Know the difference between GX Core (open source) and GX Cloud (managed service) — showing awareness of the commercial offering signals up-to-date knowledge.
+- Common mistake: generating expectations automatically and using them without review — automated profiles include noisy or meaningless checks that should be curated.
+- Senior interviewers may ask you to compare GX with alternatives (Soda, dbt tests, Deequ) — know the tradeoffs in terms of Python-nativeness, SQL-centricity, and scale.
+- Highlight that GX's real value is documentation as much as validation — the Expectation Suite becomes the canonical specification of what "good" data looks like.

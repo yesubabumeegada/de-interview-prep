@@ -178,3 +178,41 @@ GROUP BY order_date, region;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Snowflake External Table?**
+A: An External Table is a Snowflake object that allows querying files stored in an external stage (S3, GCS, Azure Blob) as if they were a native Snowflake table. The data never moves into Snowflake storage; queries read directly from the cloud object store.
+
+**Q: What is the VALUE column in an External Table?**
+A: External Tables expose raw file content through a special VARIANT column named `VALUE`. Each row represents one record from the file, and you access fields using semi-structured notation (e.g., `VALUE:field_name::STRING`). Column expressions can be added to project specific fields as typed columns.
+
+**Q: What is an External Table partition and how does it improve performance?**
+A: External Tables support partition columns derived from file path patterns (e.g., year/month/day folders). Declaring these as partition columns allows Snowflake to prune files at query time—only files matching the partition predicate are scanned. Without partitioning, every query scans all files in the stage.
+
+**Q: What is AUTO_REFRESH for External Tables and how does it work?**
+A: AUTO_REFRESH uses Snowflake's event infrastructure (SNS for S3, Azure Event Grid, GCS Pub/Sub) to automatically detect when new files land in the external stage and update the External Table's metadata. Without it, you must manually call `ALTER EXTERNAL TABLE ... REFRESH` to pick up new files.
+
+**Q: What are the performance trade-offs of External Tables vs. native Snowflake tables?**
+A: External Tables are slower—queries must read directly from object storage without Snowflake's micro-partition pruning, local caching, or columnar compression benefits. Native tables benefit from all of these. External Tables are best for large cold data you rarely query or for keeping data in its source location for governance reasons.
+
+**Q: What file formats are supported for External Tables?**
+A: Snowflake External Tables support Parquet, ORC, Avro, JSON, CSV, and other formats that Snowflake can natively read. Parquet is the most efficient choice because its columnar format allows column pruning during reads from object storage.
+
+**Q: How does an External Table differ from a Snowflake Stage?**
+A: A Stage is a pointer to an external storage location used for loading/unloading. An External Table builds a SQL-queryable abstraction on top of a stage, with schema definition and optional partitioning. You can query a stage directly with `SELECT` from `@stage`, but External Tables provide better ergonomics, partition pruning, and metadata tracking.
+
+**Q: When would you use an External Table over loading the data into Snowflake?**
+A: Use External Tables when data must remain in the external store for regulatory/data residency reasons, when querying infrequently accessed cold data where ingestion cost isn't justified, or when you want to query data that another system writes continuously without managing a separate ingestion pipeline.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the key trade-off: External Tables offer flexibility and avoid data duplication, but they're significantly slower than native tables. Show you'd quantify this before recommending them in production.
+- Mention partition columns and AUTO_REFRESH together—they're the two primary levers for making External Tables usable in production. Omitting either signals surface-level knowledge.
+- Be honest about when NOT to use External Tables. If a table is queried frequently by many users, the performance penalty of external storage outweighs the convenience—native Snowflake tables with Snowpipe ingestion are usually the right answer.
+- Senior interviewers may ask about Iceberg Tables (Snowflake's newer capability for open-table-format external data)—be aware this is the evolution of external table patterns and positions Snowflake for data lakehouse architectures.
+- Connect External Tables to data lake architectures: they're the bridge between a Snowflake warehouse and a cloud data lake, enabling a lakehouse query pattern without full data migration.

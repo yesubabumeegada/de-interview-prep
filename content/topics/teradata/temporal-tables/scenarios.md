@@ -381,3 +381,41 @@ INSERT INTO customer_position (
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are temporal tables in Teradata and what problem do they solve?**
+A: Temporal tables natively track the history of data changes over time with built-in period columns. They solve the problem of maintaining slowly changing data (e.g., employee records, product prices) without hand-crafting effective-date logic in every query—Teradata handles the version management and temporal predicates automatically.
+
+**Q: What are the two types of time in Teradata temporal tables?**
+A: Transaction time tracks when a row was inserted or deleted in the database (system-managed, tied to DML timestamps). Valid time (also called business time) tracks when a fact was true in the real world (user-managed, based on business dates). Bitemporal tables track both dimensions simultaneously.
+
+**Q: What is the PERIOD data type in Teradata?**
+A: PERIOD is a Teradata data type that represents a range of values between a start and an end bound (e.g., `PERIOD(DATE)` or `PERIOD(TIMESTAMP)`). It stores both the beginning and ending of a time interval as a single column, enabling efficient temporal period comparisons and overlaps using specialized temporal operators.
+
+**Q: What is a valid-time temporal table and how do you query it as of a specific date?**
+A: A valid-time table has a `VALIDTIME PERIOD FOR valid_period` column. To query the state as of a specific date, use: `SELECT * FROM employee AS OF DATE '2023-06-01'` — Teradata automatically filters rows where the valid period contains that date, without writing explicit BETWEEN date conditions.
+
+**Q: What is the difference between a sequenced and a non-sequenced temporal operation?**
+A: A sequenced operation respects the time dimension—it applies the DML or query semantics period by period (e.g., updating only the portion of a valid-time row that overlaps a specified period). A non-sequenced operation ignores the time dimension and treats the period columns as regular data, behaving like standard SQL.
+
+**Q: How does Teradata handle temporal UPDATE and DELETE operations differently from standard DML?**
+A: Temporal sequenced UPDATE/DELETE on a valid-time table automatically splits existing rows to preserve history. For example, updating a salary for a date range will split the existing row into "before the change period," "during the change period," and "after the change period" without you writing explicit INSERT/UPDATE logic.
+
+**Q: What is a bitemporal table and what scenarios require it?**
+A: A bitemporal table tracks both valid time (when the fact was true in the real world) and transaction time (when the fact was recorded in the database). This enables queries like "what did we know as of database state X about facts that were true as of date Y?"—essential for audit trails, regulatory reporting, and correcting historical data errors while preserving the record of what was originally recorded.
+
+**Q: What are the performance considerations for temporal tables?**
+A: Temporal tables can have more rows than equivalent non-temporal designs (due to history versions), which increases storage and scan costs. Queries that don't specify temporal predicates may scan all versions. Collect statistics on the period columns to help the Optimizer prune temporal versions efficiently. Archiving old versions to separate tables is a common management strategy.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the business problem: tracking slowly changing data (prices, employee records, contracts) is a universal DE challenge, and temporal tables solve it at the database layer rather than requiring application-level effective-date logic. This framing shows business value awareness.
+- Clearly distinguish valid time from transaction time—conflating them is the most common mistake when explaining temporal tables to interviewers. Use a concrete example (valid time = when the salary was effective; transaction time = when we recorded that salary in the system).
+- Bitemporal tables are powerful but operationally complex—acknowledge this. Knowing when the complexity is justified (regulatory audit requirements, financial restatements) vs. when simpler SCD Type 2 logic suffices shows senior judgment.
+- Discuss the sequenced vs. non-sequenced distinction as a practical query writing concern: most temporal queries should be sequenced to get correct period-aware semantics. Non-sequenced operations are for administrative operations on the temporal columns themselves.
+- Senior interviewers at financial services, insurance, or healthcare companies (heavy Teradata users) will probe temporal table depth. Knowing the automatic row-splitting behavior of sequenced DML shows genuine hands-on experience.

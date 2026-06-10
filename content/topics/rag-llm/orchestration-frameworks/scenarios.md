@@ -1255,3 +1255,41 @@ class TracedRAGService:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is an LLM orchestration framework and why do you need one?**
+A: An orchestration framework (e.g., LangChain, LlamaIndex, Haystack) provides abstractions for chaining LLM calls, retrieval steps, memory, and tool use into coherent pipelines. Without one, you'd hand-wire every integration, leading to brittle, hard-to-maintain code.
+
+**Q: What is the difference between LangChain and LlamaIndex?**
+A: LangChain is a general-purpose framework for building LLM applications including agents, chains, and memory. LlamaIndex (formerly GPT Index) is optimized specifically for data ingestion, indexing, and retrieval over large corpora. In practice, they're often used together—LlamaIndex for retrieval, LangChain for the broader application logic.
+
+**Q: What is an agent in the context of LLM orchestration?**
+A: An LLM agent dynamically decides which tools to call and in what order based on the query, rather than following a fixed pipeline. The LLM acts as a reasoning engine that issues tool calls (web search, SQL queries, code execution), observes results, and iterates until it can answer the question.
+
+**Q: What is a chain vs. a pipeline in LangChain?**
+A: A chain is a sequence of components (prompt → LLM → parser → tool → LLM) executed in a fixed order. A pipeline is similar terminology in other frameworks (e.g., Haystack). Both represent deterministic, pre-defined workflows as opposed to agents that choose their path dynamically.
+
+**Q: What is LangSmith and what problem does it solve?**
+A: LangSmith is LangChain's observability and evaluation platform. It traces every step of an LLM chain or agent run, recording inputs, outputs, latencies, and token counts. This makes it possible to debug failures, identify bottlenecks, and run systematic evaluations against production traces.
+
+**Q: How do you handle state and memory across multi-turn conversations in an orchestration framework?**
+A: Short-term memory stores recent conversation turns in the context window (simple but limited). Long-term memory persists summaries or key facts in a database and retrieves them when relevant. Hybrid approaches use a summarization step to compress history and store only salient information.
+
+**Q: What is the ReAct pattern and how is it used in agents?**
+A: ReAct (Reasoning + Acting) is a prompting strategy where the LLM alternates between generating a reasoning step ("Thought") and taking an action ("Action"). Observations from actions inform the next reasoning step. This creates a traceable, interpretable loop that combines chain-of-thought with tool use.
+
+**Q: What are the main failure modes of LLM agents in production?**
+A: Common failures include infinite loops (the agent keeps calling tools without converging), tool call errors not gracefully handled, exceeding context windows with long trajectories, and the LLM hallucinating tool inputs. Mitigations include max-step limits, structured tool output validation, and fallback strategies.
+
+---
+
+## 💼 Interview Tips
+
+- When discussing frameworks, show you've thought about build vs. buy: frameworks reduce boilerplate but add abstraction layers that can obscure bugs. Senior engineers know when to use a framework and when to write leaner custom code.
+- Mention observability early—production LLM systems require tracing and logging of every chain step. Bringing up LangSmith, Phoenix, or custom logging shows operational maturity.
+- Avoid sounding like you've only followed tutorials. Discuss real failure modes you've encountered (or would anticipate) in multi-step agents and how you'd guard against them.
+- Senior interviewers appreciate awareness of latency: chained LLM calls compound, so discuss strategies like parallelizing independent steps, caching deterministic sub-steps, and streaming responses.
+- Frame your framework choice in terms of team maintainability—a framework your team can debug and extend is more valuable than the most feature-rich option no one understands deeply.

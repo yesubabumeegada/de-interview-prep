@@ -212,3 +212,38 @@ GROUP BY purpose;
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is PII and what are common examples in a data platform?**
+A: Personally Identifiable Information (PII) is any data that can identify a specific individual directly or in combination with other data. Common examples include full name, email address, phone number, SSN, IP address, device ID, and biometric data. In a data platform, PII often appears in user event logs, customer tables, and CRM exports.
+
+**Q: What are the key differences between GDPR and CCPA?**
+A: GDPR (EU) applies to any organization processing data of EU residents, requires explicit consent, and grants rights including access, erasure, and portability — with fines up to 4% of global revenue. CCPA (California) grants California residents rights to know, delete, and opt out of the sale of their data, with narrower scope and lower penalties but similar erasure obligations.
+
+**Q: How do you implement data minimization in a pipeline?**
+A: Collect only the fields necessary for the stated business purpose. Drop or hash unnecessary PII at ingestion before data enters the lake. Avoid copying PII to development or test environments — use synthetic data or anonymized copies instead.
+
+**Q: What is the difference between anonymization and pseudonymization?**
+A: Anonymization irreversibly removes the ability to identify an individual — the data no longer falls under GDPR. Pseudonymization replaces identifiers with tokens or hashes but retains a mapping that allows re-identification; pseudonymized data is still personal data under GDPR and must be protected accordingly.
+
+**Q: How do you handle a GDPR right-to-erasure (right to be forgotten) request technically?**
+A: Use data lineage to identify every location where the individual's data exists — raw tables, derived tables, ML features, backups, and event streams. Delete or mask the data in each location. For immutable storage like Delta Lake, use GDPR-delete features or rewrite affected partitions. Document the erasure for compliance records.
+
+**Q: What is data retention policy and how is it enforced in a data platform?**
+A: A retention policy defines how long each category of data is kept before it must be deleted or anonymized. Enforce it by tagging datasets with their retention period in the catalog, running scheduled jobs to delete expired partitions, and auditing compliance with retention SLAs.
+
+**Q: How do you protect PII in transit and at rest?**
+A: In transit: enforce TLS/HTTPS for all data movement and use encrypted Kafka topics for streaming. At rest: enable server-side encryption on S3/GCS/ADLS using KMS-managed keys, use column-level encryption for the most sensitive fields, and manage key access through IAM policies tied to classification labels.
+
+---
+
+## 💼 Interview Tips
+
+- Know GDPR's key rights (access, erasure, portability, restriction) and be able to explain what each means technically — regulators and legal teams will probe these in compliance-focused DE roles.
+- Distinguish anonymization from pseudonymization clearly and consistently — conflating them is a red flag to interviewers at companies with serious legal and compliance functions.
+- For the erasure scenario, always bring up data lineage as the prerequisite — you cannot erase what you cannot find, and this connection demonstrates architectural thinking.
+- Mention synthetic data or anonymized copies for non-production environments proactively; it is a best practice that many candidates miss and it signals maturity around data handling.
+- Senior interviewers at regulated companies (fintech, healthtech) will ask about your experience with actual compliance audits — describe what evidence you would provide: audit logs, retention reports, erasure records.
+- Avoid framing PII compliance as a legal department problem; own it as an engineering responsibility and describe concrete technical controls you have implemented or would implement.

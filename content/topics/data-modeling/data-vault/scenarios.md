@@ -429,3 +429,42 @@ graph TD
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the three core components of Data Vault 2.0?**
+A: Hubs (unique business keys), Links (relationships between hubs), and Satellites (descriptive attributes with history). This structure separates business keys from context and relationships from attributes, enabling parallel loading and auditability.
+
+**Q: Why would you choose Data Vault over a traditional star schema?**
+A: Data Vault excels when source systems change frequently, auditability is required, or data must be integrated from many heterogeneous sources. Star schemas are simpler for reporting but are brittle when sources evolve or compliance demands full history.
+
+**Q: What is a hash key in Data Vault and why is it used?**
+A: A hash key is a surrogate key derived by hashing the business key (and source system for Link hash keys). It enables parallel, source-system-independent loading without needing a central key registry, and makes join logic consistent across the vault.
+
+**Q: What is the difference between a Satellite and a Link Satellite?**
+A: A Satellite stores descriptive attributes for a Hub (e.g., customer name, address). A Link Satellite stores attributes that belong to the relationship itself (e.g., the quantity on an order-product link), not to either entity alone.
+
+**Q: How does Data Vault handle late-arriving data?**
+A: Because each record carries a load timestamp and records are insert-only, late-arriving data is simply appended with its actual load time. Business logic in the Information Mart layer can use effective dates to reconstruct point-in-time correct views.
+
+**Q: What is a Point-in-Time (PIT) table in Data Vault?**
+A: A PIT table pre-joins satellite snapshots at specific points in time for a given hub, dramatically improving query performance by avoiding complex multi-satellite joins in the Information Mart. It is a performance optimization, not a core vault construct.
+
+**Q: What is the role of the Information Mart in Data Vault?**
+A: The Information Mart is the consumption layer where Data Vault raw structures are transformed into business-friendly star schemas or flat tables. It is the only layer that contains business rules, keeping the raw vault clean and auditable.
+
+**Q: What is a Reference Table in Data Vault?**
+A: Reference Tables store static or slowly changing lookup data (e.g., country codes, status types) that does not fit neatly into hub/link/satellite structures. They are used directly in the Information Mart for decoding and classification.
+
+---
+
+## 💼 Interview Tips
+
+- Always explain Data Vault in terms of the problem it solves — auditability, source system evolution, and parallel loading — not just its structure.
+- Know when NOT to use Data Vault: for small teams, simple reporting needs, or when time-to-insight is more important than architectural rigor.
+- Senior interviewers will probe whether you understand the Information Mart layer; Data Vault without a consumption layer has no business value.
+- Demonstrate familiarity with hash key generation strategies and why MD5 vs SHA-256 matters for collision resistance and performance.
+- Avoid memorizing buzzwords; be ready to sketch a simple hub-link-satellite model for a realistic scenario like orders and customers.
+- Mention tooling (dbt, Roelant Vos's Data Vault framework, WhereScape) to show you understand how Data Vault is implemented in practice, not just theory.

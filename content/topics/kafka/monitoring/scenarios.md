@@ -356,3 +356,42 @@ async def get_lag(group_id: str, token: str = Depends(get_auth_token)):
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the most critical Kafka metrics to monitor?**
+A: Consumer group lag (records behind latest offset), under-replicated partitions (broker falling behind replication), offline partitions (no leader), broker disk utilization, request latency, and producer/consumer throughput (bytes in/out per second).
+
+**Q: What is consumer lag and how do you alert on it?**
+A: Consumer lag is the difference between the latest offset produced and the last committed offset consumed per partition. Alert when lag exceeds a threshold (e.g., 10,000 messages or a time-equivalent representing N minutes of data). Use Burrow, Kafka's consumer-groups API, or CloudWatch for lag monitoring.
+
+**Q: What are under-replicated partitions and why are they dangerous?**
+A: Under-replicated partitions have fewer in-sync replicas (ISRs) than the configured replication factor, meaning data is at risk of loss if the remaining replicas fail. Caused by slow or failing follower brokers. This metric should alert immediately as it indicates cluster instability.
+
+**Q: What is an offline partition in Kafka?**
+A: An offline partition has no elected leader, making it completely unavailable for reads and writes. This occurs when all replicas of a partition are offline (broker failures). Any non-zero count of offline partitions is a critical alert requiring immediate action.
+
+**Q: What tools are commonly used for Kafka monitoring?**
+A: Kafka exposes JMX metrics which integrate with Prometheus (via JMX Exporter) + Grafana for dashboards. Confluent Control Center provides managed monitoring. Burrow (LinkedIn) specializes in consumer lag analysis. Datadog and New Relic have native Kafka integrations. AWS MSK provides CloudWatch metrics.
+
+**Q: How do you monitor producer health in Kafka?**
+A: Monitor producer request rate, error rate, average/max request latency, batch size, compression ratio, and record send failures. High producer error rates or latency spikes indicate broker-side issues (leader not available, ISR shrink) or network problems.
+
+**Q: What is the significance of the active controller metric?**
+A: The Kafka cluster should have exactly one active controller at any time. If this metric is 0 (no controller) or >1 (split brain), the cluster cannot manage partition leadership changes or broker registration — both are critical failure states.
+
+**Q: How do you correlate broker disk usage with retention policies for capacity planning?**
+A: Track disk usage per broker and per topic. Project growth based on incoming bytes/second × retention period. Alert at 70-80% disk usage to allow time for intervention. Use `kafka-log-dirs.sh` to inspect per-topic, per-partition disk consumption for targeted cleanup.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with consumer lag as the primary operational metric — it directly reflects business impact (how far behind are your consumers). Interviewers want to see you prioritize metrics by business relevance.
+- Know under-replicated partitions as a data safety alarm, not just a performance concern — the risk of data loss under further broker failure makes this a P0 alert.
+- Describe a complete monitoring stack (JMX → Prometheus → Grafana, or Datadog, or CloudWatch for MSK) rather than just listing metrics — it shows you've built or operated production monitoring.
+- Discuss consumer lag in time units, not just message counts — "10,000 messages lag" means nothing without knowing throughput; "5 minutes of data behind" is actionable for SLA assessment.
+- For senior roles, discuss capacity planning metrics: disk growth rate, bytes in/out per topic, and how to project when a broker will fill up based on current retention settings.
+- Mention Burrow specifically for consumer lag — it understands lag trends (improving vs. worsening) rather than just the current value, which eliminates false alerts during normal catch-up after downtime.

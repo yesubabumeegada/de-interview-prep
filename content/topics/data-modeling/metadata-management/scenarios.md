@@ -546,3 +546,42 @@ jobs:
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is metadata management and what are the main categories of metadata?**
+A: Metadata management is the discipline of capturing, organizing, and maintaining information about data assets. Main categories are technical metadata (schema, data types, lineage), business metadata (definitions, ownership, glossary terms), and operational metadata (job run times, row counts, freshness).
+
+**Q: What is a data catalog and how does it differ from a data dictionary?**
+A: A data catalog is an active, searchable inventory of data assets with automated discovery, lineage, and collaboration features (e.g., DataHub, Alation). A data dictionary is typically a static document or table describing column names and definitions — a simpler, manual artifact.
+
+**Q: What is a business glossary and why is it important?**
+A: A business glossary is a curated collection of agreed-upon definitions for business terms (e.g., "active customer," "gross revenue"). It is important because different teams often use the same terms differently, causing metric disagreements that erode trust in data.
+
+**Q: How does automated metadata discovery work?**
+A: Automated discovery tools crawl data sources (databases, object stores, BI tools) using connectors, extract schema and statistics, infer relationships, and populate the catalog without manual effort. Tools like DataHub, Apache Atlas, and Amundsen support this pattern.
+
+**Q: What is the relationship between metadata management and data governance?**
+A: Metadata management is a foundational capability for governance — you cannot govern what you cannot discover or describe. Governance policies (access control, classification, retention) are applied to assets surfaced and described through metadata management.
+
+**Q: What is data stewardship and how does it relate to metadata?**
+A: A data steward is a business or technical owner responsible for the accuracy and completeness of metadata for a set of assets. Stewards curate business definitions, validate lineage, and ensure metadata stays current as systems evolve.
+
+**Q: How do you measure the health of your metadata management program?**
+A: Metrics include metadata completeness (% of assets with owners, descriptions, and classifications), catalog adoption (active users, searches per week), freshness (lag between pipeline changes and catalog updates), and lineage coverage (% of assets with upstream lineage).
+
+**Q: What challenges arise when scaling metadata management across a large organization?**
+A: Challenges include keeping metadata current at scale, reconciling conflicting definitions across business units, driving adoption among data producers, integrating diverse source systems, and preventing the catalog from becoming stale and untrustworthy.
+
+---
+
+## 💼 Interview Tips
+
+- Frame metadata management as a business problem, not a technical one — the goal is enabling people to find, understand, and trust data, not just cataloging schemas.
+- Distinguish between passive catalogs (documentation repositories) and active catalogs (integrated with pipelines for automated freshness and lineage) — senior roles expect the latter.
+- Be ready to discuss how you would drive adoption of a data catalog; tooling alone never succeeds without change management and incentives for data producers.
+- Know at least one industry tool deeply (DataHub, Alation, Collibra, Atlan) and be able to discuss its architecture and integration points.
+- Avoid treating metadata as an afterthought — interviewers want to hear that you build metadata emission into pipelines from day one, not retrofit it later.
+- Senior interviewers appreciate discussion of how metadata management enables self-serve analytics, reducing bottlenecks on the data engineering team.

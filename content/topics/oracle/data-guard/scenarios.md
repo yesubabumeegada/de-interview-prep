@@ -255,3 +255,40 @@ SELECT protection_mode, protection_level FROM v$database;
 </details>
 
 </article>
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Oracle Data Guard and what problem does it solve?**
+A: Data Guard is Oracle's high-availability and disaster recovery solution that maintains one or more synchronized standby databases. It eliminates single-point-of-failure risk by automatically shipping and applying redo logs from the primary to standbys, enabling failover in minutes with zero or near-zero data loss.
+
+**Q: What are the three protection modes in Data Guard?**
+A: Maximum Performance (async redo shipping—best throughput, potential data loss on failover), Maximum Availability (sync shipping, primary continues if standby unavailable—no data loss under normal conditions), and Maximum Protection (sync shipping, primary shuts down if standby unavailable—strictest no-data-loss guarantee).
+
+**Q: What is the difference between a physical standby and a logical standby?**
+A: A physical standby is a block-for-block copy maintained by applying archived redo logs via Media Recovery. A logical standby applies SQL-level changes reconstructed from LogMiner, allowing the standby to be open read-write with additional tables not on the primary—useful for reporting but with restrictions on supported data types.
+
+**Q: What is Active Data Guard?**
+A: Active Data Guard (a licensed feature) allows a physical standby to be open read-only while still applying redo logs in real time. This enables offloading read queries and backups to the standby without interrupting recovery, effectively providing a read-scale replica.
+
+**Q: What is the difference between switchover and failover?**
+A: Switchover is a planned, graceful role reversal—both primary and standby remain intact and no data is lost. Failover is an emergency operation triggered by primary failure—the standby becomes the new primary, potentially with some data loss depending on the protection mode and redo shipping lag.
+
+**Q: What is a redo transport lag and how do you monitor it?**
+A: Redo transport lag is the delay between when redo is generated on the primary and when it is applied on the standby. Monitor it via `V$DATAGUARD_STATS` (columns `name='apply lag'`) or `V$ARCHIVE_DEST_STATUS`. Sustained lag indicates network bandwidth or standby apply throughput issues.
+
+**Q: What is a Fast-Start Failover (FSFO)?**
+A: FSFO automates failover without DBA intervention when the primary becomes unavailable. It requires a Data Guard Observer process and the standby must meet configurable lag and connectivity thresholds. FSFO is essential for SLAs that require sub-minute RTO.
+
+**Q: How does Data Guard integrate with RMAN for backup strategy?**
+A: With Active Data Guard, RMAN backups can be offloaded entirely to the standby, reducing primary I/O. The standby's backups are usable for primary recovery because the files are physically identical. This is a best-practice for production environments to keep backup overhead off the primary.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the three protection modes and the RPO/RTO trade-off each represents—this frames the architectural thinking interviewers want to see.
+- Know the operational commands: `ALTER DATABASE SWITCHOVER TO standby_name VERIFY;` and `ALTER DATABASE FAILOVER TO standby_name;`. Vague answers about "clicking a button in OEM" won't land well.
+- Senior interviewers often ask about post-failover steps: re-syncing the old primary as a new standby, updating connection strings/TNS aliases, and reinstating FSFO observer. Walk through the full sequence.
+- Mention Active Data Guard for read offload—many teams don't use it optimally. Showing you know how to use the standby for reporting queries demonstrates cost-consciousness.
+- Connect Data Guard to your DR testing discipline: scheduled switchover drills are the only way to verify RTO. Mention that untested failover procedures are a compliance risk.

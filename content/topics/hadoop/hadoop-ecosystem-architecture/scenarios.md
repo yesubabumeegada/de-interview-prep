@@ -445,3 +445,42 @@ Additional benefits (unquantified):
 
 </details>
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the core components of the Hadoop ecosystem?**
+A: The core components are HDFS (distributed storage), YARN (resource management and job scheduling), MapReduce (batch processing framework), and common utilities. The broader ecosystem adds Hive (SQL), Pig (scripting), HBase (NoSQL), Sqoop (RDBMS import/export), Oozie (workflow), and Zookeeper (coordination).
+
+**Q: How does HDFS achieve fault tolerance?**
+A: HDFS replicates each data block (default 3 replicas) across different DataNodes, preferring nodes on different racks. If a DataNode fails, the NameNode detects the missing replicas through heartbeats and instructs other DataNodes to re-replicate the blocks to restore the replication factor.
+
+**Q: What is the role of the NameNode in HDFS?**
+A: The NameNode is the HDFS metadata server. It maintains the namespace (directory tree and file-to-block mappings) in memory and records block locations reported by DataNodes. It does not store actual data — all data I/O flows directly between clients and DataNodes.
+
+**Q: What is YARN and why was it introduced?**
+A: YARN (Yet Another Resource Negotiator) separates cluster resource management from the MapReduce programming model, allowing multiple processing frameworks (Spark, Flink, MapReduce) to share the same cluster. It replaced Hadoop 1's fixed JobTracker/TaskTracker architecture.
+
+**Q: How does data locality work in Hadoop?**
+A: YARN's ResourceManager attempts to schedule tasks on nodes where the required HDFS blocks already reside, minimizing network data transfer. This "move compute to data" principle is fundamental to Hadoop's performance model.
+
+**Q: What is the difference between HDFS and a traditional distributed file system?**
+A: HDFS is optimized for large sequential reads/writes of large files (GB to TB range) with high throughput, not low-latency random access. It uses large block sizes (128MB default), is write-once (no in-place edits), and assumes commodity hardware with software-level fault tolerance.
+
+**Q: What replaced MapReduce for most workloads and why?**
+A: Apache Spark replaced MapReduce for most workloads because it performs in-memory computation, reducing I/O-intensive disk writes between stages. Spark is 10-100x faster for iterative algorithms and interactive queries while running on the same YARN/HDFS infrastructure.
+
+**Q: How does the Hadoop ecosystem fit in a modern cloud architecture?**
+A: On-premises Hadoop clusters are increasingly replaced by cloud-native equivalents: S3/GCS/ADLS for HDFS, EMR/Dataproc for Spark/Hive, DynamoDB/Bigtable for HBase, and managed Kafka for streaming. Organizations retain Hadoop expertise but migrate to managed services to reduce operational burden.
+
+---
+
+## 💼 Interview Tips
+
+- Know the NameNode as a single point of failure and how HA (High Availability) NameNode with ZooKeeper-based failover addresses it — this shows production operations awareness.
+- Be ready to compare Hadoop to Spark concisely: Hadoop MapReduce is disk-based and resilient; Spark is memory-based and faster. Both can use HDFS and YARN.
+- Frame Hadoop knowledge in a modern context — pure Hadoop is legacy in most organizations; showing you know when to use EMR, Dataproc, or cloud storage vs. HDFS demonstrates current relevance.
+- Interviewers often ask about block size tuning — larger blocks reduce NameNode metadata pressure but increase task granularity; knowing the trade-off signals operational depth.
+- Avoid treating Hadoop as a monolith; discuss the ecosystem components separately and how they interact, showing architectural understanding rather than surface-level familiarity.
+- For senior roles, connect Hadoop architecture decisions to cost: replication factor 3 means 3x storage cost; columnar formats like ORC/Parquet on HDFS dramatically reduce I/O costs.

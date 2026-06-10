@@ -428,3 +428,42 @@ ORDER BY r.logical_date DESC, s.started_at;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What does idempotency mean in data engineering?**
+A: An idempotent operation produces the same result regardless of how many times it is executed. In ETL, this means running a pipeline twice for the same input data yields the same output state — no duplicates, no data loss.
+
+**Q: Why is idempotency critical for ETL pipelines?**
+A: Network failures, scheduler retries, and operator re-runs are inevitable in production. Without idempotency, retries create duplicate records or corrupt state. With it, any run can be safely retried without manual cleanup.
+
+**Q: How do you make a data load idempotent?**
+A: Use INSERT OVERWRITE or MERGE (upsert) semantics instead of plain INSERT. Partition data by a natural key (e.g., date), so re-running the load for a partition replaces the previous output atomically rather than appending to it.
+
+**Q: What is the difference between idempotency and exactly-once semantics?**
+A: Idempotency is a property of the operation (re-running produces the same state). Exactly-once is a delivery guarantee (each message is processed precisely once). An idempotent sink can tolerate at-least-once delivery and still produce a correct final state.
+
+**Q: How do you achieve idempotency when writing to a relational database?**
+A: Use UPSERT (INSERT ... ON CONFLICT DO UPDATE in PostgreSQL, MERGE in SQL Server/Snowflake) keyed on a unique business key or surrogate ID. This ensures re-processing the same record updates rather than duplicates it.
+
+**Q: How do you handle idempotency when calling external APIs in a pipeline?**
+A: Use idempotency keys (a unique request ID sent with each call) supported by the API to ensure the server deduplicates repeat requests. Store successful call records locally so you can skip already-processed items on retry without re-calling the API.
+
+**Q: What is a natural idempotency key?**
+A: A natural idempotency key is a business-meaningful unique identifier inherent in the data — such as order_id, event_id, or a composite of (source_system, record_id, date). Using natural keys avoids the need for synthetic deduplication logic.
+
+**Q: How does Airflow support idempotent DAG design?**
+A: Airflow passes `execution_date` (the logical run time) to each task, allowing tasks to scope their reads and writes to a specific partition. Designing tasks to process only their `execution_date` partition and overwrite it makes each run naturally idempotent.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with the "why" before the "how" — explain that retries and failures are inevitable, so idempotency is a correctness requirement, not an optimization. This frames you as a systems thinker.
+- Distinguish idempotency from deduplication — deduplication removes existing duplicates reactively; idempotency prevents them proactively. Interviewers appreciate the nuance.
+- When discussing sink writes, name the specific SQL/API mechanism (MERGE, UPSERT, ON CONFLICT) rather than just saying "use upsert" — specificity signals hands-on experience.
+- Be ready for the follow-up: "What if your idempotency key source has gaps?" — discuss surrogate key generation strategies and how to handle missing natural keys gracefully.
+- Mention the testing angle: idempotency should be verified by running the same pipeline twice in a test environment and asserting row counts and values are identical.
+- For streaming pipelines, explain that idempotency at the sink is your primary defense against at-least-once delivery — showing you understand delivery semantics in context impresses senior interviewers.

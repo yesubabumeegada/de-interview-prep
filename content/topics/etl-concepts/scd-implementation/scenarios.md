@@ -380,3 +380,42 @@ published_q1 = generate_revenue_report(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a Slowly Changing Dimension (SCD) and why does it matter?**
+A: An SCD is a dimension table that tracks changes to attributes over time. It matters because business entities (customers, products) change, and analytics often need to reflect the attribute values that were true at the time of a historical transaction, not just current values.
+
+**Q: What is the difference between SCD Type 1 and Type 2?**
+A: SCD Type 1 overwrites the old value with the new one — no history is kept, simple to implement. SCD Type 2 adds a new row for each change with effective dates and a current flag — full history is preserved, enabling point-in-time analysis.
+
+**Q: How does SCD Type 2 work mechanically?**
+A: When a change is detected in a source record, the current row in the dimension table has its end_date set to the change date and is_current set to false. A new row is inserted with the new attribute values, start_date set to the change date, end_date set to NULL, and is_current set to true.
+
+**Q: What columns are typically added to support SCD Type 2?**
+A: A surrogate key (unique per row version), effective_start_date, effective_end_date (NULL for the current record), and is_current (boolean flag). The natural/business key remains the same across all versions of the same entity.
+
+**Q: How do you query SCD Type 2 for point-in-time analysis?**
+A: Join the fact table to the dimension table on the natural key AND filter where the fact's event_date is between the dimension's effective_start_date and effective_end_date, ensuring the attribute values used are those that were true at the time of the event.
+
+**Q: What is SCD Type 3 and when would you use it?**
+A: SCD Type 3 adds extra columns to store the previous value alongside the current value (e.g., current_region, previous_region). It supports limited history (typically one change) and is used when only the most recent prior state is relevant, avoiding the row proliferation of Type 2.
+
+**Q: How do you implement SCD Type 2 efficiently at scale in a cloud warehouse?**
+A: Use MERGE (UPSERT) statements to detect changes in the incoming dataset compared to the current dimension rows, close changed rows in one pass, and insert new versions in a second pass. In Spark, use Delta Lake's MERGE INTO for transactional SCD Type 2 at scale.
+
+**Q: What is SCD Type 6 (hybrid)?**
+A: SCD Type 6 combines Types 1, 2, and 3 — it keeps full history like Type 2, stores the current value in all historical rows like Type 1 (denormalized for easy querying), and adds previous value columns like Type 3. It simplifies reporting but increases storage.
+
+---
+
+## 💼 Interview Tips
+
+- Interviewers almost always ask about SCD Type 2 specifically — be ready to write or explain the MERGE SQL pattern from memory, including how you close old rows and insert new ones atomically.
+- Demonstrate you understand the point-in-time query pattern, not just the load pattern — showing you know how downstream analysts consume SCD Type 2 data proves end-to-end understanding.
+- Mention surrogate keys explicitly — using only natural keys for SCD Type 2 leads to fact table join ambiguity, and knowing this detail signals production experience.
+- Discuss performance implications: SCD Type 2 grows dimension tables with every change, so full table scans become expensive — partitioning by is_current or using columnar storage helps.
+- For senior roles, connect SCD implementation to the orchestration layer: how do incremental loads feed the MERGE, and how do you ensure the dimension state is consistent with the fact table?
+- Avoid confusing SCD types under pressure — enumerate Type 1 (overwrite), Type 2 (new row + history), Type 3 (add column) clearly before discussing which to recommend for a given scenario.

@@ -402,3 +402,41 @@ class TestOutputDataQuality:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are pytest fixtures and how do they differ from test setup methods in unittest?**
+A: Pytest fixtures are functions decorated with `@pytest.fixture` that provide shared resources (database connections, sample DataFrames, temporary directories) to tests via function argument injection. Unlike unittest's `setUp`/`tearDown`, fixtures are composable, parameterizable, have explicit scope, and can be used across multiple test files without inheritance.
+
+**Q: What are fixture scopes and when would you use each?**
+A: `scope="function"` (default)—recreated for every test. `scope="class"`—shared within a test class. `scope="module"`—shared across all tests in a file. `scope="session"`—shared for the entire test run. Use session or module scope for expensive setup (database connection, SparkSession) to avoid repeated initialization overhead.
+
+**Q: What is `pytest.mark.parametrize` and how does it help?**
+A: `@pytest.mark.parametrize("arg", [val1, val2, val3])` runs the decorated test function once for each value, generating separate test IDs. This tests multiple inputs (edge cases, boundary values, error cases) without code duplication—a single test function covers all variants. Combine with multiple parameters as tuples for combinatorial testing.
+
+**Q: What is mocking and how do you use `unittest.mock.patch` in pytest?**
+A: Mocking replaces a dependency (API call, database query, file read) with a controlled fake during testing. `patch('module.ClassName.method')` replaces the target with a `MagicMock`. In pytest, use `@pytest.fixture` with `mocker.patch` (from `pytest-mock`) for cleaner syntax. Always patch at the import location (where the code uses it, not where it is defined).
+
+**Q: What is the difference between a mock and a stub?**
+A: A stub provides canned return values (fake data). A mock additionally records how it was called and asserts interactions (was it called once? with the right arguments?). In practice, Python's `MagicMock` combines both—use `mock.return_value` for stubbing and `mock.assert_called_once_with(...)` for interaction verification.
+
+**Q: How do you test a function that reads from S3 without actually calling AWS?**
+A: Mock the S3 client using `moto` (a library that intercepts boto3 calls and simulates AWS services in-process) or mock `boto3.client` directly with `unittest.mock.patch`. `moto` is preferred for complex scenarios (bucket creation, object listing) as it faithfully simulates the AWS API without hitting the network.
+
+**Q: What is test coverage and how do you measure it with pytest?**
+A: Test coverage measures what percentage of source code lines are executed during tests. Use `pytest-cov`: `pytest --cov=mypackage --cov-report=html` generates an HTML coverage report. Aim for high coverage (80%+) on business logic; 100% is not always practical. Coverage gaps highlight untested edge cases.
+
+**Q: What is a conftest.py file and what is it used for?**
+A: `conftest.py` is a pytest plugin file automatically discovered by pytest. Define shared fixtures, hooks, and plugins there without importing them in test files—pytest injects fixtures by name. A `conftest.py` at the root shares fixtures across all test modules; one in a subdirectory scopes fixtures to that directory's tests.
+
+---
+
+## 💼 Interview Tips
+
+- Demonstrate fixture composition in interviews: a `db_connection` fixture that yields a connection and rolls back after each test, composed with a `sample_data` fixture that inserts rows. This pattern is ubiquitous in DE pipeline testing.
+- Know the `moto` library for AWS testing—it is the standard approach for testing S3/Glue/DynamoDB code without real AWS credentials or costs. Mentioning it by name signals practical DE testing experience.
+- Senior interviewers probe what you actually test: not just "does it run" but "does it produce correct output?" Assert on specific values, schema correctness, row counts, and null handling—not just "no exception raised."
+- Show you know the testing pyramid: many fast unit tests (mock external systems), fewer integration tests (real database, local S3 emulator), few end-to-end tests (full pipeline on real infra). Apply the pyramid to a DE pipeline context.
+- Demonstrate `@pytest.mark.parametrize` for data quality tests: testing the same transformation function with clean data, null values, duplicate keys, and edge-case timestamps shows thorough DE testing discipline.

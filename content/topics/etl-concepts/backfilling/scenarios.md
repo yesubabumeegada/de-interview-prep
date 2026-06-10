@@ -440,3 +440,42 @@ Post-swap monitoring:
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is backfilling in data engineering?**
+A: Backfilling is the process of reprocessing historical data to populate a dataset after a pipeline is created or fixed. It ensures that records prior to the pipeline's launch date are included in the output, maintaining data completeness.
+
+**Q: When would you trigger a backfill?**
+A: You backfill when a new pipeline goes live and needs historical data, when a bug fix requires reprocessing past records, or when a schema change demands recomputing derived fields for prior periods.
+
+**Q: How do you make a backfill idempotent?**
+A: Partition output by date, use INSERT OVERWRITE (or MERGE) semantics, and ensure source reads are bounded by explicit start/end timestamps so re-runs produce identical results without duplication.
+
+**Q: What is the difference between a full backfill and an incremental backfill?**
+A: A full backfill reprocesses all historical data at once, while an incremental backfill processes historical data in smaller time-window chunks to limit resource usage and allow easier recovery from failures.
+
+**Q: How does Airflow support backfilling?**
+A: Airflow's `airflow dags backfill` command re-runs DAG runs for a specified date range, respecting task dependencies and using the same execution_date context so pipelines behave identically to scheduled runs.
+
+**Q: What risks does backfilling introduce in production?**
+A: Backfills can overload source systems with sudden read spikes, saturate compute clusters, and accidentally overwrite current production data if partition logic is incorrect. Rate-limiting and dry-run validation mitigate these risks.
+
+**Q: How do you handle backfilling when the source data no longer exists?**
+A: Use archived snapshots, data lake cold storage, or audit logs to reconstruct the historical state. If unavailable, document the data gap and apply NULL or default values with appropriate lineage metadata.
+
+**Q: What is a catchup run and how does it differ from a manual backfill?**
+A: A catchup run is an automatic scheduler behavior that fills missed intervals since the last successful run (e.g., Airflow's `catchup=True`). A manual backfill is an explicit operator-triggered reprocessing of a specific historical range.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with idempotency: every backfill answer should mention partitioned overwrites and bounded reads — interviewers test whether you think about data correctness before performance.
+- Avoid saying you'd run a full historical reprocess without mentioning rate-limiting or chunking; senior engineers want to hear that you protect production systems.
+- Mention execution_date or logical date awareness in Airflow — showing you understand the difference between scheduled and wall-clock time signals Airflow maturity.
+- Discuss monitoring: senior interviewers expect you to describe how you'd track backfill progress, detect failures mid-run, and resume without restarting from scratch.
+- Bring up cost: backfills on cloud warehouses (BigQuery, Redshift, Snowflake) can be expensive — mentioning slot reservation or warehouse sizing shows business awareness.
+- If asked about backfilling streaming data, distinguish between reprocessing from Kafka offsets vs. rebuilding from a historical source of truth — this separates junior from senior candidates.

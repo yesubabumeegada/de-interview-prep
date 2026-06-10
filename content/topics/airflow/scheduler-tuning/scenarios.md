@@ -410,3 +410,42 @@ PythonOperator(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What does the Airflow scheduler do and what are its main performance bottlenecks?**
+A: The scheduler parses DAG files, identifies tasks ready to run, submits them to the executor, and updates task states. Main bottlenecks: DAG file parse time (too many files or complex parsing logic), metadata database query latency (too many task state updates), and scheduling loop throughput (limited by `scheduler_heartbeat_sec` and DAG count).
+
+**Q: What is `min_file_process_interval` and how does it affect scheduler performance?**
+A: `min_file_process_interval` (seconds) sets the minimum time between re-parsing a single DAG file. Increasing it reduces parse frequency and CPU load on the scheduler. Default is 0 (parse as fast as possible). For stable production DAGs, setting it to 30-60 seconds significantly reduces scheduler CPU usage.
+
+**Q: How does the number of DAG files in the `dags_folder` affect scheduler performance?**
+A: The scheduler parses all files in the `dags_folder` in a continuous cycle. More files = longer parse cycles = higher task scheduling latency. Reduce by: removing unused DAGs, splitting large DAGs into smaller ones, increasing `min_file_process_interval`, and organizing DAGs into subdirectories with selective parsing.
+
+**Q: What is `parallelism` in Airflow and what does it control?**
+A: `parallelism` (now `max_active_tasks` in Airflow 2.x) is the maximum number of task instances that can run concurrently across the entire Airflow installation. It's an installation-wide ceiling — even if pools and per-DAG limits allow more, this global limit applies. Set it based on your executor worker capacity.
+
+**Q: How do you run multiple Airflow schedulers for high availability and throughput?**
+A: Airflow 2.x supports running multiple scheduler instances simultaneously using distributed locking via the metadata database. Run 2-3 scheduler replicas for HA — if one fails, others continue scheduling. This also improves throughput for high-DAG-count deployments.
+
+**Q: What is DAG serialization and how does it improve scheduler performance?**
+A: DAG serialization stores DAG structure as JSON in the metadata database. The webserver and other components read serialized DAGs from the database instead of parsing Python files — eliminating the need for all components to have access to DAG files and reducing redundant parsing. Enable via `store_serialized_dags=True` (default in Airflow 2.x).
+
+**Q: What metrics should you monitor to diagnose scheduler performance issues?**
+A: Key metrics: `dagbag_import_errors` (parse failures), `dag_processing.total_parse_time` (parse duration), `scheduler.tasks.starving` (tasks blocked on pool/queue), `scheduler.critical_section_duration` (scheduling loop contention), and `executor.open_slots` (available worker capacity).
+
+**Q: How does the metadata database impact scheduler performance and what can you do to optimize it?**
+A: High write throughput (task state updates) and complex queries (finding schedulable tasks) can make the metadata DB a bottleneck. Optimizations: use PostgreSQL (not SQLite/MySQL) with connection pooling (pgBouncer), add indexes on `task_instance` table columns, configure `sql_alchemy_pool_size`, and periodically clean up old DagRun/TaskInstance records with `airflow db clean`.
+
+---
+
+## 💼 Interview Tips
+
+- Open with the scheduler's core loop: parse → identify → submit → update. Understanding this loop is prerequisite to discussing any tuning knob intelligently.
+- Scheduler tuning is a senior-level topic — if asked about it, frame your answer around metrics and diagnosis first, then interventions. Blindly tweaking config values without measurement is an antipattern.
+- Mention `airflow db clean` and log rotation — accumulated historical task records are a common but often overlooked performance drain on the metadata database.
+- DAG serialization is enabled by default in Airflow 2.x — mentioning it signals you're working with a modern Airflow version and understand its architecture.
+- The multiple-scheduler HA pattern is a major Airflow 2.x improvement — if interviewing for a senior role, demonstrate awareness of this even if you haven't used it directly.
+- Senior interviewers may ask: "your scheduler is lagging by 10 minutes — how do you diagnose it?" Walk through a structured approach: check parse time, check DB latency, check executor slots, check pool utilization — showing systematic thinking over guessing.

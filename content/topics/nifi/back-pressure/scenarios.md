@@ -448,3 +448,41 @@ nifi_clickstream_records_dropped counter (expiration)
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is back-pressure in NiFi and why does it matter?**
+A: Back-pressure is NiFi's flow-control mechanism that pauses upstream processors when a downstream connection's queue exceeds a configured threshold (by count or size). It prevents runaway memory consumption and ensures producers don't overwhelm slower consumers. Without it, a slow sink could cause the JVM to run out of heap.
+
+**Q: What are the two back-pressure thresholds you can configure on a connection?**
+A: "Back Pressure Object Threshold" (number of FlowFiles) and "Back Pressure Data Size Threshold" (total bytes). When either limit is breached the source processor is no longer scheduled to run until the queue drains below the threshold.
+
+**Q: How do you identify which connection is causing a bottleneck?**
+A: In the NiFi UI, connections turn red/orange when back-pressured. You can also query the NiFi REST API (`/nifi-api/connections/{id}/status`) or use the Summary table to sort by queue depth and find the slowest link.
+
+**Q: What happens to a processor that is back-pressured?**
+A: NiFi simply stops scheduling that processor for execution. It is not killed—it just sits idle. Once the downstream queue drains below the threshold, the scheduler picks the processor up again automatically.
+
+**Q: How would you tune back-pressure thresholds for a high-throughput pipeline?**
+A: Raise the object threshold (e.g., 50 000 FlowFiles) and the data-size threshold (e.g., 1 GB) for pipelines with large burst traffic, but stay well within available heap. Pair this with increasing the NiFi heap (`-Xmx`) and using the Content Repository on fast local SSD to handle the buffered data.
+
+**Q: Can back-pressure thresholds be changed at runtime without restarting NiFi?**
+A: Yes. You can edit connection properties in the UI or via the REST API while the flow is running. The new thresholds take effect immediately for subsequent scheduling decisions.
+
+**Q: How does back-pressure interact with NiFi clustering?**
+A: In a clustered deployment, back-pressure is enforced per-node. Each node independently pauses its local processor when its local queue exceeds the threshold. A cluster-wide bottleneck must be addressed by scaling out nodes or increasing parallelism on the slow processors.
+
+**Q: What is the difference between back-pressure and prioritization?**
+A: Back-pressure controls *when* a processor runs (pause/resume), while prioritization controls *which* FlowFiles are dequeued first (FIFO, LIFO, priority attribute). They are complementary: back-pressure protects system resources; prioritization shapes processing order.
+
+---
+
+## 💼 Interview Tips
+
+- Mention specific threshold types (object count vs. data size) and explain *why* both exist—different workloads are constrained by different resources.
+- Avoid saying "back-pressure stops the flow." It pauses the *source processor*, not the entire flow—downstream processors keep running and draining the queue.
+- Senior interviewers want to hear how you diagnosed a back-pressure issue end-to-end: UI color cues → REST API metrics → root-cause (slow sink, network, DB) → remediation (tune thresholds, add parallelism, scale out).
+- Connect back-pressure to heap management: uncontrolled queues cause OOM; back-pressure is the first line of defense before you reach swapping content to disk.
+- Know the interplay with Concurrent Tasks—increasing concurrent tasks on a bottleneck processor often resolves back-pressure faster than raising thresholds.

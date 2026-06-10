@@ -256,3 +256,42 @@ eu_dt.vacuum(0)  # Immediate physical deletion (override retention for GDPR)
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Delta Lake and what are its core capabilities?**
+A: Delta Lake is an open-source storage layer that brings ACID transactions, scalable metadata handling, and unified streaming/batch processing to data lakes. It stores data as Parquet files with a `_delta_log` transaction log that provides atomicity, consistency, isolation, and durability.
+
+**Q: How does Delta Lake's transaction log work?**
+A: The `_delta_log` directory contains JSON commit files for each transaction. Each commit records which files were added or removed, schema changes, and metadata. Delta Lake reads these log files to reconstruct the current table state and provide time travel capabilities.
+
+**Q: What is Delta Lake time travel and how do you use it?**
+A: Time travel lets you query historical versions of a Delta table using version numbers or timestamps: `SELECT * FROM table VERSION AS OF 5` or `SELECT * FROM table TIMESTAMP AS OF '2024-01-15'`. It is used for auditing, debugging, and reproducing historical states.
+
+**Q: What is the MERGE operation in Delta Lake and when is it used?**
+A: `MERGE INTO` performs upserts — inserting new records, updating matching records, and optionally deleting removed records in one atomic operation. It is used for CDC (change data capture) integration, SCD Type 2 implementation, and any pattern requiring conditional insert/update.
+
+**Q: What is Z-ordering in Delta Lake?**
+A: Z-ordering is a multi-dimensional clustering technique (`OPTIMIZE table ZORDER BY col1, col2`) that co-locates related data across multiple columns in the same files. It enables efficient file skipping when queries filter on those columns, reducing data scanned and improving query latency.
+
+**Q: What is Delta Lake schema enforcement vs. schema evolution?**
+A: Schema enforcement (on by default) rejects writes that don't match the current table schema, preventing data corruption. Schema evolution (opt-in via `mergeSchema` or `autoMerge`) allows new columns to be added automatically during writes without failing the job.
+
+**Q: What is the difference between Delta Lake, Apache Hudi, and Apache Iceberg?**
+A: All three are open table formats providing ACID transactions on data lakes. Delta Lake has the tightest Databricks/Spark integration. Iceberg is the most interoperable (supported by Snowflake, AWS, BigQuery). Hudi specializes in upsert-heavy workloads with record-level indexing. All three are converging on similar feature sets.
+
+**Q: What is Liquid Clustering in Delta Lake and how does it differ from Z-ordering?**
+A: Liquid Clustering incrementally reorganizes data as new writes arrive, avoiding the expensive full-table rewrites required by Z-ordering's `OPTIMIZE` command. It automatically adapts clustering to query patterns over time and is the recommended replacement for Z-ordering in Delta Lake 3.x+.
+
+---
+
+## 💼 Interview Tips
+
+- Understand the transaction log deeply — interviewers at Databricks-heavy shops will probe how Delta Lake achieves ACID guarantees at the file level.
+- Know the difference between Delta Lake (open source), Delta Lake on Databricks (enhanced with proprietary features like Photon, Liquid Clustering), and the Delta Lake spec.
+- Be ready to discuss MERGE semantics and performance — MERGE is powerful but can be expensive at scale; show you know optimization techniques (partition filtering, small file management).
+- Senior interviewers expect you to compare Delta Lake with Iceberg and Hudi — know the key differentiators without being dogmatic about one being "the best."
+- Show awareness of the full lifecycle: write optimization (Z-order, liquid clustering), read optimization (file skipping, data skipping), and maintenance (VACUUM, OPTIMIZE).
+- Common mistake: not understanding VACUUM — it permanently removes files that are no longer referenced, which affects time travel retention. Show you know how to configure it safely.

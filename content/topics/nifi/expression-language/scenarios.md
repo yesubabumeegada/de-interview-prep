@@ -321,3 +321,41 @@ UpdateAttribute:
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is NiFi Expression Language (EL) and where can it be used?**
+A: NiFi EL is a domain-specific language embedded in `${...}` syntax that evaluates FlowFile attributes and system variables at runtime. It can be used in processor properties that display the EL indicator icon, enabling dynamic configuration without custom code.
+
+**Q: How would you extract just the filename without extension from the `filename` attribute?**
+A: `${filename:substringBeforeLast('.')}` uses the `substringBeforeLast` function to strip the extension. This is cleaner than regex for simple cases and more readable in property fields.
+
+**Q: What is the difference between `${literal('text')}` and just writing `text` in a property?**
+A: `${literal('text')}` explicitly invokes EL and returns the string "text". It is useful when you want to chain EL functions: `${literal('prefix_'):append(${filename})}`. Plain text is just a static value; EL is only evaluated when the expression markers are present.
+
+**Q: How do you perform arithmetic in NiFi EL?**
+A: Use numeric functions: `${fileSize:divide(1024):toWholeNumber()}` converts bytes to kilobytes. EL supports `plus`, `minus`, `multiply`, `divide`, `mod`, and type coercions like `toLong` and `toDecimal`.
+
+**Q: How would you set a FlowFile attribute to the current timestamp formatted as `yyyy-MM-dd`?**
+A: `${now():format('yyyy-MM-dd')}` — `now()` returns the current epoch millisecond and `format()` applies a Java SimpleDateFormat pattern.
+
+**Q: What happens if an EL expression references an attribute that does not exist?**
+A: EL returns an empty string, not an error. This can cause silent bugs (e.g., a route condition always evaluating false). Use `${attribute:isEmpty()}` or `${attribute:isNull()}` to guard against missing attributes.
+
+**Q: How can you use EL to route FlowFiles conditionally in a RouteOnAttribute processor?**
+A: Define a route property with an EL condition: `${status:equals('error')}` returns true/false, routing the FlowFile to the matching relationship. Multiple properties create multiple output relationships.
+
+**Q: Can NiFi EL access environment variables or NiFi variables defined in the Variable Registry?**
+A: Yes. Variables defined in the NiFi Variable Registry (process group or global) are accessible via `${variable_name}`. System environment variables are accessible via `${ENV_VAR}` if the property is EL-enabled and the administrator has not restricted environment access.
+
+---
+
+## 💼 Interview Tips
+
+- Demonstrate function chaining fluency—interviewers often give a raw attribute value and ask you to transform it using EL. Practice `substring`, `replace`, `format`, `toDate`, and `split` chains.
+- Explain *where* EL is supported: not all processor properties accept EL (look for the EL icon). Trying to use EL in a non-EL field is a common junior mistake.
+- Senior interviewers probe edge cases: what happens with null/missing attributes, what happens with type mismatches in numeric functions. Show you know to validate and default.
+- Mention performance: EL is evaluated per-FlowFile, so complex expressions in a high-throughput path add CPU cost. For heavy transformations, prefer a scripted processor or record-based approach.
+- When discussing routing, clearly articulate the RouteOnAttribute match strategy (route to first match vs. all matches) and how EL boolean expressions drive it.

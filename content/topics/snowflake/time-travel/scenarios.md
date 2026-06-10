@@ -327,3 +327,41 @@ ORDER BY TIME_TRAVEL_BYTES DESC;
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Snowflake Time Travel and what does it enable?**
+A: Time Travel allows querying historical versions of data up to a configurable retention period (1 day on Standard, up to 90 days on Enterprise). You can query data as it existed at a specific timestamp or before a DML statement, and restore accidentally dropped or modified tables.
+
+**Q: What are the three ways to specify a Time Travel query point?**
+A: Using `AT (TIMESTAMP => ...)` for a specific point in time, `AT (OFFSET => -N)` for N seconds before the current time, and `BEFORE (STATEMENT => '<query_id>')` to query the state just before a specific SQL statement executed. The STATEMENT option is most useful for undoing accidental DML.
+
+**Q: How do you restore a dropped table using Time Travel?**
+A: Use `UNDROP TABLE table_name` to restore the most recently dropped version. If the table was dropped multiple times, you can restore a specific version by first cloning it from a historical state using `CREATE TABLE ... CLONE ... AT (TIMESTAMP => ...)` before undropping.
+
+**Q: What is the storage cost of Time Travel?**
+A: Time Travel retains historical micro-partition versions, which increases storage consumption. The additional storage is billed at Snowflake's standard storage rate. For high-churn tables (frequent updates/deletes), Time Travel storage can be significant—reducing retention period for these tables can control cost.
+
+**Q: What is Fail-safe and how does it differ from Time Travel?**
+A: Fail-safe is a 7-day storage period beyond Time Travel, exclusively for Snowflake's disaster recovery use. You cannot directly query Fail-safe data—only Snowflake Support can recover it. Time Travel is self-service for users; Fail-safe is a last-resort recovery mechanism managed by Snowflake.
+
+**Q: Can you use Time Travel on external tables or temporary tables?**
+A: No. External tables don't store data in Snowflake, so Time Travel doesn't apply. Temporary tables have a maximum of 1 day of Time Travel retention and are dropped at session end. Transient tables support Time Travel but have 0-day Fail-safe, making them a lower-cost option for staging tables where full retention isn't needed.
+
+**Q: What is Zero-Copy Cloning and how does it interact with Time Travel?**
+A: Zero-Copy Cloning creates an instant copy of a table, schema, or database by sharing micro-partitions with the source (no data copied). You can clone a table at a historical Time Travel point to create a snapshot of the data as it was at that time—useful for creating point-in-time analytical snapshots or testing data recovery procedures.
+
+**Q: How do you configure and manage Time Travel retention periods?**
+A: Set `DATA_RETENTION_TIME_IN_DAYS` at the account, database, schema, or table level. Table-level settings override higher levels. Set to 0 for transient or high-churn staging tables to eliminate Time Travel storage cost. Monitor storage impact via `ACCOUNT_USAGE.TABLE_STORAGE_METRICS`.
+
+---
+
+## 💼 Interview Tips
+
+- Always tie Time Travel to concrete operational use cases: auditing data changes, debugging pipeline errors by comparing before/after, and recovering from accidental DML. Interviewers want to see you connect features to real problems.
+- Distinguish Time Travel (user-accessible, configurable) from Fail-safe (Snowflake-managed, opaque to users)—confusing the two is a common junior mistake.
+- Mention cost management: 90-day retention on a large high-churn table can create substantial storage bills. Show you'd right-size retention periods based on actual recovery requirements.
+- Bring up Zero-Copy Cloning as a complement to Time Travel—together they enable instant, low-cost point-in-time snapshots for testing, auditing, and blue-green pipeline deployments.
+- Senior interviewers may ask about GDPR right-to-erasure compliance: deleting a user's data from the current table doesn't remove it from Time Travel history. Discuss the retention period window and Snowflake's `DATA_RETENTION_TIME_IN_DAYS = 0` option for compliance-sensitive tables.

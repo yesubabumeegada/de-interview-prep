@@ -169,3 +169,41 @@ db_data = extract_data(
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What are the four pillars of object-oriented programming and how do they apply in Python?**
+A: Encapsulation (bundling data + methods, using `_` conventions for private members), Inheritance (subclassing to reuse/extend behavior), Polymorphism (different classes implementing the same interface—Python uses duck typing rather than strict interface enforcement), and Abstraction (hiding implementation details via abstract base classes with `abc.ABC`).
+
+**Q: What is the difference between `__str__` and `__repr__`?**
+A: `__repr__` should return an unambiguous string that could recreate the object (developer-facing). `__str__` should return a readable, human-friendly string (user-facing). `str(obj)` calls `__str__`; `repr(obj)` calls `__repr__`. If only `__repr__` is defined, `str()` falls back to it.
+
+**Q: What is `@classmethod` vs. `@staticmethod`?**
+A: A `@classmethod` receives the class (`cls`) as the first argument and can access/modify class state—commonly used as alternative constructors. A `@staticmethod` receives no implicit first argument and is essentially a regular function namespaced inside the class—use it when the function is logically related to the class but does not need `self` or `cls`.
+
+**Q: What is a dataclass and when is it preferred over a regular class?**
+A: `@dataclass` auto-generates `__init__`, `__repr__`, `__eq__`, and optionally `__hash__` and `__lt__` based on annotated class attributes. Use it for simple data-holding classes (records, configuration objects, pipeline metadata) to eliminate boilerplate. For complex initialization logic or methods, a regular class may be clearer.
+
+**Q: What is the MRO (Method Resolution Order) and how does Python determine it?**
+A: MRO defines the order in which Python searches classes for a method in multiple inheritance. Python uses the C3 linearization algorithm. Inspect it with `ClassName.__mro__` or `ClassName.mro()`. The MRO ensures consistent, predictable lookup order and prevents diamond inheritance ambiguity.
+
+**Q: What is `super()` and why should you use it instead of calling the parent class directly?**
+A: `super()` returns a proxy that delegates method calls to the next class in the MRO, rather than the immediate parent. This is essential in multiple inheritance: calling the parent directly (`ParentClass.method(self)`) skips the MRO and breaks cooperative multiple inheritance. Always use `super().__init__(...)` in `__init__`.
+
+**Q: What is an abstract base class (ABC) and when is it useful in data engineering?**
+A: An ABC (using `abc.ABC` and `@abstractmethod`) defines an interface contract—subclasses must implement all abstract methods or they cannot be instantiated. In DE, define an ABC for sources, sinks, or transformers: `class BaseExtractor(ABC): @abstractmethod def extract(self): ...`. This enforces a consistent interface across S3, database, and API extractors.
+
+**Q: What is composition vs. inheritance and when do you prefer composition in Python?**
+A: Inheritance models "is-a" relationships; composition models "has-a" relationships. Prefer composition when you want to combine behaviors from multiple independent sources without the tight coupling of inheritance. In Python, composition is often more flexible—a `Pipeline` class that holds a list of `Step` objects is easier to extend than a deep inheritance hierarchy.
+
+---
+
+## 💼 Interview Tips
+
+- Abstract base classes for extractor/transformer/loader interfaces is a DE-specific OOP pattern. Show you design plugin architectures: define the ABC, let each source (S3, Kafka, Postgres) implement it, and write generic pipeline code against the interface.
+- Dataclasses are the modern choice for pipeline configuration and metadata objects—demonstrate you know `@dataclass(frozen=True)` for immutable records and `field(default_factory=list)` for mutable defaults.
+- Senior interviewers probe `super()` in multiple inheritance: walk through a diamond inheritance example and explain why cooperative `super()` is essential. Candidates who call `ParentClass.__init__(self)` directly reveal a gap.
+- Composition over inheritance is a senior-level design principle. Describe a scenario where you refactored a deep class hierarchy into a composition-based pipeline that was easier to test and extend.
+- Python's duck typing enables polymorphism without formal interfaces—but ABCs add contract enforcement at instantiation time. Know when enforced interfaces (ABCs) are worth the overhead vs. duck typing convention.

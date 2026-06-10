@@ -560,3 +560,42 @@ spark.conf.set("spark.sql.streaming.stateStore.rocksdb.blockCacheSizeMB", "256")
 </details>
 
 </article>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is Structured Streaming in Spark and how does it differ from DStreams?**
+A: Structured Streaming is Spark's declarative streaming API that treats a live data stream as an unbounded DataFrame. It replaced the older DStreams (RDD-based) API by providing the full DataFrame/SQL API, end-to-end exactly-once semantics, and event-time processing — all with a much simpler programming model.
+
+**Q: What are the three output modes in Structured Streaming?**
+A: Append mode writes only new rows to the output sink. Complete mode writes the entire result table on each trigger — only supported for aggregations. Update mode writes only rows that changed since the last trigger. Choice depends on the query type and sink capabilities.
+
+**Q: What is a watermark in Structured Streaming and why is it needed?**
+A: A watermark is a threshold that tells Structured Streaming how late data can arrive and still be processed in the correct time window. Without a watermark, the engine would need to retain state forever to handle arbitrarily late data — the watermark bounds the state and enables state cleanup.
+
+**Q: How does Structured Streaming achieve exactly-once semantics?**
+A: By combining idempotent sources (Kafka offset tracking), a write-ahead checkpoint log (storing progress and state), and idempotent sinks (Delta Lake with transactional writes). On restart, the engine recovers from the checkpoint and reprocesses from the last committed offset without duplication.
+
+**Q: What are the trigger types in Structured Streaming?**
+A: Default (as-fast-as-possible, continuous micro-batches), Fixed interval (`Trigger.ProcessingTime("1 minute")` — process once per interval), Once (`Trigger.Once()` — process all available data in one batch then stop), and AvailableNow (`Trigger.AvailableNow()` — like Once but with multiple micro-batches for large backfills).
+
+**Q: What is state management in Structured Streaming and what operations require it?**
+A: State management tracks information across micro-batches (e.g., running aggregations, stream-stream join buffers, deduplication keys). Stateful operations include windowed aggregations, `dropDuplicates`, stream-stream joins, and `mapGroupsWithState`. State is stored in the checkpoint location and can grow large for long-running streams.
+
+**Q: How do you handle schema evolution in a Structured Streaming pipeline reading from Kafka?**
+A: Parse the message payload in the Spark job itself (e.g., from Avro or JSON), and use schema registry integration (Confluent Schema Registry with `from_avro`) to handle schema changes. Alternatively, use Auto Loader with `cloudFiles.schemaEvolutionMode` for file-based sources.
+
+**Q: What is foreachBatch and when would you use it?**
+A: `foreachBatch` is a sink that passes each micro-batch as a DataFrame to a user-defined function, enabling arbitrary batch operations (multi-table writes, MERGE operations, external API calls) as the streaming sink. It is the escape hatch when built-in sinks don't support your required write pattern.
+
+---
+
+## 💼 Interview Tips
+
+- Understand watermarks deeply — late data handling is a common interview deep-dive and many candidates cannot explain the tradeoff between watermark delay and completeness.
+- Know all trigger types and when to use AvailableNow vs. Once — this shows practical knowledge of running streaming jobs in cost-efficient batch mode.
+- Be ready to debug a streaming job from first principles: check the Spark UI streaming tab for input rate, processing rate, batch duration, and state size.
+- Senior interviewers will probe state management: how does state grow over time, what happens if you run out of state store memory, and how do you tune state store configuration?
+- Common mistake: ignoring checkpoint management — explain how to safely move or reset a checkpoint and the implications for reprocessing and deduplication.
+- Connect Structured Streaming to Delta Lake MERGE for CDC pipelines — using `foreachBatch` with a MERGE is a production-grade pattern that demonstrates real-world implementation knowledge.

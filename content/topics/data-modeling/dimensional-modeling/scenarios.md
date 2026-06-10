@@ -487,3 +487,42 @@ graph LR
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is dimensional modeling and who popularized it?**
+A: Dimensional modeling is a technique for structuring data warehouses around business processes using facts and dimensions. Ralph Kimball popularized it through the Kimball Group's Data Warehouse Toolkit, emphasizing query performance and business usability.
+
+**Q: What is a fact table and what types of facts exist?**
+A: A fact table stores measurable business events and their associated dimension keys. The three types of facts are additive (can be summed across all dimensions), semi-additive (can be summed across some dimensions, e.g., balances), and non-additive (cannot be summed, e.g., ratios).
+
+**Q: What is a degenerate dimension?**
+A: A degenerate dimension is a dimension attribute stored directly in the fact table rather than in a separate dimension table — typically a transaction ID or order number. It has no associated dimension table because it carries no additional descriptive attributes.
+
+**Q: What is the bus architecture in dimensional modeling?**
+A: The bus architecture is Kimball's approach to enterprise data warehouse integration where multiple fact tables share conformed dimensions, enabling cross-process analysis (e.g., comparing sales and inventory by the same date and product dimensions).
+
+**Q: What is a conformed dimension?**
+A: A conformed dimension has the same meaning and keys across multiple fact tables and subject areas. A Date dimension is the classic example — it allows joining sales facts to inventory facts by a shared date key.
+
+**Q: When would you use a factless fact table?**
+A: A factless fact table records events or conditions that have no natural numeric measure — such as student attendance, product promotions, or coverage events. It captures the occurrence of a relationship rather than a measurement.
+
+**Q: What is grain in dimensional modeling and why is it important?**
+A: Grain defines the level of detail each row in the fact table represents (e.g., one row per order line item). Declaring grain before designing is critical because it determines which dimensions are valid and prevents double-counting in aggregations.
+
+**Q: How do you handle many-to-many relationships in dimensional models?**
+A: Use a bridge table (also called a helper table) that sits between the dimension and the fact table, resolving the many-to-many relationship. Weighting factors are sometimes added to distribute measures correctly across multiple dimension members.
+
+---
+
+## 💼 Interview Tips
+
+- Always declare the grain of a fact table before anything else — interviewers use this to test whether you understand foundational dimensional modeling discipline.
+- Know the difference between Kimball (dimensional, bottom-up) and Inmon (normalized, top-down) approaches and be ready to argue tradeoffs.
+- Avoid saying "just denormalize everything" — show that you understand when normalization in dimensions (snowflaking) is appropriate.
+- Senior interviewers expect you to discuss conformed dimensions and the bus matrix as tools for enterprise-scale data warehouse design.
+- Be prepared to handle edge cases: slowly changing dimensions, late-arriving facts, and null foreign keys in fact tables.
+- Connect dimensional modeling to the analytics layer — explain how well-designed dimensional models make BI tools like Tableau or Power BI dramatically more performant and intuitive.

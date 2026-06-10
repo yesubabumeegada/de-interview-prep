@@ -544,3 +544,41 @@ ORDER BY eventTime;
 
 </article>
 
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is NiFi Data Provenance?**
+A: Data Provenance is NiFi's immutable audit trail that records every event that occurs to every FlowFile: CREATE, FETCH, SEND, RECEIVE, FORK, JOIN, DROP, ATTRIBUTES_MODIFIED, etc. It enables lineage tracing from source to destination and is stored in the Provenance Repository.
+
+**Q: What provenance event types are most useful for debugging a pipeline?**
+A: DROP (why was a FlowFile removed?), SEND/RECEIVE (was data transmitted to/from an external system?), FORK (how did a FlowFile split?), and ATTRIBUTES_MODIFIED (what changed the metadata?). Filtering by event type and processor narrows root-cause investigation quickly.
+
+**Q: How long is provenance data retained and how do you tune it?**
+A: Provenance retention is controlled by `nifi.provenance.repository.max.storage.size` and `nifi.provenance.repository.max.storage.time` in nifi.properties. When either limit is hit, oldest events are evicted. High-throughput systems need larger storage or shorter TTL; balance compliance requirements against disk cost.
+
+**Q: What is the difference between the Volatile and Persistent Provenance Repository implementations?**
+A: WriteAheadProvenanceRepository (persistent) survives restarts and is the default. VolatileProvenanceRepository keeps events only in memory—useful for development but loses all history on restart. A third option, EncryptedProvenanceRepository, adds at-rest encryption for regulated environments.
+
+**Q: How can you use provenance to reconstruct a FlowFile's lineage?**
+A: In the NiFi UI, open the Provenance table for a FlowFile's UUID and click "Show Lineage." NiFi renders a graph of all events (FORK, JOIN, SEND, etc.) showing the complete ancestry and descendants. You can replay the FlowFile from any point in its lineage.
+
+**Q: What is Provenance Reporting and how does it integrate with external monitoring?**
+A: A Provenance Reporting Task (e.g., SiteToSiteProvenanceReportingTask) streams provenance events to an external NiFi instance, Elasticsearch, or SIEM. This allows centralized audit logging without relying on the local NiFi UI, which is critical for compliance and cross-cluster visibility.
+
+**Q: Can you replay a FlowFile from provenance?**
+A: Yes. In the Provenance UI, select an event and click "Replay." NiFi resubmits a copy of the FlowFile (with its content at that point in time) to the originating processor's queue. This is invaluable for reprocessing failed records without re-ingesting from the source.
+
+**Q: How does provenance impact NiFi performance?**
+A: Every event write is an I/O operation. High-throughput flows can generate millions of provenance records per minute. Mitigation strategies include increasing provenance rollover size, using a dedicated fast disk (NVMe) for the Provenance Repository, or sampling provenance events for non-critical processors.
+
+---
+
+## 💼 Interview Tips
+
+- Lead with provenance's dual purpose: debugging AND compliance/audit. Senior interviewers in regulated industries (finance, healthcare) value the audit angle highly.
+- Know the FlowFile replay workflow step-by-step—it's a practical capability that distinguishes NiFi from basic ETL tools and comes up in operations-focused interviews.
+- Demonstrate performance awareness: provenance is one of the top causes of NiFi disk saturation. Mention separate disk mounts for repositories and repository retention tuning.
+- Connect Provenance Reporting Tasks to enterprise monitoring—streaming events to Elasticsearch or Splunk for SIEM integration shows production maturity.
+- Avoid vague answers about provenance "tracking data"—use the specific event type vocabulary (FORK, JOIN, DROP, SEND) to show fluency.

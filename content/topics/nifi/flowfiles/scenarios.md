@@ -407,3 +407,41 @@ UpdateAttribute (on retry path):
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is a FlowFile in NiFi?**
+A: A FlowFile is the fundamental unit of data in NiFi. It consists of a set of key-value attributes (metadata) and an optional content reference (pointer to actual bytes in the Content Repository). The attributes travel with the data throughout the flow, enabling routing and enrichment decisions.
+
+**Q: Where is FlowFile content physically stored?**
+A: In the Content Repository, which by default is a local filesystem directory. NiFi uses copy-on-write semantics—modifying content creates a new file in the repository rather than overwriting, enabling provenance and rollback.
+
+**Q: What is the difference between FlowFile attributes and content?**
+A: Attributes are lightweight string key-value pairs stored in memory/Flow File Repository (e.g., `filename`, `mime.type`, `uuid`). Content is the binary payload stored on disk. Processors that only need metadata work on attributes; processors that transform data work on content.
+
+**Q: What happens to a FlowFile when a processor fails to process it?**
+A: The FlowFile is routed to the processor's `failure` or `retry` relationship (depending on how it is wired). If neither is connected, NiFi auto-terminates it. The Content Repository retains the data until the FlowFile is fully removed from the system, supporting provenance reconstruction.
+
+**Q: What is the FlowFile Repository?**
+A: The FlowFile Repository is a write-ahead log (WAL) that persists the current state of every active FlowFile (attributes, content pointer, queue position). It enables NiFi to recover the exact flow state after a crash without losing in-flight data.
+
+**Q: How does NiFi ensure FlowFile exactly-once delivery within a flow?**
+A: NiFi uses a transactional model per processor session. A processor claims FlowFiles, performs work, and commits or rolls back the session atomically. A crash before commit causes the FlowFile to be re-queued, which means processors must be designed to be idempotent for end-to-end exactly-once guarantees.
+
+**Q: What are core FlowFile attributes set by NiFi automatically?**
+A: `uuid` (unique identifier), `filename` (logical name), `path` (logical path), and `entryDate` (when the FlowFile entered the system). Processors may add domain-specific attributes such as `mime.type`, `kafka.topic`, or `sql.args.*`.
+
+**Q: How can you merge multiple FlowFiles into one?**
+A: Use the MergeContent processor. It supports bin-packing strategies (count, size, age threshold) and formats (concat, Avro, ZIP, TAR). Merged FlowFiles carry attributes from the first fragment by default; you can customize with merge strategies.
+
+---
+
+## 💼 Interview Tips
+
+- Always distinguish the three repositories: FlowFile Repository (WAL/state), Content Repository (actual bytes), Provenance Repository (audit trail). Mixing them up is a common mistake.
+- Explain the copy-on-write model when discussing content modification—it shows you understand NiFi's data immutability guarantees and how provenance works.
+- Senior interviewers often ask about data loss scenarios. Know that data survives processor failure (rolled-back session) but a node crash between write and WAL commit can lose a FlowFile; discuss mitigations (replicated Content Repository, idempotent sources).
+- For high-volume pipelines, emphasize keeping attribute sets small and avoiding large in-memory attribute values—attributes live in heap while content lives on disk.
+- Connect FlowFile lifecycle to back-pressure and provenance naturally: it shows you understand NiFi holistically rather than in isolated concepts.

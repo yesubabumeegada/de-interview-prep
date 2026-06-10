@@ -395,3 +395,42 @@ rm -rf "$STATUS_DIR"
 </article>
 
 </content>
+
+---
+
+## ⚡ Quick-fire Q&A
+
+**Q: What is the difference between a shell script and a cron job?**
+A: A shell script is a file containing commands that can be executed manually or programmatically. A cron job is a scheduled task that runs a shell script (or command) automatically at specified time intervals using the cron daemon.
+
+**Q: How do you make a shell script idempotent?**
+A: Design the script so running it multiple times produces the same result as running it once. Use checks before creating files/directories (`[ -f file ] || touch file`), use `mkdir -p` instead of `mkdir`, and use upsert patterns for database operations.
+
+**Q: What is a lockfile and why is it important in automation?**
+A: A lockfile is a file created at the start of a script to signal that it is running, preventing concurrent executions. It is important to avoid race conditions and data corruption when the same script might be triggered multiple times simultaneously.
+
+**Q: How do you handle failures gracefully in a long-running automation script?**
+A: Use `set -e` to exit on errors, `trap` to catch signals and clean up resources, implement retry logic with exponential backoff for transient failures, and send alerts or write to a log when failures occur.
+
+**Q: What is the purpose of `set -euo pipefail` in bash scripts?**
+A: `set -e` exits on any error, `set -u` treats unset variables as errors, and `set -o pipefail` causes a pipeline to return the exit code of the first failed command rather than the last. Together they make scripts fail fast and loudly.
+
+**Q: How do you pass configuration to automation scripts without hardcoding values?**
+A: Use environment variables (loaded from a `.env` file or set externally), command-line arguments parsed with `getopts`, or a configuration file in a known location that the script reads at startup.
+
+**Q: What is the difference between running a script with `./script.sh` vs `bash script.sh`?**
+A: `./script.sh` requires the script to have execute permissions and uses the shebang line to determine the interpreter. `bash script.sh` explicitly runs the script with bash regardless of permissions or shebang, ignoring the shebang line.
+
+**Q: How do you implement logging in a bash automation script?**
+A: Redirect output to a log file with `exec >> /var/log/myscript.log 2>&1`, include timestamps using `echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] message"`, and use log rotation tools like `logrotate` to manage log file size.
+
+---
+
+## 💼 Interview Tips
+
+- Demonstrate awareness of idempotency when describing automation — interviewers want to know you think about re-runs and failure recovery, not just the happy path.
+- Mention `set -euo pipefail` early when asked about script reliability; it signals you write production-grade scripts, not quick hacks.
+- Avoid saying you would just re-run failed scripts manually — talk about alerting, retries, and observability to show operational maturity.
+- When discussing scheduling, go beyond cron and mention modern alternatives like Airflow or cloud schedulers, explaining when each is appropriate.
+- Senior interviewers want to hear about testing automation scripts — mention unit testing with `bats`, dry-run modes, and staging environment validation.
+- Discuss secret management explicitly: never hardcode credentials, use environment variables or a secrets manager like AWS Secrets Manager or Vault.
