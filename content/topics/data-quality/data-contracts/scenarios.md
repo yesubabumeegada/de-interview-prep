@@ -56,7 +56,7 @@ validate_schema(payments_df, expected)
 <details>
 <summary>💡 Hint</summary>
 
-**Migration plan:**
+The safe pattern is *parallel run* — publish both the old and new column name simultaneously for a deprecation window, then remove the old name only after confirming zero readers. Think about: how do you notify 8 teams (contract PR triggers notifications), how do you verify migration (column-read metrics or query log analysis), what's the deprecation timeline (90 days is typical), and what's the rollback plan if a team misses the deadline.
 
 </details>
 
@@ -102,7 +102,7 @@ Week 13: Remove deprecated field
 <details>
 <summary>💡 Hint</summary>
 
-**Components:**
+Think about the four components every contract platform needs: a *contract store* (Git + registry DB for machine-readable contracts), a *CI/CD integration* (validate contracts on PR, notify consumers of breaking changes), a *validation engine* (runtime checks at ingestion), and a *discovery UI* (so consumers can find and subscribe to datasets). The hard problems at this scale are: who owns enforcement for legacy datasets without contracts, how to handle "soft" violations that shouldn't block pipelines, and how to prevent contract sprawl.
 
 </details>
 

@@ -20,7 +20,7 @@ tags: [data-classification, interview, scenarios, sensitivity, governance]
 <details>
 <summary>💡 Hint</summary>
 
-**Controls to apply:**
+Classify at two levels: the table (by its most sensitive column) and each column individually. Use a standard sensitivity taxonomy (public / internal / confidential / restricted). For each column, ask: is this a direct identifier (name, email = PII → restricted), a quasi-identifier that enables re-identification (employee_id + role = confidential), or a general business attribute (department = internal)? Salary and performance ratings are confidential. The table inherits the highest column classification — so `employee_records` is **restricted**.
 
 </details>
 
@@ -90,7 +90,7 @@ columns:
 <details>
 <summary>💡 Hint</summary>
 
-**Root cause analysis:**
+Classification drift is almost always a schema evolution problem: the table was classified at creation, then a new column was added later without triggering re-classification. Work through the root causes in order: (1) was the column there at classification time, (2) was the column obfuscated (`contact_info` instead of `email`), or (3) was the auto-scanner not rerun after the schema change? The fix is both immediate (reclassify and apply masking now) and systemic (run the PII scanner on every schema change event, not just on table creation).
 
 </details>
 
@@ -154,7 +154,7 @@ def check_classification_consistency(engine) -> list[str]:
 <details>
 <summary>💡 Hint</summary>
 
-**Phase 1: Automated first pass (Week 1)**
+50,000 columns can't be manually reviewed — automate the first 80%. Use a classifier that combines column name pattern matching (regex for `email`, `ssn`, `phone`), data-type heuristics, and sample value inspection (does this VARCHAR look like an email address?). Auto-classify with confidence scores: high-confidence results go straight to the catalog, low-confidence go to a human review queue. Then enforce forward by triggering the classifier on every schema change event — so new columns are classified automatically within hours, not discovered in the next annual audit.
 
 </details>
 

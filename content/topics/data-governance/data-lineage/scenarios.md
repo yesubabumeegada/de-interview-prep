@@ -131,7 +131,7 @@ WHERE job_name = 'gold_revenue_daily_transform'
 <details>
 <summary>💡 Hint</summary>
 
-**Key design decisions:**
+Use OpenLineage as the collection standard — it has native integrations for Spark (SparkListener), dbt (plugin), and Airflow (plugin), emitting structured events at each job start/complete/fail. Route events through Kafka for durability, then store in a graph database (Neo4j) that can answer "what tables does this dashboard depend on?" and "what dashboards break if I change this column?" The hardest part is Looker — no native OpenLineage, so you scrape LookML via API. Think about column-level vs table-level lineage: column-level is 10× more complex to capture but 10× more useful for impact analysis.
 
 </details>
 

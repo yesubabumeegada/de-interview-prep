@@ -20,7 +20,7 @@ tags: [oracle, sql-tuning, interview, scenarios, troubleshooting]
 <details>
 <summary>💡 Hint</summary>
 
-**Step 1: Get the execution plan**
+Start with the execution plan — use `DBMS_XPLAN.DISPLAY_CURSOR` to see what Oracle is actually doing. Look for two red flags: full table scans on large tables (millions of rows) and stale statistics (check `last_analyzed` in `dba_tables`). For a query filtering by date on a large table, the fix is usually an index on the filter column plus fresh stats. Measure before and after.
 
 </details>
 
@@ -85,7 +85,7 @@ EXEC DBMS_STATS.GATHER_TABLE_STATS('APP', 'ORDER_ITEMS', degree => 8);
 <details>
 <summary>💡 Hint</summary>
 
-**Root cause hypothesis: bind variable peeking + skewed data**
+When the same SQL runs drastically differently for different users, the culprit is almost always *data skew + bind variable peeking*: Oracle peeked at the first user's bind value to build the plan, and that plan is wrong for jsmith who has 10,000× more rows. Check `v$sql` child cursors to see if ACS (Adaptive Cursor Sharing) created different plans. Then check `customer_id` cardinality for jsmith vs average — if jsmith's customer has a huge order volume, Oracle needs histograms or a manual hint to pick the right join method.
 
 </details>
 
@@ -154,7 +154,7 @@ Option C — Application-level fix (if you can change code):
 <details>
 <summary>💡 Hint</summary>
 
-**Immediate action — use SPM to pin the old plans:**
+The fastest path to stability (without rollback) is SQL Plan Management (SPM): load the known-good 19c plans from AWR or a test environment into SQL Plan Baselines, then evolve only the plans that have been verified to be better than the baseline. This pins the old plan immediately. In parallel, investigate *why* the new optimizer chose a worse plan — usually changed statistics defaults, new optimizer features like Adaptive Plans, or parameter differences between 19c and 21c. Use `OPTIMIZER_CAPTURE_SQL_PLAN_BASELINES` and `DBMS_SPM` to manage the baselines.
 
 </details>
 

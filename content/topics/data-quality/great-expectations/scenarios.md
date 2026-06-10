@@ -20,7 +20,7 @@ tags: [great-expectations, interview, scenarios]
 <details>
 <summary>💡 Hint</summary>
 
-import great_expectations as gx
+Use `gx.get_context()` to start. You need: a datasource (pandas or Spark), a batch definition (whole dataframe for daily loads), and a suite of expectations. For a customers table, start with the three must-haves: primary key not null, primary key unique, and email not null with `mostly=0.95`. Run with `context.run_checkpoint(...)` and check the `success` field of the result.
 
 </details>
 
@@ -125,7 +125,9 @@ print("In data but not expected:", extra_in_data)
 <details>
 <summary>💡 Hint</summary>
 
-**Auto-generation pipeline:**
+The key insight is profiling-driven generation: run `BasicDatasetProfiler` or a custom profiler against each table's sample data to generate a baseline suite automatically. Store the generated suite as a YAML artifact in Git. Then split tables into tiers: gold/critical tables get hand-tuned suites with strict thresholds; bronze/raw tables get auto-generated suites with `mostly=0.80`. Think about where to run validation (in-DAG vs post-load) and what to do on failure (block or quarantine).
+
+</details>
 
 </details>
 

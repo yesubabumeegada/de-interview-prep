@@ -50,7 +50,7 @@ tags: [data-quality, interview, scenarios, problem-solving]
 <details>
 <summary>💡 Hint</summary>
 
-**Step 1: Scope the gap**
+First establish whether the gap is consistent across time (structural issue) or only recent (pipeline incident). Then work down the layers: row counts match? If not, find where rows are dropped (Silver filters, dedup rules). If counts match, compare subtotals by dimension (date, region, order type) to isolate the segment. Common culprits: currency conversion, cancelled/refunded orders handled differently, pipeline lag for late-arriving records, and Silver-layer business-rule filters the OLTP doesn't apply.
 
 </details>
 
@@ -112,7 +112,7 @@ HAVING cnt > 1;
 <details>
 <summary>💡 Hint</summary>
 
-**Architecture:**
+Think about the four concerns that must be separate: *rule definition* (how domain teams express expectations without needing engineering), *execution* (at what stage in the pipeline and with what engine), *results storage* (time-series metric store for trending), and *action* (alerting, blocking, quarantine, scorecard). The key design question for 300 tables is automation: you can't manually write rules for every table — consider profiling-driven rule generation and domain-level defaults.
 
 </details>
 

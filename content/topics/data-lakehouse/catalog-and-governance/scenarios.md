@@ -267,9 +267,13 @@ Emit OpenLineage events from each engine:
 
 ```python
 # Spark with OpenLineage
-spark = SparkSession.builder     .config("spark.extraListeners",
-            "io.openlineage.spark.agent.OpenLineageSparkListener")     .config("spark.openlineage.transport.type", "http")     .config("spark.openlineage.transport.url",
-            "https://openmetadata.internal/api/v1/lineage")     .getOrCreate()
+spark = (
+    SparkSession.builder
+    .config("spark.extraListeners", "io.openlineage.spark.agent.OpenLineageSparkListener")
+    .config("spark.openlineage.transport.type", "http")
+    .config("spark.openlineage.transport.url", "https://openmetadata.internal/api/v1/lineage")
+    .getOrCreate()
+)
 # All Spark SQL now auto-emits lineage events
 
 # dbt with OpenLineage

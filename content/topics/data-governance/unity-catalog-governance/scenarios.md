@@ -20,7 +20,7 @@ tags: [unity-catalog, databricks, interview, scenarios, governance]
 <details>
 <summary>💡 Hint</summary>
 
-**Step 1: Add analyst to the correct IdP group**
+In Unity Catalog, access is managed through groups synced from your IdP (Azure AD / Okta via SCIM). Add the analyst to the appropriate group — if the group already has `SELECT ON prod.gold.*`, the user inherits access in 5–10 minutes. For PII masking, Unity Catalog uses *column masking functions* applied to the table: non-privileged users see `NULL` or a masked value for PII columns automatically, no application changes needed. Verify both: the group grant exists, and the masking policy is applied to `email`.
 
 </details>
 
@@ -89,7 +89,7 @@ LIMIT 5;
 <details>
 <summary>💡 Hint</summary>
 
-**Phase 1: Assessment (Week 1)**
+Migration has three phases: inventory first (which tables exist, are they managed or external, who uses them), then migrate in batches (start with non-critical, use `CREATE TABLE ... LOCATION` for external or `DEEP CLONE` for managed), then cut over access. The big decision is managed vs external: managed tables move their data to UC storage; external tables just register a new pointer. Run both catalogs in parallel during migration so consumers don't break.
 
 </details>
 
@@ -155,7 +155,7 @@ spark.sql("ALTER TABLE hive_metastore.gold.orders SET TBLPROPERTIES ('deprecated
 <details>
 <summary>💡 Hint</summary>
 
-**Catalog structure:**
+Design top-down: catalog (one per environment: prod/dev/staging) → schema per team or domain → tables. For 15 teams with GDPR, the key governance decisions are: row-level security (each team sees only their data), column masking for PII (applied at the catalog level, not the application), and data lineage (Unity Catalog captures it automatically for Databricks SQL, but you need OpenLineage for external pipelines). For GDPR, map `customer_email` and other PII columns to a classification tag and attach masking functions — this ensures any new table using those columns inherits the mask automatically.
 
 </details>
 

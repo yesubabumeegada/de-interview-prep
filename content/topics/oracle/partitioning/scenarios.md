@@ -20,7 +20,7 @@ tags: [oracle, partitioning, interview, scenarios, design, troubleshooting]
 <details>
 <summary>💡 Hint</summary>
 
-**Best choice: Range-Interval on `order_date`**
+Match the partition key to the most common filter: if 90% of queries filter on `order_date`, that's your key. Between range and interval, prefer *interval* partitioning (a range variant) — it auto-creates monthly partitions without manual maintenance. The killer feature for this use case is data lifecycle: you can `DROP PARTITION` for old data in milliseconds instead of a slow `DELETE`. Hash partitioning would distribute data evenly but doesn't help with date-range pruning.
 
 </details>
 
@@ -78,7 +78,7 @@ ALTER TABLE customer_orders DROP PARTITION p2021_01 UPDATE GLOBAL INDEXES;
 <details>
 <summary>💡 Hint</summary>
 
-**Run the explain plan first:**
+Partition pruning fails when Oracle can't determine at parse time *which* partition boundaries the filter touches. Check the explain plan — look at Pstart and Pstop columns. If it says KEY or ALL, pruning didn't work. The two most common causes: (1) the WHERE clause wraps the partition column in a function (`TRUNC(sale_date)`, `TO_CHAR(sale_date, 'YYYY')`) — Oracle can't reverse the function to find partition bounds, and (2) using a bind variable whose value isn't known at parse time — Oracle must scan all partitions to be safe. Fix: use the column directly in the filter, or create a function-based partition key that matches the function used in queries.
 
 </details>
 
@@ -147,7 +147,7 @@ SELECT * FROM sales WHERE customer_id = 42 AND sale_date != DATE '2024-06-15';
 <details>
 <summary>💡 Hint</summary>
 
-**Use Online Redefinition (DBMS_REDEFINITION) — zero-downtime repartitioning:**
+`DBMS_REDEFINITION` is Oracle's zero-downtime table restructuring mechanism. The pattern: create an interim table with the target partition structure, call `START_REDEF_TABLE` to begin copying data (production table stays online), call `SYNC_INTERIM_TABLE` periodically to catch up on DML changes, then `FINISH_REDEF_TABLE` which atomically swaps the two tables (a brief lock at the end, not a full downtime). Verify with `CAN_REDEF_TABLE` first — primary key or ROWID requirement must be met. The main risk is the space requirement: you need ~2TB free for the interim copy.
 
 </details>
 

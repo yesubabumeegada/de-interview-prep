@@ -20,7 +20,7 @@ tags: [oracle, materialized-views, interview, scenarios, query-rewrite, refresh-
 <details>
 <summary>💡 Hint</summary>
 
--- MV 1: Monthly revenue by region (refreshed nightly)
+For each dashboard widget, ask: how fresh does the data need to be, and what's the query pattern? Match the refresh type to the answer — nightly REFRESH FAST ON DEMAND works for "current month" widgets. Create MV logs on the base tables to enable fast refresh. Enable `QUERY REWRITE` so Oracle automatically routes matching queries to the MV without changing application SQL.
 
 </details>
 
@@ -104,7 +104,7 @@ END;
 <details>
 <summary>💡 Hint</summary>
 
-**Systematic diagnosis:**
+Query rewrite has three common failure modes: (1) the MV is stale — Oracle won't rewrite to a stale MV with default `QUERY_REWRITE_INTEGRITY=ENFORCED`, (2) the parameter `query_rewrite_enabled` is FALSE at the session or system level, or (3) the query isn't semantically equivalent to the MV definition (different columns, filters, or join order that Oracle can't prove equivalent). Check staleness first with `dba_mviews.staleness`, then the parameters, then use `EXPLAIN_MVIEW` to get Oracle's reason for not rewriting.
 
 </details>
 

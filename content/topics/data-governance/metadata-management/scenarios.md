@@ -93,7 +93,7 @@ models:
 <details>
 <summary>💡 Hint</summary>
 
-**Week 1: Automated discovery**
+Start with automated discovery to understand what you're dealing with before asking humans to document anything: ingest schema, row counts, sample values, and PII signals automatically. Then do one interview per domain (not per table) with the acquired team's engineers to assign owners and get business descriptions for the 10–15 most important tables — owners cascade documentation to related tables. Rename and reclassify in a staging catalog before merging, so your production catalog stays clean during onboarding.
 
 </details>
 
@@ -166,7 +166,7 @@ def pre_query_check(user_email: str, table_name: str) -> dict:
 <details>
 <summary>💡 Hint</summary>
 
-**Baseline analysis (Week 1)**
+Going from 45% to 85% across 10,000 tables in 6 months is impossible through manual documentation alone. The strategy is: score each table on a metadata quality rubric (owner, description, classification tag, freshness SLA), then focus human effort on the top 500 most-queried tables (these have the most impact and interested owners), use LLM-assisted description generation for the rest, and enforce a "no deploy without metadata" gate in CI for all new tables. Track progress weekly with a quality dashboard so teams can see their scores and compete.
 
 </details>
 

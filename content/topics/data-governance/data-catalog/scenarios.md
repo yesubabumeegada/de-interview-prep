@@ -20,7 +20,7 @@ tags: [data-catalog, interview, scenarios, datahub, governance]
 <details>
 <summary>💡 Hint</summary>
 
-**Immediate answer:**
+The immediate answer is "always use the gold/curated layer for reporting" — explain what each layer is for (bronze=raw, silver=cleaned, gold=source-of-truth). The long-term fix is a *certified table* tag in the data catalog: one table per domain gets a "Certified" badge, clearly marked as the authoritative source, with owner and freshness SLA. That eliminates the "which one?" question for every new analyst.
 
 </details>
 
@@ -132,7 +132,7 @@ legacy.orders_v1:
 <details>
 <summary>💡 Hint</summary>
 
-**Key design decisions:**
+At 10,000 tables, no team can manually curate metadata for everything — the catalog must be *mostly automated*. Think in layers: automated ingestion (lineage from dbt/Spark/Airflow via OpenLineage, schema from metastore), tiered profiling (daily stats for critical tables, weekly for the rest), and human-supplied metadata (owners, descriptions, certified badge) only for the 200 most-used tables. The governance challenge is ownership: every table needs a registered owner, or metadata rots. Solve with a "publish or perish" policy enforced in CI.
 
 </details>
 

@@ -68,7 +68,7 @@ with DAG("freshness_check", schedule="55 8 * * 1-5"):
 <details>
 <summary>💡 Hint</summary>
 
-**Investigation steps:**
+Work backwards from the SLA deadline: check Airflow task instance logs to see when each stage completed. The bottleneck is usually one of three things — the upstream source was late (check source extraction time), a slow transformation task (check duration vs historical baseline), or a queue/resource contention issue (cluster was busy). Once you find the slow stage, check what changed: new data volume, a schema change that broke an index, or a resource constraint.
 
 </details>
 

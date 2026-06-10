@@ -70,7 +70,7 @@ result = check_row_count(1000, historical)
 <details>
 <summary>💡 Hint</summary>
 
-**Investigation:**
+The row count is normal — so it's not a missing data problem. Think about *distributional* shifts: what could halve the mean without changing the count? Work through the likely causes in order: a new product category, a currency/unit change, a refund/reversal spike, or a data type/rounding issue. Use percentile comparisons and group-by breakdowns to isolate which segment drove the drop.
 
 </details>
 
@@ -122,7 +122,7 @@ print(yesterday["order_type"].value_counts())
 <details>
 <summary>💡 Hint</summary>
 
-**Architecture:**
+Think in layers: collection (metadata, row counts, distributions at each pipeline stage), detection (statistical baselines, ML-based anomalies, rule-based thresholds), alerting (tiered by severity, routed to owners), and a lineage layer that lets you trace *which upstream table* caused the anomaly. Distinguish between infrastructure observability (pipeline health) and data observability (content quality). Decide early whether to build on open standards (OpenLineage, Great Expectations) or build custom — and what the incremental path looks like.
 
 </details>
 

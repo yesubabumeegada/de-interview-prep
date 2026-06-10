@@ -196,7 +196,7 @@ END;
 <details>
 <summary>💡 Hint</summary>
 
-**Current slow code:**
+The bottleneck is *row-by-row* processing — a cursor FOR LOOP with individual INSERTs does one context switch per row (5M switches for 5M rows). The fix is to replace it with set-based SQL: `INSERT INTO ... SELECT ...` for the inserts, and `UPDATE ... WHERE ... IN (...)` for the status update. If you must use PL/SQL for business logic, use `BULK COLLECT ... FORALL` to process thousands of rows per round-trip instead of one. Also disable redo logging with `APPEND` hint and `NOLOGGING` for the initial load if recoverability allows.
 
 </details>
 

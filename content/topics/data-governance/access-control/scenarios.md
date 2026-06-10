@@ -20,7 +20,7 @@ tags: [access-control, rbac, interview, scenarios, iam]
 <details>
 <summary>💡 Hint</summary>
 
-**Step 1: Determine what access they need**
+Follow the *principle of least privilege*: grant only the access needed for the role, not the broadest access that would be convenient. For an analyst: read-only on the gold layer, no access to raw tables or sensitive schemas, and PII should be masked (not visible). Use a role (not direct user grants) so when the next analyst joins, you just add them to the group — not repeat the individual grant process. Ask "what tables do they need for their job?" not "what can we give them?"
 
 </details>
 
@@ -146,7 +146,7 @@ CREATE OR REPLACE ROW ACCESS POLICY pii_row_limit AS (val VARCHAR) RETURNS BOOLE
 <details>
 <summary>💡 Hint</summary>
 
-**Design: Attribute-driven role hierarchy**
+For 200 teams, you can't configure individual per-team roles — that's 600 roles (200 × 3 job types) that nobody can audit. Instead, design a *hierarchy*: a small set of platform base roles (analyst_read, engineer_write, scientist_read, pii_approved) that are attribute-driven — membership is controlled by IdP group attributes (team=revenue, function=analyst, pii_approved=false). The platform role grants access to the appropriate schemas by tier, and PII masking is enforced at the column level regardless of role. New teams get access automatically by being added to the right IdP groups — no per-team role configuration needed.
 
 </details>
 

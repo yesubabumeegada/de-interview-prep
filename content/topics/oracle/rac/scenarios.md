@@ -20,7 +20,7 @@ tags: [oracle, rac, interview, scenarios, failover, troubleshooting]
 <details>
 <summary>💡 Hint</summary>
 
-**Automatic Oracle response (within seconds):**
+RAC's failure detection is driven by CSS (Cluster Synchronization Services) heartbeats to voting disks. When a node misses heartbeats, CSS *fences* the node (revokes its storage access) and evicts it — this prevents a zombie node from corrupting data. Trace through the five steps: CSS detects failure → fencing → surviving node performs instance recovery (reads failed node's redo log from shared storage) → services failover → SCAN listeners stop routing to failed node. Think about where in-flight transactions go.
 
 </details>
 
@@ -66,7 +66,7 @@ Uncommitted transactions → Rolled back during instance recovery
 <details>
 <summary>💡 Hint</summary>
 
-**Step 1: Check the interconnect is private**
+`gc buffer busy acquire` means nodes are contending over the same data blocks — Cache Fusion is working too hard. Adding a third node increases interconnect traffic because the same hot blocks now get passed between three nodes instead of two. The usual suspects: (1) the interconnect is accidentally routing through the public network instead of a private NIC, (2) hot sequences with low cache values cause every `nextval` to generate interconnect traffic, or (3) the application has a hotspot table/block that all nodes are updating (like a sequence-backed primary key). Check `v$cluster_interconnects` for public routing first — it's the fastest win.
 
 </details>
 
@@ -135,7 +135,7 @@ FETCH FIRST 10 ROWS ONLY;
 <details>
 <summary>💡 Hint</summary>
 
-**Architecture:**
+99.99% availability + <1s data loss + <5min RTO requires two technologies working together: RAC for node-level HA within a datacenter (transparent failover to surviving nodes) and Data Guard with synchronous transport for cross-datacenter protection (LGWR SYNC commits only after standby acknowledges — guarantees no data loss). For 5,000 TPS at low latency, the interconnect must be a dedicated 25GbE private network. Fast-Start Failover with an Observer provides the <5min RTO automatically. Think about the standby as 2-node RAC too (not single-node) so the DR site itself has HA.
 
 </details>
 

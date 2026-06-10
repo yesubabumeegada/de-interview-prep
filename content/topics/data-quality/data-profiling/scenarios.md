@@ -141,7 +141,7 @@ for metric in ["row_count", "distinct_orders", "total_amount", "null_customers"]
 <details>
 <summary>💡 Hint</summary>
 
-**Architecture:**
+The system needs two modes: *onboarding* (profile a new table, auto-generate rules, human review and commit to Git) and *continuous* (daily profile run, compare stats to baseline, flag drift, update rules when change is intentional). The key tension is automation vs false positives — think about when the system should auto-update rules vs alert for human review. Also consider which statistics to track: row count, null rate, cardinality, distribution percentiles, and referential integrity.
 
 </details>
 

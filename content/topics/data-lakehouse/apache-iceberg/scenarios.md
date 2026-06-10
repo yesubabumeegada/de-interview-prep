@@ -198,7 +198,14 @@ Consider catalog choices (Hive Metastore, AWS Glue, Nessie, REST catalog), optim
 
 **Catalog Configuration — Spark:**
 ```python
-spark = SparkSession.builder     .config("spark.sql.catalog.prod", "org.apache.iceberg.spark.SparkCatalog")     .config("spark.sql.catalog.prod.type", "rest")     .config("spark.sql.catalog.prod.uri", "https://catalog.internal/api/catalog")     .config("spark.sql.catalog.prod.credential", "client:secret")     .getOrCreate()
+spark = (
+    SparkSession.builder
+    .config("spark.sql.catalog.prod", "org.apache.iceberg.spark.SparkCatalog")
+    .config("spark.sql.catalog.prod.type", "rest")
+    .config("spark.sql.catalog.prod.uri", "https://catalog.internal/api/catalog")
+    .config("spark.sql.catalog.prod.credential", "client:secret")
+    .getOrCreate()
+)
 ```
 
 **Catalog Configuration — Trino:**

@@ -20,7 +20,7 @@ tags: [oracle, data-guard, interview, scenarios, dr, failover, rto-rpo]
 <details>
 <summary>💡 Hint</summary>
 
--- PREREQUISITES (on PRIMARY):
+Four prerequisites on the primary before you can create a standby: ARCHIVELOG mode must be ON (Data Guard ships archived logs), FORCE LOGGING must be enabled (so NOLOGGING operations are still captured), a password file must exist (used for redo transport authentication), and a standby redo log must be sized and created. Then use RMAN DUPLICATE to copy the database to the standby host — not a manual copy.
 
 </details>
 
@@ -101,7 +101,7 @@ SELECT process, status, sequence# FROM v$managed_standby WHERE process = 'MRP0';
 <details>
 <summary>💡 Hint</summary>
 
-**Assessment (first 2 minutes):**
+Confirm the primary is truly down before failing over (not a network partition where both sides think they're primary). Check transport lag growth on the standby — if `v$dataguard_stats.transport lag` keeps increasing, the primary is not sending redo. With Maximum Performance and 45s lag, expect up to 45s of data loss. Use `DGMGRL FAILOVER TO standby` (not switchover — switchover requires the primary to participate). After failover, reinstate the old primary as a new standby when it comes back.
 
 </details>
 
@@ -164,7 +164,7 @@ FROM v$archived_log WHERE standby_dest = 'NO';
 <details>
 <summary>💡 Hint</summary>
 
-**Architecture:**
+RPO=0 forces Maximum Availability mode (synchronous redo shipping — primary waits for standby acknowledgement before returning). This adds write latency, so the standby must be on low-latency private interconnect, not public internet. RTO=30s means you need Fast-Start Failover (FSFO) with an Observer process that monitors both sides and triggers auto-failover. For 50K TPS, primary should be an Oracle RAC cluster. Consider a far-sync instance to relay redo asynchronously to a distant DR site without imposing inter-datacenter latency on every transaction.
 
 </details>
 

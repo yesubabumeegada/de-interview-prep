@@ -20,7 +20,7 @@ tags: [oracle, exadata, interview, scenarios, performance, architecture]
 <details>
 <summary>💡 Hint</summary>
 
-**Check each reason systematically:**
+Smart Scan requires four conditions to be true simultaneously: (1) the table must physically live on Exadata storage cells (not a regular SAN), (2) the query must do a full or large range scan — small indexed lookups go through the buffer cache instead, (3) the table must NOT be cached in the buffer cache (cached objects use memory, not Smart Scan), and (4) the query must pass through Direct Path IO. Check `v$sql.io_cell_offload_eligible_bytes` — if it's 0, start with whether the data file is on ASM on the Exadata cells.
 
 </details>
 
@@ -146,7 +146,7 @@ END;
 <details>
 <summary>💡 Hint</summary>
 
-**Evaluation framework:**
+Evaluate on three axes: *control vs operations*, *economics at your data scale*, and *workload fit*. On-premises Exadata gives maximum control but requires hardware refresh cycles and DBA headcount. ExaCS is Exadata in Oracle's cloud — same performance characteristics, elastic sizing, but you still manage the database. ADW is fully managed (Oracle runs everything) with auto-tuning but you lose deep control over SQL plans and resource management. At 50TB with mixed workloads, the key question is whether you have the DBA headcount to justify on-prem, and whether your workloads need raw Exadata capabilities (Smart Scan, HCC compression) that ADW abstracts away.
 
 </details>
 

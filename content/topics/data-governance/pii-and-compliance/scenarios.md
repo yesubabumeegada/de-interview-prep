@@ -20,7 +20,7 @@ tags: [pii, gdpr, compliance, interview, scenarios]
 <details>
 <summary>💡 Hint</summary>
 
-**Immediate response (within 1 hour):**
+Two tracks simultaneously: *containment* (revoke public access immediately — this is the highest priority) and *assessment* (how long was it exposed, how many rows, who could have accessed it?). Then fix the root cause in code (remove email from the debug model), add a CI check that scans dbt models for PII column names, and document the incident. Under GDPR, if the exposure was significant, it may need to be reported.
 
 </details>
 
@@ -84,7 +84,7 @@ def check_pii_in_dev_schemas(manifest_path: str) -> list[str]:
 <details>
 <summary>💡 Hint</summary>
 
-**Step 1: Understand scope (within 24 hours)**
+GDPR erasure is a *discovery* problem before it's a deletion problem: you must find every copy of the customer's data before you can delete it (raw tables, cleaned tables, aggregates, backups, logs). Start with a DSAR (Data Subject Access Request) query that identifies all tables containing this customer's identifier. Then distinguish between what can be hard-deleted (personal records) vs what can only be pseudonymized (aggregate stats where deletion would alter analytics). Backups are the hardest — most companies don't delete from backups and instead maintain a suppression list.
 
 </details>
 
@@ -145,7 +145,7 @@ Note: certain data may be retained as required by law (e.g., financial records f
 <details>
 <summary>💡 Hint</summary>
 
-**Phase 1: Discovery**
+Structure this as a 5-phase program: (1) Discovery — run automated PII classifier across all 200 tables, (2) Classify and Control — apply column masking and access controls to discovered PII, (3) Erasure Pipeline — build the DSAR + deletion workflow, (4) Consent Management — connect to a consent database so every pipeline checks consent before processing, (5) Audit and Monitoring — continuous scanning for PII drift, audit logs for all PII access. The critical technical decision is *erasure strategy*: hard delete vs pseudonymization vs suppression list — each has different complexity and backup implications.
 
 </details>
 

@@ -99,7 +99,12 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json, when
 from pyspark.sql.types import StructType, StringType, LongType, IntegerType
 
-spark = SparkSession.builder     .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")     .config("spark.sql.extensions", "org.apache.spark.sql.hudi.HoodieSparkSessionExtension")     .getOrCreate()
+spark = (
+    SparkSession.builder
+    .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    .config("spark.sql.extensions", "org.apache.spark.sql.hudi.HoodieSparkSessionExtension")
+    .getOrCreate()
+)
 
 # Debezium schema (simplified)
 debezium_schema = StructType()     .add("op", StringType())     .add("ts_ms", LongType())     .add("after", StructType()

@@ -86,7 +86,7 @@ ORDER BY lmode DESC;
 <details>
 <summary>💡 Hint</summary>
 
-**Step 1: Compare execution plans (before vs after)**
+The new statistics changed the optimizer's cost estimates, causing it to choose a different (worse) execution plan. Pull both plans from AWR — the plan used before last night's snapshot and the current plan. Use `DBA_HIST_SQL_PLAN` to compare `plan_hash_value` before and after. Common cause: the stats gather removed a histogram on a skewed column, making the optimizer underestimate rows and choose NESTED LOOPS over HASH JOIN. Fix: restore old stats with `DBMS_STATS.RESTORE_TABLE_STATS`, or create an SPM baseline to pin the old plan.
 
 </details>
 
@@ -170,7 +170,7 @@ END;
 <details>
 <summary>💡 Hint</summary>
 
-**Architecture:**
+The raw material is all in AWR: `DBA_HIST_SQLSTAT` for query-level metrics, `DBA_HIST_SYSSTAT` for instance-level throughput trends, and `DBA_HIST_SNAPSHOT` to define the week boundaries. The architecture is: nightly extraction job that reads last week's AWR into a reporting table, a weekly comparison query that pairs each metric against prior-week average, and a dashboard layer (APEX, Grafana, or a static HTML report) for the scorecard. Key metrics: top queries by elapsed time and CPU, week-over-week change in DB time, and session wait event distribution shift.
 
 </details>
 
