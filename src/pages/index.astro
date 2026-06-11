@@ -71,42 +71,26 @@ const topicFileStats = topics.map(topic => {
 <MainLayout title="Topic Dashboard">
   <SidebarNav slot="sidebar" />
 
-  <!-- Hero banner -->
-  <div class="mb-10 rounded-xl overflow-hidden border border-[var(--color-surface-tertiary)]" style="background: var(--color-surface);">
-    <div class="flex flex-col md:flex-row">
-      <!-- Left: text + stats -->
-      <div class="flex-1 p-6 md:p-8 flex flex-col justify-center gap-4">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-widest text-[var(--color-content-tertiary)] m-0 mb-1">Interview Preparation</p>
-          <h1 class="text-gradient text-3xl md:text-4xl font-bold leading-tight m-0">Data Engineering</h1>
+  <!-- Hero banner: full-width image with stats overlay -->
+  <div class="mb-8 rounded-xl overflow-hidden relative" style="height: 260px;">
+    <img
+      src={`${import.meta.env.BASE_URL}images/app-icon.png`}
+      alt="Data engineer working with pipelines, dashboards and code"
+      style="width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block;"
+      loading="eager"
+    />
+    <!-- Stats bar overlaid at bottom -->
+    <div class="absolute bottom-0 left-0 right-0 flex items-center gap-3 px-5 py-3" style="background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);">
+      {[
+        { label: 'Topics',    value: topics.length },
+        { label: 'Materials', value: topicFileStats.reduce((s, t) => s + t.studyMaterialCount, 0) },
+        { label: 'Scenarios', value: topicFileStats.reduce((s, t) => s + t.scenarioQuestionCount, 0) },
+      ].map(({ label, value }) => (
+        <div class="flex items-center gap-1.5">
+          <span class="text-sm font-bold text-white">{value}</span>
+          <span class="text-xs text-white/70">{label}</span>
         </div>
-        <p class="text-[var(--color-content-secondary)] text-sm m-0 max-w-sm leading-relaxed">
-          {topics.length} topics · Fundamentals to Senior-Level · Code examples, diagrams &amp; scenario questions
-        </p>
-        <div class="flex flex-wrap gap-2">
-          {[
-            { label: 'Topics',     value: topics.length,                                                          color: 'var(--color-primary)' },
-            { label: 'Materials',  value: topicFileStats.reduce((s, t) => s + t.studyMaterialCount, 0),           color: 'var(--color-accent)' },
-            { label: 'Scenarios',  value: topicFileStats.reduce((s, t) => s + t.scenarioQuestionCount, 0),        color: 'var(--color-success)' },
-          ].map(({ label, value, color }) => (
-            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--color-surface-tertiary)] bg-[var(--color-background)]">
-              <span class="w-1.5 h-1.5 rounded-full shrink-0" style={`background:${color};`} aria-hidden="true" />
-              <span class="text-xs font-semibold text-[var(--color-content)]">{value}</span>
-              <span class="text-xs text-[var(--color-content-tertiary)]">{label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <!-- Right: hero image -->
-      <div class="hidden md:block shrink-0 overflow-hidden" style="width: 340px; min-height: 260px;">
-        <img
-          src={`${import.meta.env.BASE_URL}images/app-icon.png`}
-          alt="Data engineer working with pipelines, dashboards and code"
-          style="width: 100%; height: 100%; object-fit: cover; object-position: 20% center; display: block;"
-          loading="eager"
-        />
-      </div>
+      ))}
     </div>
   </div>
 

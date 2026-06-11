@@ -32,18 +32,18 @@ const ICONS: Record<string, { path: string; hex: string }> = {
   "powerbi": { path: "M14.403 0H5.25a.75.75 0 0 0-.75.75V6H3a3 3 0 0 0-3 3v8.25A2.75 2.75 0 0 0 2.75 20H4.5v3.25a.75.75 0 0 0 .75.75h14.5a.75.75 0 0 0 .75-.75V5.597zm3.347 22.5H6v-2.25h3.25a.75.75 0 0 0 0-1.5H2.75c-.69 0-1.25-.56-1.25-1.25V9a1.5 1.5 0 0 1 1.5-1.5h1.5V17a.75.75 0 0 0 .75.75h12.5zm1.5-7.25H6.75V1.5h7.153l5.347 5.597z", hex: "#F2C811" },
 };
 
-const TABLER: Record<string, string> = {
-  "etl": "ti-arrows-right-left",
-  "data-modeling": "ti-schema",
-  "data-quality": "ti-shield-check",
-  "streaming": "ti-broadcast",
-  "governance": "ti-certificate",
-  "system-design": "ti-topology-star",
-  "interview": "ti-user-check",
+const STROKE: Record<string, { paths: string[]; color: string }> = {
+  "etl":           { color: "#6366f1", paths: ["M21 7l-18 0","M18 10l3 -3l-3 -3","M6 20l-3 -3l3 -3","M3 17l18 0"] },
+  "data-modeling": { color: "#8b5cf6", paths: ["M5 2h5v4h-5l0 -4","M15 10h5v4h-5l0 -4","M5 18h5v4h-5l0 -4","M5 10h5v4h-5l0 -4","M10 12h5","M7.5 6v4","M7.5 14v4"] },
+  "data-quality":  { color: "#10b981", paths: ["M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06","M15 19l2 2l4 -4"] },
+  "streaming":     { color: "#ef4444", paths: ["M12 18l.01 0","M9.172 15.172a4 4 0 0 1 5.656 0","M6.343 12.343a8 8 0 0 1 11.314 0","M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"] },
+  "governance":    { color: "#f59e0b", paths: ["M12 15a3 3 0 1 0 6 0a3 3 0 1 0 -6 0","M13 17.5v4.5l2 -1.5l2 1.5v-4.5","M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73","M6 9l12 0","M6 12l3 0","M6 15l2 0"] },
+  "system-design": { color: "#3b82f6", paths: ["M10 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0","M18 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0","M10 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0","M6 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0","M18 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0","M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0","M22 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0","M6 12h4","M14 12h4","M15 7l-2 3","M9 7l2 3","M11 14l-2 3","M13 14l2 3"] },
+  "interview":     { color: "#06b6d4", paths: ["M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0","M6 21v-2a4 4 0 0 1 4 -4h4","M15 19l2 2l4 -4"] },
 };
 
 const icon = ICONS[iconKey];
-const tabler = TABLER[iconKey];
+const stroke = STROKE[iconKey];
 ---
 {icon ? (
   <svg
@@ -58,8 +58,22 @@ const tabler = TABLER[iconKey];
   >
     <path d={icon.path} />
   </svg>
-) : tabler ? (
-  <i class={`ti ${tabler} ${cls}`} style={`font-size:${size}px;`} aria-hidden="true"></i>
+) : stroke ? (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke={stroke.color}
+    stroke-width="1.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    xmlns="http://www.w3.org/2000/svg"
+    class={cls}
+    aria-hidden="true"
+  >
+    {stroke.paths.map(d => <path d={d} />)}
+  </svg>
 ) : (
   <span class={cls} style={`font-size:${size * 0.9}px;`} aria-hidden="true">📖</span>
 )}

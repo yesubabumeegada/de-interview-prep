@@ -48,10 +48,7 @@ const { title, description = 'Data Engineer Interview Preparation - Comprehensiv
     <meta property="og:image" content={`${import.meta.env.BASE_URL}images/app-icon.png`} />
     <meta property="og:type" content="website" />
 
-    <!-- Tabler icons webfont -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/tabler-icons.min.css" />
-
-    <!-- Performance: Preconnect to font CDNs if using web fonts -->
+<!-- Performance: Preconnect to font CDNs if using web fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
@@ -185,6 +182,12 @@ const { title, description = 'Data Engineer Interview Preparation - Comprehensiv
       <div class="flex-1 min-w-0 w-full">
         <!-- TopBar with ThemeToggle visible on every page -->
         <TopBar>
+          <div slot="search" class="flex items-center gap-3 min-w-0">
+            <div class="min-w-0">
+              <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-[var(--color-content-tertiary)] m-0 leading-none mb-0.5">Interview Preparation</p>
+              <h1 class="text-sm font-bold text-[var(--color-content)] m-0 leading-tight truncate" style="background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Data Engineering</h1>
+            </div>
+          </div>
           <ThemeToggle client:load slot="theme-toggle" />
         </TopBar>
 
