@@ -10,6 +10,12 @@ tags: [python, type-hints, typing, mypy, annotations, static-analysis]
 
 # Python Type Hints — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of type hints like street signs on a highway: they don't physically stop you from going the wrong way, but they tell you (and your IDE/linter) exactly what's expected, catching mistakes before runtime.
+
+---
 ## What Are Type Hints?
 
 Type hints are **optional annotations** that declare what types a function expects and returns. Python doesn't enforce them at runtime — they're used by tools (mypy, IDEs) for static analysis and documentation.
@@ -228,6 +234,38 @@ disallow_untyped_defs = false     # Tests don't need strict typing
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from typing import Optional, Union
+from dataclasses import dataclass
+
+def process_orders(
+    orders: list[dict],
+    min_amount: float = 0.0,
+    region: Optional[str] = None,
+) -> list[dict]:
+    result = [o for o in orders if o["amount"] >= min_amount]
+    if region:
+        result = [o for o in result if o.get("region") == region]
+    return result
+
+@dataclass
+class Order:
+    id: int
+    amount: float
+    region: str
+    status: str = "pending"
+
+orders = [Order(1, 300.0, "US"), Order(2, 50.0, "EU")]
+us_orders = [o for o in orders if o.region == "US"]
+print(us_orders)  # IDE knows o.amount is float, not Any
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why use type hints in Python?" — "Three reasons: (1) Catch bugs before production — mypy finds type mismatches statically. (2) Self-documenting code — function signatures clearly show expected inputs/outputs. (3) IDE support — autocomplete, jump-to-definition, and inline warnings. They're especially valuable in data pipelines where a wrong type can silently corrupt millions of records."

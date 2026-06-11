@@ -10,6 +10,12 @@ tags: [pyspark, udf, user-defined-functions, python-udf, serialization, native-f
 
 # PySpark UDFs — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of a UDF like hiring a specialist contractor: the job gets done but it breaks Spark's internal optimization pipeline. Use built-in functions whenever possible; bring in the contractor (UDF) only when built-ins can't do it.
+
+---
 ## What Are UDFs?
 
 A **User-Defined Function (UDF)** extends Spark's built-in function library with custom Python logic. When built-in functions can't express your transformation, UDFs let you apply arbitrary Python code to DataFrame columns.
@@ -270,6 +276,27 @@ df.withColumn("result", my_logic_df(F.col("col")))
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import udf, col
+from pyspark.sql.types import StringType
+spark = SparkSession.builder.master("local[*]").appName("udf").getOrCreate()
+# UDF: use only when no built-in alternative exists
+@udf(StringType())
+def categorize(amount):
+    return "high" if amount > 200 else "low"
+
+data = [(1, 300), (2, 100), (3, 250)]
+df = spark.createDataFrame(data, ["id", "amount"])
+df.withColumn("tier", categorize(col("amount"))).show()
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a UDF and when would you use one?" — "A UDF is a User-Defined Function that extends Spark's built-in functions with custom Python logic. I use them only when no combination of built-in functions can express the transformation — things like custom parsing logic, regex patterns too complex for regexp_extract, or calling external libraries. They're a last resort because they're 5-20x slower than native functions due to serialization overhead between JVM and Python."

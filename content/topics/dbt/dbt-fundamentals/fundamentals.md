@@ -10,6 +10,12 @@ tags: [dbt, data-build-tool, transformation, analytics-engineering, sql]
 
 # dbt Fundamentals
 
+
+## 🎯 Analogy
+
+Think of dbt like version-controlled SQL with a test suite built in. Instead of running raw SQL scripts manually, you define models as SELECT statements and dbt handles materializing them, testing them, and documenting them.
+
+---
 ## What Is dbt?
 
 dbt (data build tool) is an open-source transformation framework that enables analytics engineers to transform data in their warehouse using SQL. It brings software engineering best practices — version control, testing, documentation, and modularity — to data transformation.
@@ -226,3 +232,27 @@ flowchart TD
 | Models | SQL SELECT statements = tables/views |
 | Tests | Validate data quality |
 | Macros | Reusable Jinja SQL functions |
+
+## ▶️ Try It Yourself
+
+```bash
+# Install dbt
+pip install dbt-snowflake  # or dbt-bigquery, dbt-postgres, etc.
+
+# Initialize a project
+dbt init my_project
+cd my_project
+
+# Run all models
+dbt run
+
+# Test all models (schema tests + custom tests)
+dbt test
+
+# Generate and serve documentation
+dbt docs generate && dbt docs serve
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

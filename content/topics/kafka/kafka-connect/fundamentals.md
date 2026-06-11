@@ -10,6 +10,12 @@ tags: [kafka, kafka-connect, connectors, source, sink, workers, transforms]
 
 # Kafka Connect — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Kafka Connect like a standardized power adapter: instead of writing custom code to pull from MySQL or push to S3, you configure a connector JSON and Connect handles the wiring.
+
+---
 ## What Is Kafka Connect?
 
 Kafka Connect is a **scalable, fault-tolerant framework** for streaming data between Kafka and external systems. It eliminates the need to write custom producer/consumer code for common integrations.
@@ -188,6 +194,34 @@ Connect automatically manages offsets in Kafka topics:
 
 This means connectors are fault-tolerant by default — if a worker dies, another picks up from the last committed offset.
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Deploy a JDBC source connector (pull from Postgres into Kafka)
+curl -X POST http://localhost:8083/connectors \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "postgres-orders-source",
+    "config": {
+      "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+      "connection.url": "jdbc:postgresql://localhost/mydb",
+      "connection.user": "reader",
+      "connection.password": "secret",
+      "table.whitelist": "orders",
+      "mode": "incrementing",
+      "incrementing.column.name": "id",
+      "topic.prefix": "db."
+    }
+  }'
+
+# Check connector status
+curl http://localhost:8083/connectors/postgres-orders-source/status
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Kafka Connect is not just "a managed producer/consumer." Emphasize that it provides automatic parallelism (tasks), schema management, SMTs, and REST management API — things you'd have to build yourself with raw producer/consumer APIs.

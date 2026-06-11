@@ -10,6 +10,12 @@ tags: [airflow, operators, pythonoperator, bashoperator, tasks, dag]
 
 # Airflow Operators — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Airflow operators like power tools — each designed for a specific job. The PythonOperator is a swiss army knife, BashOperator is a terminal, and cloud operators (S3CopyOperator, BigQueryOperator) are purpose-built for their service.
+
+---
 ## What Is an Operator?
 
 An **operator** is a template that defines a single unit of work in a DAG. Each task in an Airflow DAG is an instance of an operator. The operator determines *what* that task does — run a Python function, execute a Bash command, submit a Spark job, query a database, etc.
@@ -247,6 +253,27 @@ load_task = PythonOperator(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
+from datetime import datetime
+
+with DAG("operators_demo", start_date=datetime(2024,1,1), schedule=None, catchup=False) as dag:
+    bash_task = BashOperator(task_id="check_disk", bash_command="df -h /tmp")
+    python_task = PythonOperator(
+        task_id="process",
+        python_callable=lambda: print("Processing with Python")
+    )
+    bash_task >> python_task
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between an operator and a task?" — An **operator** is the class/template (the definition). A **task** is an instance of an operator in a specific DAG (the execution). `PythonOperator` is the operator; `extract_task = PythonOperator(...)` is the task.

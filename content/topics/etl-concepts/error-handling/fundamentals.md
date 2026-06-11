@@ -10,6 +10,12 @@ tags: [etl, error-handling, retry, dead-letter-queue, alerting]
 
 # Error Handling — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of ETL error handling like a hospital triage system: some errors are minor (log and continue), some need attention (quarantine the bad record and alert), and some are critical (stop the pipeline and page the on-call).
+
+---
 ## Why Error Handling Is Critical in Data Pipelines
 
 Data pipelines operate against unreliable infrastructure: networks drop, databases become overloaded, upstream APIs return unexpected formats. Without explicit error handling:
@@ -312,6 +318,48 @@ def process_with_error_tolerance(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import logging
+from dataclasses import dataclass
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class Record:
+    id: int
+    amount: float
+    region: Optional[str] = None
+
+def validate(record: Record) -> Optional[str]:
+    if record.amount < 0:
+        return "negative amount"
+    if not record.region:
+        return "missing region"
+    return None  # Valid
+
+def process_batch(records: list[Record]) -> dict:
+    success, failed = [], []
+    for r in records:
+        error = validate(r)
+        if error:
+            logger.warning("Quarantining record %d: %s", r.id, error)
+            failed.append({"id": r.id, "reason": error})
+        else:
+            success.append(r)
+    return {"processed": len(success), "failed": len(failed), "errors": failed}
+
+batch = [Record(1, 100.0, "US"), Record(2, -50.0, "EU"), Record(3, 200.0, None)]
+result = process_batch(batch)
+print(result)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always distinguish transient from permanent errors. Transient errors (network blips) warrant retry; permanent errors (bad record format) warrant DLQ routing. Retrying a bad record forever is an anti-pattern (poison pill).

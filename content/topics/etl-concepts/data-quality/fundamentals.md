@@ -10,6 +10,12 @@ tags: [etl, data-quality, great-expectations, dbt-tests, completeness, accuracy]
 
 # Data Quality — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data quality checks like a factory quality control station: every batch goes through automated inspection — are parts the right size (schema), weight (type), count (completeness)? Failing batches go back, not to the customer.
+
+---
 ## The Four Dimensions of Data Quality
 
 Data quality is measured across four primary dimensions:
@@ -277,6 +283,43 @@ def reconcile_row_counts(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+def validate_orders(df) -> dict:
+    issues = {}
+
+    # Completeness check
+    null_pct = df.isnull().mean() * 100
+    high_null = null_pct[null_pct > 5].to_dict()
+    if high_null:
+        issues["nulls_above_5pct"] = high_null
+
+    # Uniqueness
+    dup_ids = df["order_id"].duplicated().sum()
+    if dup_ids:
+        issues["duplicate_order_ids"] = int(dup_ids)
+
+    # Range check
+    neg_amounts = (df["amount"] < 0).sum()
+    if neg_amounts:
+        issues["negative_amounts"] = int(neg_amounts)
+
+    return {"passed": len(issues) == 0, "issues": issues}
+
+import pandas as pd
+df = pd.DataFrame({
+    "order_id": [1, 2, 2, 3],
+    "amount": [100, -50, 200, 300],
+    "region": ["US", "EU", None, "US"],
+})
+print(validate_orders(df))
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Frame data quality in terms of business impact. "Our quality checks prevented $2M in incorrect revenue recognition" is more compelling than "we check for nulls."

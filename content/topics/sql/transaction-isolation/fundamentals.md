@@ -10,6 +10,12 @@ tags: [sql, transactions, isolation-levels, acid, dirty-read, phantom-read, conc
 
 # SQL Transaction Isolation — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of transaction isolation levels like library reading rules: READ UNCOMMITTED lets you peek at someone's draft notes (dirty reads). SERIALIZABLE forces everyone to queue up and take turns — perfectly consistent but slower.
+
+---
 ## What Is a Transaction?
 
 A **transaction** is a group of SQL statements that execute as a single atomic unit. Either all statements succeed, or none of them are applied. This is the foundation of data integrity in relational databases.
@@ -258,6 +264,33 @@ COMMIT;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Check current isolation level (Postgres)
+SHOW transaction_isolation;
+
+-- Set isolation level for a transaction
+BEGIN;
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+
+-- Simulate a bank transfer (must be atomic)
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+COMMIT;  -- Both succeed or both fail
+
+-- Demonstrate dirty read prevention (READ COMMITTED — Postgres default)
+-- Session 1: BEGIN; UPDATE orders SET amount = 999 WHERE id = 1;
+-- Session 2: SELECT amount FROM orders WHERE id = 1;
+-- → Session 2 sees original value (READ COMMITTED protects from dirty reads)
+-- Session 1: COMMIT;
+-- → Now session 2 sees 999
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What does ACID stand for and which property does isolation level control?" — "ACID stands for Atomicity, Consistency, Isolation, Durability. Isolation levels control the I in ACID — they determine how much one transaction can see another's in-progress changes. Higher isolation levels prevent more concurrency anomalies but reduce throughput because more locking or versioning is required."

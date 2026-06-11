@@ -10,6 +10,12 @@ tags: [pyspark, spark-sql, sparksession, sql, dataframe-api, catalog, temp-view]
 
 # PySpark Spark SQL — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Spark SQL like a translator: you write familiar SQL, and Spark converts it into an optimized distributed execution plan — same Catalyst optimizer, same performance, just SQL syntax.
+
+---
 ## What Is Spark SQL?
 
 Spark SQL is the module for structured data processing. It provides a SQL interface on top of Spark DataFrames, allowing you to query data using familiar SQL syntax while benefiting from Spark's distributed execution engine.
@@ -285,6 +291,22 @@ spark.sql("""
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.master("local[*]").appName("sparksql").getOrCreate()
+data = [("Alice","Sales",300),("Bob","Eng",400),("Carol","Sales",250)]
+df = spark.createDataFrame(data, ["name","dept","salary"])
+df.createOrReplaceTempView("employees")
+result = spark.sql('SELECT dept, AVG(salary) as avg_salary, COUNT(*) as headcount FROM employees GROUP BY dept ORDER BY avg_salary DESC')
+result.show()
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between SQL and DataFrame API in Spark?" — "They're functionally equivalent. Both go through the same Catalyst optimizer and produce identical physical plans. SQL is better for analytics-style queries and when your team knows SQL. DataFrame API is better for programmatic transformations and when you need IDE support. I choose based on readability for the specific operation."

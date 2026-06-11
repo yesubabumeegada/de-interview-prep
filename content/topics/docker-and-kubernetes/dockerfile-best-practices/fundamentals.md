@@ -10,6 +10,12 @@ tags: [docker, dockerfile, best-practices, optimization]
 
 # Dockerfile Best Practices — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of a Dockerfile like a recipe: the order matters (Docker caches each step), smaller ingredients mean a smaller image, and you don't want to leave raw meat (credentials) on the counter.
+
+---
 ## The Recipe Card Analogy
 
 A Dockerfile is like a recipe card for building your application's environment. A badly written recipe says "add some flour" — vague and non-reproducible. A good recipe card specifies "200g bread flour (King Arthur, unbleached)" — exact and repeatable. Good Dockerfiles pin exact versions, order instructions to maximize caching, and include only what's needed for cooking (not every utensil in the kitchen). The recipe card should produce the exact same dish every time, anywhere.
@@ -155,3 +161,32 @@ USER appuser
 
 CMD ["python", "pipeline.py"]
 ```
+
+## ▶️ Try It Yourself
+
+```dockerfile
+# Multi-stage build: builder stage (large) → runtime stage (minimal)
+FROM python:3.11-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+FROM python:3.11-slim AS runtime
+WORKDIR /app
+# Copy only installed packages from builder (no pip, no compilers)
+COPY --from=builder /root/.local /root/.local
+COPY src/ ./src/
+
+# Security: run as non-root
+RUN useradd -m appuser
+USER appuser
+
+# Cache-friendly: copy requirements before source code
+# (requirements change rarely; source changes often)
+ENV PATH=/root/.local/bin:$PATH
+CMD ["python", "src/main.py"]
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

@@ -10,6 +10,12 @@ tags: [data-catalog, metadata, datahub, amundsen, discoverability]
 
 # Data Catalog — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of a data catalog like a library card catalog for your data: it tells you where each dataset lives, what it contains, who owns it, and how fresh it is — so analysts can find trustworthy data without asking a data engineer.
+
+---
 ## What Is a Data Catalog?
 
 A data catalog is a searchable inventory of all data assets in an organization — tables, dashboards, pipelines, ML models — enriched with metadata (descriptions, owners, tags, lineage).
@@ -159,6 +165,46 @@ def add_tag_to_dataset(urn: str, tag: str):
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Simulate a simple catalog entry
+catalog = {}
+
+def register_dataset(name: str, location: str, owner: str,
+                      description: str, schema: dict):
+    catalog[name] = {
+        "location": location,
+        "owner": owner,
+        "description": description,
+        "schema": schema,
+        "registered_at": "2024-01-15",
+    }
+
+def search_catalog(query: str) -> list:
+    return [
+        {"name": k, **v}
+        for k, v in catalog.items()
+        if query.lower() in k.lower() or query.lower() in v["description"].lower()
+    ]
+
+register_dataset(
+    "gold.orders",
+    "s3://data-lake/gold/orders/",
+    "data-platform@company.com",
+    "Cleaned, deduplicated order records from POS system",
+    {"order_id": "BIGINT", "amount": "DECIMAL", "region": "VARCHAR"},
+)
+
+results = search_catalog("orders")
+for r in results:
+    print(r["name"], "→", r["description"])
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a data catalog and why do you need one?" — A searchable inventory of all data assets with metadata (descriptions, owners, lineage, quality). Needed because without it, analysts waste time re-discovering existing tables, duplicating work, or using wrong/stale data.

@@ -10,6 +10,12 @@ tags: [data-modeling, star-schema, dimensional-modeling, fact-table, dimension-t
 
 # Star Schema — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of a star schema like a solar system: the fact table is the sun (big, central, all the measures), and dimension tables are the planets orbiting it (providing context: who, what, when, where).
+
+---
 ## What Is a Star Schema?
 
 A star schema is the **most common data warehouse design pattern**. It organizes data into a central **fact table** (measurements/events) surrounded by **dimension tables** (descriptive context).
@@ -273,6 +279,47 @@ ORDER BY d.quarter, total_revenue DESC;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Star schema: fact table + dimension tables
+-- Dimension: who placed the order
+CREATE TABLE dim_customer (
+    customer_sk INT PRIMARY KEY,  -- Surrogate key
+    customer_id INT,              -- Natural key from source
+    name VARCHAR(100),
+    region VARCHAR(50),
+    valid_from DATE, valid_to DATE
+);
+
+-- Dimension: when
+CREATE TABLE dim_date (
+    date_sk INT PRIMARY KEY,
+    full_date DATE,
+    year INT, quarter INT, month INT, day_of_week VARCHAR(10)
+);
+
+-- Fact table: measurements (foreign keys to all dims)
+CREATE TABLE fact_orders (
+    order_sk BIGINT PRIMARY KEY,
+    customer_sk INT REFERENCES dim_customer(customer_sk),
+    date_sk INT REFERENCES dim_date(date_sk),
+    amount DECIMAL(12,2),
+    quantity INT
+);
+
+-- Simple star query
+SELECT d.year, c.region, SUM(f.amount) AS revenue
+FROM fact_orders f
+JOIN dim_date d USING (date_sk)
+JOIN dim_customer c USING (customer_sk)
+GROUP BY d.year, c.region;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** When asked to "design a data model for X," always start by stating the grain: "Each row represents one [event/entity] at [this level of detail]." Then identify the measures (what you'll SUM/AVG) and the dimensions (how you'll slice/filter).

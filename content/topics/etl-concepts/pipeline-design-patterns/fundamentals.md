@@ -10,6 +10,12 @@ tags: [etl, pipeline-design, lambda, kappa, medallion, batch, streaming]
 
 # Pipeline Design Patterns — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of pipeline design patterns like architectural blueprints: the fan-out pattern is a star (one source, many consumers), the funnel pattern is many sources into one clean store, and the medallion pattern is a quality ladder (bronze → silver → gold).
+
+---
 ## Why Design Patterns Matter
 
 Pipeline design patterns are proven solutions to common data engineering problems. Using the right pattern for your use case avoids re-inventing solutions, communicates intent to other engineers, and prevents common mistakes.
@@ -240,6 +246,44 @@ PIPELINE_CONFIG = {
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Medallion architecture (Bronze → Silver → Gold)
+import pandas as pd
+
+# Bronze: raw, unmodified (exact copy of source)
+def ingest_bronze(source_data: list[dict]) -> pd.DataFrame:
+    df = pd.DataFrame(source_data)
+    df["_ingested_at"] = pd.Timestamp.now()
+    return df
+
+# Silver: cleaned, typed, deduplicated
+def transform_silver(bronze: pd.DataFrame) -> pd.DataFrame:
+    df = bronze.copy()
+    df = df.dropna(subset=["order_id"])
+    df = df.drop_duplicates("order_id")
+    df["amount"] = pd.to_numeric(df["amount"], errors="coerce")
+    return df
+
+# Gold: aggregated, business-ready
+def aggregate_gold(silver: pd.DataFrame) -> pd.DataFrame:
+    return silver.groupby("region")["amount"].sum().reset_index()
+
+raw = [{"order_id": 1, "amount": "100", "region": "US"},
+       {"order_id": 1, "amount": "100", "region": "US"},  # duplicate
+       {"order_id": 2, "amount": "200", "region": "EU"}]
+
+bronze = ingest_bronze(raw)
+silver = transform_silver(bronze)
+gold = aggregate_gold(silver)
+print(gold)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** The medallion architecture (Bronze/Silver/Gold) is the most common architecture pattern in modern data lake/lakehouse setups. Know all three layers, what quality level each represents, and what transformations happen at each boundary.

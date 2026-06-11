@@ -10,6 +10,12 @@ tags: [snowflake, performance, tuning, warehouses, clustering, optimization]
 
 # Snowflake Performance Tuning — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Snowflake performance tuning like tuning a car: clustering keys are the gear selection (data locality), result cache is cruise control (free repeat runs), and the right warehouse size is the engine displacement (raw power).
+
+---
 ## How Snowflake Executes Queries
 
 ```mermaid
@@ -192,6 +198,31 @@ SELECT * FROM orders LIMIT 100;  -- Good: stops after 100 rows
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Check if a query is using the result cache (free!) or micro-partition pruning
+SELECT query_id, total_elapsed_time, bytes_scanned, percentage_scanned_from_cache
+FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY())
+ORDER BY start_time DESC LIMIT 10;
+
+-- Add clustering key on high-cardinality filter column
+ALTER TABLE fact_orders CLUSTER BY (order_date, region);
+
+-- Check clustering health
+SELECT SYSTEM$CLUSTERING_INFORMATION('fact_orders', '(order_date, region)');
+
+-- Use query tags for cost attribution
+ALTER SESSION SET QUERY_TAG = 'team=analytics,pipeline=revenue_daily';
+
+-- Auto-suspend warehouse after 2 minutes idle (saves cost)
+ALTER WAREHOUSE analytics_wh SET AUTO_SUSPEND = 120;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you tune query performance in Snowflake?" — Start with Query Profile: check partitions_scanned/total (clustering effectiveness), spill (memory), and queuing (warehouse sizing). Common fixes: cluster tables on filter columns, scale warehouse for memory-bound queries, add MVs for repeated aggregations, and avoid SELECT * (column pruning).

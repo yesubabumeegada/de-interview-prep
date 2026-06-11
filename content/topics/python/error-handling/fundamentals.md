@@ -10,6 +10,12 @@ tags: [python, error-handling, exceptions, try-except, custom-exceptions, best-p
 
 # Python Error Handling — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of error handling like defensive driving: you anticipate specific hazards (wrong-way driver = ValueError, icy road = NetworkError) and have different responses for each — not just one generic 'slow down for everything'.
+
+---
 ## Why Error Handling Matters in Data Engineering
 
 Data pipelines process millions of records from unreliable sources — APIs timeout, files have bad encoding, databases hit connection limits. Proper error handling is the difference between a pipeline that recovers gracefully and one that silently corrupts data.
@@ -312,6 +318,45 @@ def safe():
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def load_config(path: str) -> dict:
+    try:
+        with open(path) as f:
+            import json
+            return json.load(f)
+    except FileNotFoundError:
+        logger.warning("Config %s not found, using defaults", path)
+        return {"retries": 3, "timeout": 30}
+    except json.JSONDecodeError as e:
+        logger.error("Invalid JSON in %s: %s", path, e)
+        raise ValueError(f"Config file {path} is malformed") from e
+    finally:
+        logger.debug("load_config finished for %s", path)
+
+# Custom exception for domain errors
+class PipelineError(Exception):
+    def __init__(self, stage: str, reason: str):
+        self.stage = stage
+        super().__init__(f"[{stage}] {reason}")
+
+try:
+    config = load_config("/tmp/missing.json")
+    print(config)
+except ValueError as e:
+    print(f"Cannot start pipeline: {e}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Never use bare `except:` — it catches SystemExit and KeyboardInterrupt, making your program impossible to stop. At minimum use `except Exception:`, but prefer specific exception types. This is the most common code review feedback on junior Python code.

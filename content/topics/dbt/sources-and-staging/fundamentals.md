@@ -10,6 +10,12 @@ tags: [dbt, sources, staging, freshness, schema-yml]
 
 # dbt Sources & Staging
 
+
+## 🎯 Analogy
+
+Think of dbt sources like declared imports at customs: you formally register where raw data comes from (which database, which table), so dbt can track lineage, run freshness checks, and warn you if the source hasn't updated.
+
+---
 ## What Are Sources?
 
 Sources in dbt represent **raw tables loaded by your ELT tool** (Fivetran, Airbyte, etc.). Declaring them enables freshness checks, lineage tracking, and clean references.
@@ -163,3 +169,28 @@ models/staging/
     ├── _salesforce_sources.yml
     └── stg_salesforce_accounts.sql
 ```
+
+## ▶️ Try It Yourself
+
+```yaml
+# models/staging/sources.yml
+version: 2
+sources:
+  - name: raw_postgres
+    database: production
+    schema: public
+    freshness:
+      warn_after: {count: 12, period: hour}
+      error_after: {count: 24, period: hour}
+    tables:
+      - name: orders
+        loaded_at_field: updated_at
+      - name: customers
+
+# Reference in a model: {{ source('raw_postgres', 'orders') }}
+# Check freshness: dbt source freshness
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

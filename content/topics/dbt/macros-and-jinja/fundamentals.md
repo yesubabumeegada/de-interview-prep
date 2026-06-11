@@ -10,6 +10,12 @@ tags: [dbt, macros, jinja, templating, reusability]
 
 # dbt Macros & Jinja
 
+
+## 🎯 Analogy
+
+Think of dbt macros like functions in SQL: write the logic once (how to generate a date spine, how to pivot columns), call it everywhere, and changing the macro updates every model that uses it.
+
+---
 ## What Is Jinja?
 
 Jinja is a Python-based templating language embedded in dbt SQL files. It enables dynamic SQL generation using variables, conditionals, and loops.
@@ -187,3 +193,26 @@ SELECT * FROM source WHERE order_date > '{{ max_date }}'
 | `env_var('VAR')` | Read environment variable |
 | `var('name')` | Read project variable |
 | `log('msg', info=True)` | Print to console |
+
+## ▶️ Try It Yourself
+
+```sql
+-- macros/cents_to_dollars.sql
+{% macro cents_to_dollars(column_name) %}
+    ({{ column_name }} / 100.0)::NUMERIC(12,2)
+{% endmacro %}
+
+-- Use in any model:
+-- SELECT {{ cents_to_dollars('price_cents') }} AS price_usd
+
+-- macros/generate_date_spine.sql example usage:
+{% macro last_n_days(n) %}
+    DATEADD(day, -{{ n }}, CURRENT_DATE)
+{% endmacro %}
+
+-- In a model: WHERE order_date >= {{ last_n_days(30) }}
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

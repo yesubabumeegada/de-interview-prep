@@ -10,6 +10,12 @@ tags: [data-modeling, scd, dimensions, type1, type2, type3, warehouse]
 
 # Slowly Changing Dimensions — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of SCD like updating a contact book: SCD Type 1 erases the old address and writes the new one (simple, no history). SCD Type 2 adds a new contact card with a 'valid from' date (full history preserved).
+
+---
 ## What Are Slowly Changing Dimensions?
 
 A Slowly Changing Dimension (SCD) is a dimension table attribute that **changes over time** — like a customer's address, an employee's department, or a product's price. The "slowly" means it doesn't change every transaction — but it DOES change occasionally.
@@ -194,6 +200,33 @@ CREATE TABLE dim_customer (
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- SCD Type 1: Overwrite (no history)
+UPDATE dim_customer SET region = 'EU' WHERE customer_id = 42;
+
+-- SCD Type 2: Add new row (preserve history)
+-- Step 1: Expire current row
+UPDATE dim_customer
+SET valid_to = CURRENT_DATE - 1, is_current = FALSE
+WHERE customer_id = 42 AND is_current = TRUE;
+
+-- Step 2: Insert new row
+INSERT INTO dim_customer (customer_id, name, region, valid_from, valid_to, is_current)
+SELECT customer_id, name, 'EU', CURRENT_DATE, '9999-12-31', TRUE
+FROM dim_customer WHERE customer_id = 42 AND valid_to = CURRENT_DATE - 1;
+
+-- Query: point-in-time lookup (what region was customer 42 in 2023?)
+SELECT region FROM dim_customer
+WHERE customer_id = 42
+  AND valid_from <= '2023-06-01' AND valid_to >= '2023-06-01';
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Explain SCD Type 2" — "When a tracked attribute changes, we close the current record (set effective_to and is_current=FALSE) and insert a new row with the new values, a new surrogate key, and effective_from = today. Historical facts keep their old surrogate key, so they always join to the correct historical version."

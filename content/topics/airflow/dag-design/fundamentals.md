@@ -10,6 +10,12 @@ tags: [airflow, dag, orchestration, scheduling, tasks, dependencies]
 
 # Airflow DAG Design — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of an Airflow DAG like a cooking recipe with dependencies: you can't frost the cake before baking it. The DAG defines the order; Airflow handles running each step at the right time.
+
+---
 ## What Is Apache Airflow?
 
 Apache Airflow is a **workflow orchestration platform** — it schedules, monitors, and manages the execution of data pipelines. Think of it as the "cron on steroids" that runs your ETL jobs in the right order, handles retries, and alerts you on failures.
@@ -292,6 +298,28 @@ load_sql = SqlOperator(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+
+def extract(): print("Extracting data...")
+def transform(): print("Transforming data...")
+def load(): print("Loading data...")
+
+with DAG("etl_demo", start_date=datetime(2024,1,1), schedule="@daily", catchup=False) as dag:
+    t1 = PythonOperator(task_id="extract", python_callable=extract)
+    t2 = PythonOperator(task_id="transform", python_callable=transform)
+    t3 = PythonOperator(task_id="load", python_callable=load)
+    t1 >> t2 >> t3  # Dependencies: extract → transform → load
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is an Airflow DAG?" — "A DAG is a collection of tasks with defined dependencies that Airflow schedules and monitors. It's a Directed Acyclic Graph — directed meaning tasks flow one way, acyclic meaning no circular dependencies. Each DAG run represents one execution of the entire pipeline for a specific logical date."

@@ -10,6 +10,12 @@ tags: [pyspark, partitioning, bucketing, repartition, coalesce, partitionBy, spa
 
 # PySpark Partitioning and Bucketing — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of partitioning like filing documents into folders by year — when you need 2023 docs, you open only that folder. Bucketing is pre-sorting files within each folder by last name so merges are instant.
+
+---
 ## Two Types of Partitioning
 
 "Partitioning" in Spark refers to two different concepts that often confuse beginners:
@@ -230,6 +236,23 @@ df.repartition("user_id").write.partitionBy("user_id").parquet(path)
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.master("local[*]").appName("partition").getOrCreate()
+data = [("2023","US",100),("2023","EU",200),("2024","US",150)]
+df = spark.createDataFrame(data, ["year","region","revenue"])
+# Write partitioned by year — each year gets its own directory
+df.write.partitionBy("year").mode("overwrite").parquet("/tmp/revenue_partitioned")
+# Read only 2023 — Spark skips 2024 folder entirely (partition pruning)
+spark.read.parquet("/tmp/revenue_partitioned/year=2023").show()
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between Spark partitions and Hive partitions?" — "Spark partitions are the in-memory parallelism units — each partition is processed by one task. Hive/storage partitions are the directory structure on disk, organized by column values (like year=2024/month=1/). They're orthogonal: you can have 200 Spark partitions reading from 12 Hive partitions, or 50 Spark partitions writing to 365 Hive partitions."

@@ -10,6 +10,12 @@ tags: [sql, window-functions, analytics, ranking, aggregation]
 
 # SQL Window Functions — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of SQL window functions like a spreadsheet formula that looks at nearby rows. `SUM(amount) OVER (PARTITION BY region ORDER BY date ROWS UNBOUNDED PRECEDING)` is like a running total column that resets per region — no GROUP BY needed.
+
+---
 ## What Are Window Functions?
 
 Window functions perform calculations **across a set of rows related to the current row** — without collapsing rows into a single output like GROUP BY does.
@@ -283,6 +289,30 @@ ORDER BY hire_date;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Running total and rank per region
+WITH sales AS (
+    SELECT 'US' region, '2024-01' mo, 300 amt UNION ALL
+    SELECT 'US', '2024-02', 400 UNION ALL
+    SELECT 'EU', '2024-01', 200 UNION ALL
+    SELECT 'EU', '2024-02', 350
+)
+SELECT
+    region,
+    mo,
+    amt,
+    SUM(amt)   OVER (PARTITION BY region ORDER BY mo) AS running_total,
+    RANK()     OVER (PARTITION BY region ORDER BY amt DESC) AS rank_in_region,
+    LAG(amt,1) OVER (PARTITION BY region ORDER BY mo) AS prev_month
+FROM sales;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Find top N per group" = ROW_NUMBER() + PARTITION BY + CTE with WHERE rn <= N. This is the #1 most asked SQL pattern in DE interviews.

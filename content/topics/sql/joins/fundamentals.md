@@ -10,6 +10,12 @@ tags: [sql, joins, inner-join, left-join, right-join, full-join, cross-join]
 
 # SQL Joins — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of SQL joins like combining two guest lists for a party. INNER JOIN keeps only people on both lists. LEFT JOIN keeps everyone from the left list (with NULLs for unmatched right entries). CROSS JOIN invites every possible combination.
+
+---
 ## What Are Joins?
 
 Imagine you have two spreadsheets — one has employee names with department IDs, the other has department IDs with department names. To create a complete report with both name AND department name, you need to "look up" across tables. That's a JOIN.
@@ -278,6 +284,28 @@ JOIN orders o ON c.id = o.customer_id;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Setup
+CREATE TABLE orders (id INT, cust_id INT, amt DECIMAL);
+CREATE TABLE customers (id INT, name VARCHAR(50));
+INSERT INTO orders VALUES (1,1,100),(2,2,200),(3,99,50);
+INSERT INTO customers VALUES (1,'Alice'),(2,'Bob'),(3,'Carol');
+
+-- INNER: only orders with matching customers
+SELECT o.id, c.name, o.amt FROM orders o JOIN customers c ON o.cust_id = c.id;
+-- Result: order 1 (Alice), order 2 (Bob) -- order 3 excluded (no cust 99)
+
+-- LEFT: all orders, NULL name if no customer match
+SELECT o.id, c.name, o.amt FROM orders o LEFT JOIN customers c ON o.cust_id = c.id;
+-- Result: order 3 → name=NULL
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** For "find records in A but not B" — use LEFT JOIN + WHERE right.col IS NULL (anti-join pattern).

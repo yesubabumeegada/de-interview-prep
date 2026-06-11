@@ -10,6 +10,12 @@ tags: [airflow, dependencies, trigger-rule, fan-out, fan-in, operators, dag-desi
 
 # Airflow Task Dependencies — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of task dependencies like a project Gantt chart: some tasks can run in parallel, others must wait. Airflow's `>>` operator is how you draw those arrows.
+
+---
 ## What Are Task Dependencies?
 
 In Airflow, **task dependencies** define the execution order of tasks within a DAG. They answer the question: "Before task B can start, which other tasks must complete, and in what state?"
@@ -327,6 +333,26 @@ alert = PythonOperator(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+
+with DAG("dependencies_demo", start_date=datetime(2024,1,1), schedule=None) as dag:
+    extract_a = PythonOperator(task_id="extract_a", python_callable=lambda: None)
+    extract_b = PythonOperator(task_id="extract_b", python_callable=lambda: None)
+    transform  = PythonOperator(task_id="transform",  python_callable=lambda: None)
+    load       = PythonOperator(task_id="load",       python_callable=lambda: None)
+    # extract_a and extract_b run in parallel, transform waits for both
+    [extract_a, extract_b] >> transform >> load
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between `>>` and `set_downstream()`?" — "They're identical — `>>` is syntactic sugar for `set_downstream()`. `a >> b` means 'a must complete before b starts.' I always use `>>` because it reads left-to-right like a timeline and is what the community expects."

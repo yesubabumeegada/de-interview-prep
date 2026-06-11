@@ -10,6 +10,12 @@ tags: [python, decorators, functions, higher-order-functions, wrapping]
 
 # Python Decorators — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of decorators like gift wrapping: the gift (original function) stays the same inside, but the wrapping adds something (logging, timing, retry logic) on the outside without touching the gift itself.
+
+---
 ## What Is a Decorator?
 
 A decorator is a **function that wraps another function** to add behavior before or after it runs — without modifying the original function's code.
@@ -312,6 +318,48 @@ def expensive_lookup(customer_id):
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import time
+import functools
+
+def timer(func):
+    @functools.wraps(func)  # Preserve original function name/docstring
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        print(f"{func.__name__} took {elapsed:.3f}s")
+        return result
+    return wrapper
+
+def retry(times=3):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(times):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == times - 1:
+                        raise
+                    print(f"Retry {attempt+1}/{times} after error: {e}")
+        return wrapper
+    return decorator
+
+@timer
+@retry(times=3)
+def fetch_data():
+    return [1, 2, 3]
+
+print(fetch_data())
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Explain decorators" — "A decorator is a function that takes a function and returns an enhanced version of it. The `@decorator` syntax is sugar for `func = decorator(func)`. I use them for cross-cutting concerns like retry logic, logging, and timing — things you want on many functions without duplicating code."

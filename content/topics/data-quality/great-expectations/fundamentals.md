@@ -10,6 +10,12 @@ tags: [great-expectations, gx, data-quality, expectations, validation]
 
 # Great Expectations — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Great Expectations like a test suite for your data: you define expectations (column X should never be null, values should be between 0 and 1000), and GE runs them against every new batch before it enters the warehouse.
+
+---
 ## What Is Great Expectations?
 
 Great Expectations (GX) is the most widely used open-source data quality framework for Python. It lets you define **expectations** — assertions about your data — and validate batches of data against them. When expectations fail, GX produces human-readable validation reports.
@@ -179,6 +185,36 @@ context.build_data_docs()
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install great-expectations
+import great_expectations as gx
+
+context = gx.get_context()
+
+# Create a simple in-memory datasource (for demo)
+import pandas as pd
+df = pd.DataFrame({
+    "order_id": [1, 2, 3],
+    "amount": [100.0, 200.0, 50.0],
+    "region": ["US", "EU", "US"],
+})
+
+# Validate directly
+validator = context.sources.pandas_default.read_dataframe(df)
+validator.expect_column_to_exist("order_id")
+validator.expect_column_values_to_not_be_null("order_id")
+validator.expect_column_values_to_be_between("amount", min_value=0, max_value=10000)
+validator.expect_column_values_to_be_in_set("region", ["US", "EU", "APAC"])
+results = validator.validate()
+print(f"Success: {results.success}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Great Expectations?" — A Python DQ framework where you declare expectations (assertions) about data, then validate batches against them. Failures produce actionable reports, not just error messages.

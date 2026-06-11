@@ -10,6 +10,12 @@ tags: [etl, scd, slowly-changing-dimensions, type-1, type-2, dimensional-modelin
 
 # SCD Implementation — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of SCD (Slowly Changing Dimensions) like maintaining a history of addresses for a person: SCD Type 1 overwrites the old address (no history), SCD Type 2 adds a new row with a validity date range (full history).
+
+---
 ## What Are Slowly Changing Dimensions?
 
 In dimensional modeling, a **Slowly Changing Dimension (SCD)** is a dimension table where attribute values change over time, but slowly. Common examples:
@@ -234,6 +240,34 @@ sk = generate_surrogate_key("CUST-001", "2024-01-15T00:00:00")
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- SCD Type 2: Add new row when a customer's region changes
+-- Existing rows get end date, new row gets NULL end date (current)
+
+-- Step 1: Expire old row
+UPDATE dim_customers
+SET valid_to = CURRENT_DATE - INTERVAL '1 day', is_current = FALSE
+WHERE customer_id = 42 AND is_current = TRUE;
+
+-- Step 2: Insert new row
+INSERT INTO dim_customers (customer_id, name, region, valid_from, valid_to, is_current)
+VALUES (42, 'Alice', 'EU', CURRENT_DATE, '9999-12-31', TRUE);
+
+-- Query: get current state of all customers
+SELECT customer_id, name, region FROM dim_customers WHERE is_current = TRUE;
+
+-- Query: get Alice's state as of 2023-06-01 (point-in-time)
+SELECT * FROM dim_customers
+WHERE customer_id = 42
+  AND valid_from <= '2023-06-01' AND valid_to >= '2023-06-01';
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always ask the interviewer: "Does history matter?" If yes, SCD Type 2. If only current state matters, Type 1. This question often reveals the actual business requirement behind the technical question.

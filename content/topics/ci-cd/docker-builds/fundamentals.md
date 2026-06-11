@@ -10,6 +10,12 @@ tags: [ci-cd, docker, builds, ci, automation]
 
 # Docker Builds — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of building Docker images in CI like printing a book: you only reprint (rebuild) when the content (code or dependencies) changes. Docker layer caching means unchanged layers are reused — fast builds.
+
+---
 ## Automated Builds: The Stamp Press Analogy
 
 Manual Docker builds are like hand-stamping each coin. Automated builds in CI are like a coin press: you set up the die once (Dockerfile), feed in raw materials (code), and it produces identical coins (images) every time, stamped with the batch number (git SHA). Every PR automatically produces a testable image. Every merge to main produces a deployable image tagged with the commit that created it.
@@ -137,3 +143,35 @@ LABEL git_sha=$GIT_SHA
 LABEL build_date=$BUILD_DATE
 LABEL version=$VERSION
 ```
+
+## ▶️ Try It Yourself
+
+```yaml
+# .github/workflows/docker-build.yml
+name: Docker Build and Push
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.ECR_REGISTRY }}/my-etl:${{ github.sha }}
+          cache-from: type=gha       # Use GitHub Actions cache
+          cache-to: type=gha,mode=max
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

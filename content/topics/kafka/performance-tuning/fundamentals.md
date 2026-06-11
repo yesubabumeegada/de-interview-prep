@@ -10,6 +10,12 @@ tags: [kafka, performance, throughput, latency, producer-tuning, consumer-tuning
 
 # Kafka Performance Tuning — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Kafka performance tuning like configuring a highway: more lanes (partitions) increase throughput, batching messages reduces toll booth stops (network round trips), and compression is like compacting trucks to fit more cargo per trip.
+
+---
 ## The Performance Tradeoff Triangle
 
 Kafka performance tuning balances three competing dimensions:
@@ -175,6 +181,33 @@ For every 100 MB/s produce rate with RF=3:
 - Total network traffic: ~300 MB/s per broker (write) + ~200 MB/s (fetch consumers)
 - Plan for 10 Gbps NICs for high-throughput brokers
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Producer tuning for high throughput
+# batch.size=65536          # Batch up to 64KB before sending
+# linger.ms=10              # Wait 10ms to accumulate a batch
+# compression.type=lz4      # Compress batches (2-4x throughput)
+# buffer.memory=67108864    # 64MB producer buffer
+
+# Consumer tuning
+# fetch.min.bytes=1048576   # Wait until 1MB is available (fewer fetches)
+# fetch.max.wait.ms=500     # Max wait for fetch.min.bytes
+# max.poll.records=500      # Records per poll()
+
+# Benchmark producer throughput
+kafka-producer-perf-test.sh \
+    --topic perf-test \
+    --num-records 1000000 \
+    --record-size 1000 \
+    --throughput -1 \
+    --producer-props bootstrap.servers=localhost:9092
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always start performance discussions with the tradeoff triangle: throughput vs latency vs durability. Show you understand that optimizing one usually comes at the expense of another.

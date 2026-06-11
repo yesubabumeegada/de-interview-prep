@@ -10,6 +10,12 @@ tags: [dimensional-modeling, kimball, facts, dimensions, star-schema, data-wareh
 
 # Dimensional Modeling — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of dimensional modeling like filling out a receipt: the amount, quantity, and price are facts (measurable numbers), while the store, product, and date are dimensions (the 'who/what/when/where' context).
+
+---
 ## What is Dimensional Modeling?
 
 Dimensional modeling is a data warehouse design technique optimized for **query performance and user understandability**. Developed by Ralph Kimball, it organizes data into two types of tables:
@@ -226,6 +232,41 @@ graph TD
 
 **Rule:** Same dimension, same keys, same attributes = join any fact table and get consistent results.
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Identify facts vs dimensions
+-- Facts: numeric, additive, event-based (order amount, click count, revenue)
+-- Dimensions: descriptive, slowly changing (customer name, product category)
+
+-- Good fact: naturally numeric, makes sense to SUM/AVG
+-- amount DECIMAL -- good fact: SUM(amount) = total revenue
+-- customer_id INT -- this is a foreign key, NOT a fact
+
+-- Additive fact: SUM across all dimensions makes sense
+-- SELECT SUM(amount) FROM fact_orders  → total revenue ✓
+
+-- Semi-additive fact: SUM only across some dimensions
+-- account_balance: SUM across customers OK, but not across time (snapshot)
+
+-- Non-additive fact: never SUM
+-- order_margin_pct DECIMAL: AVG is OK, SUM is meaningless
+
+SELECT
+    p.category,
+    d.month,
+    SUM(f.amount) AS revenue,       -- additive: SUM across any dim
+    AVG(f.margin_pct) AS avg_margin -- non-additive: use AVG
+FROM fact_orders f
+JOIN dim_product p USING (product_sk)
+JOIN dim_date d USING (date_sk)
+GROUP BY p.category, d.month;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is dimensional modeling?" — A design technique for data warehouses. Organize data into fact tables (measurements/metrics) and dimension tables (descriptive context). Optimized for query performance and business user understanding. Created by Ralph Kimball.

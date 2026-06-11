@@ -10,6 +10,12 @@ tags: [sql, recursive-cte, hierarchies, tree-traversal, org-chart, bill-of-mater
 
 # Recursive Queries — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of recursive CTEs like a mirror facing a mirror: the query refers to its own output, letting you traverse hierarchies (org charts, bill of materials, folder trees) without knowing the depth in advance.
+
+---
 ## What Are Recursive CTEs?
 
 A **recursive CTE** (Common Table Expression) is a query that references itself to traverse hierarchical or graph-like data. Think of it as giving SQL a "loop" — it repeatedly executes until it runs out of rows to process.
@@ -246,6 +252,31 @@ SELECT dt FROM dates;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Recursive CTE: traverse an employee hierarchy
+WITH RECURSIVE org_tree AS (
+    -- Base case: start with top-level managers (no parent)
+    SELECT id, name, manager_id, 1 AS level
+    FROM employees
+    WHERE manager_id IS NULL
+
+    UNION ALL
+
+    -- Recursive case: find direct reports of the previous level
+    SELECT e.id, e.name, e.manager_id, ot.level + 1
+    FROM employees e
+    JOIN org_tree ot ON e.manager_id = ot.id
+)
+SELECT level, name FROM org_tree ORDER BY level, name;
+-- Works for any depth: CEO → VP → Manager → IC
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When would you use a recursive CTE?" — "Anytime I need to traverse hierarchical data — org charts, category trees, bill of materials, or graph paths. The key structure is: base case selects the root nodes, recursive step joins back to find children, and UNION ALL combines all levels. I always add a depth limit as a safety net against circular references."

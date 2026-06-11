@@ -10,6 +10,12 @@ tags: [airflow, dynamic-dags, task-mapping, config-driven, loops, parallelism]
 
 # Airflow Dynamic DAGs — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of dynamic DAGs like a template letter with mail-merge: one template, many instantiated DAGs — one per customer, per region, or per config entry.
+
+---
 ## What Are Dynamic DAGs?
 
 A **dynamic DAG** is one where the tasks — their number, names, or configuration — are determined at runtime based on external data, rather than being hardcoded at write time.
@@ -306,6 +312,33 @@ for table in TABLES:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+
+# Generate one DAG per region dynamically
+for region in ["us", "eu", "apac"]:
+    with DAG(
+        dag_id=f"etl_{region}",
+        start_date=datetime(2024, 1, 1),
+        schedule="@daily",
+        catchup=False,
+        tags=[region],
+    ) as dag:
+        PythonOperator(
+            task_id="process",
+            python_callable=lambda r=region: print(f"Processing {r}")
+        )
+    globals()[f"etl_{region}"] = dag  # Register in Airflow
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between a loop-based dynamic DAG and dynamic task mapping?" — "Loop-based: tasks are generated at DAG parse time from a static source (config file, list). The structure is fixed once parsed. Dynamic task mapping (Airflow 2.3+): the number of task instances is determined at runtime from an upstream task's output. Use mapping when you don't know how many tasks you'll need until the pipeline starts running."

@@ -10,6 +10,12 @@ tags: [snowflake, streams, tasks, cdc, change-tracking, automation]
 
 # Snowflake Streams and Tasks — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Snowflake Streams like a change log camera: it photographs what rows were inserted, updated, or deleted since you last checked. Tasks are the scheduled job that reads the photo and acts on it.
+
+---
 ## What Are Streams?
 
 A Stream is Snowflake's **change data capture (CDC) mechanism**. It tracks row-level changes (INSERT, UPDATE, DELETE) on a table, view, or directory table since the last time the stream was consumed.
@@ -227,6 +233,37 @@ SHOW TASKS;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Create a stream on a source table
+CREATE STREAM orders_stream ON TABLE raw.orders;
+
+-- The stream captures all changes (INSERT, UPDATE, DELETE)
+-- Rows appear with metadata columns:
+-- METADATA$ACTION: 'INSERT' or 'DELETE'
+-- METADATA$ISUPDATE: TRUE if this is the post-image of an UPDATE
+
+-- Create a task to process the stream every 5 minutes
+CREATE TASK process_new_orders
+    WAREHOUSE = etl_wh
+    SCHEDULE = '5 MINUTE'
+WHEN
+    SYSTEM$STREAM_HAS_DATA('orders_stream')  -- Only run if stream has data
+AS
+INSERT INTO silver.orders
+SELECT order_id, amount, region, order_date
+FROM orders_stream
+WHERE METADATA$ACTION = 'INSERT';
+
+-- Start the task (tasks start suspended by default)
+ALTER TASK process_new_orders RESUME;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What are Snowflake Streams?" — CDC mechanism that tracks INSERT/UPDATE/DELETE on a table. Creates a change log you can query. When consumed in a DML statement, the offset advances (you only see new changes next time). Use with Tasks for automated incremental ETL.

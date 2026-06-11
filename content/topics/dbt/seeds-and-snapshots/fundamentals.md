@@ -10,6 +10,12 @@ tags: [dbt, seeds, snapshots, scd-type-2, history-tracking]
 
 # dbt Seeds & Snapshots
 
+
+## 🎯 Analogy
+
+Think of seeds like lookup tables checked into Git — small CSV files (country codes, category mappings) that dbt loads into your warehouse. Snapshots are a time machine: they track how a row changed over time using Type 2 SCD logic.
+
+---
 ## Seeds — Static Reference Data
 
 Seeds are CSV files that dbt loads into your warehouse as tables. Use them for small, slowly-changing reference data:
@@ -164,3 +170,29 @@ FROM {{ ref('snap_customers') }}
 WHERE customer_id = 12345
 ORDER BY dbt_valid_from;
 ```
+
+## ▶️ Try It Yourself
+
+```sql
+-- seeds/country_codes.csv (committed to Git)
+-- code,name
+-- US,United States
+-- DE,Germany
+-- dbt seed  →  loads into warehouse as a table
+
+-- snapshots/orders_snapshot.sql  (Type 2 SCD)
+{% snapshot orders_snapshot %}
+{{ config(
+    target_schema='snapshots',
+    unique_key='order_id',
+    strategy='timestamp',
+    updated_at='updated_at',
+) }}
+SELECT * FROM {{ source('raw', 'orders') }}
+{% endsnapshot %}
+-- dbt snapshot  →  adds dbt_valid_from / dbt_valid_to columns
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

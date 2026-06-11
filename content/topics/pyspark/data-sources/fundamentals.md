@@ -10,6 +10,12 @@ tags: [pyspark, data-sources, parquet, csv, json, delta, reading, writing]
 
 # PySpark Data Sources — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Spark data sources like universal adapters — one consistent DataFrame API regardless of whether the data lives in S3 Parquet, a Postgres table, a Kafka topic, or a Delta table.
+
+---
 ## The DataFrameReader API
 
 Every Spark data read starts with `spark.read` — a `DataFrameReader` that provides a fluent interface for data ingestion.
@@ -179,6 +185,26 @@ raw_df = spark.read.schema(schema).option("header", "true").csv("s3://raw/orders
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.master("local[*]").appName("sources").getOrCreate()
+import tempfile, os
+# Write a Parquet file first
+data = [("Alice", 300), ("Bob", 150)]
+df = spark.createDataFrame(data, ["name", "amount"])
+path = "/tmp/demo_parquet"
+df.write.mode("overwrite").parquet(path)
+# Read it back
+df2 = spark.read.parquet(path)
+df2.show()
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why Parquet over CSV?" — "Parquet is columnar (reads only needed columns), embeds schema, supports predicate pushdown via row group stats, and compresses 5-10x better. CSV is row-based — even reading one column requires scanning entire rows."

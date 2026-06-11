@@ -10,6 +10,12 @@ tags: [pyspark, kubernetes, k8s, deployment, spark-submit, pods]
 
 # Spark on Kubernetes — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of running Spark on Kubernetes like ordering from a restaurant that only charges you for what you eat: Kubernetes spins up executor pods when the job starts and tears them down when it finishes — no idle cluster paying rent.
+
+---
 ## Why Spark on Kubernetes?
 
 Kubernetes provides container-level isolation, autoscaling, and multi-tenancy for Spark without a separate Hadoop cluster.
@@ -164,6 +170,26 @@ kubectl describe pod daily-etl-driver -n spark-production  # Events
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Submit a Spark job to Kubernetes
+spark-submit \
+  --master k8s://https://<k8s-api>:6443 \
+  --deploy-mode cluster \
+  --conf spark.executor.instances=3 \
+  --conf spark.kubernetes.container.image=apache/spark:3.5.0 \
+  --conf spark.kubernetes.namespace=data \
+  local:///opt/spark/examples/jars/spark-examples.jar 1000
+
+# Check pods during execution
+kubectl get pods -n data -w
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why Spark on K8s instead of YARN?" — "K8s provides container isolation, cluster autoscaling, namespace-based multi-tenancy, and runs on any cloud. You share one K8s cluster between Spark, APIs, and ML instead of maintaining a separate Hadoop cluster."

@@ -10,6 +10,12 @@ tags: [sql, subqueries, correlated-subquery, scalar-subquery, exists, in, derive
 
 # SQL Subqueries — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of subqueries like a two-step research process: first run the inner query to get a list (e.g., top customers), then use that list in the outer query to filter or join. CTEs are the same idea but named and reusable.
+
+---
 ## What Is a Subquery?
 
 A **subquery** (also called an inner query or nested query) is a SELECT statement written inside another SQL statement. It runs first and its result is used by the outer query.
@@ -277,6 +283,36 @@ WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id);
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Scalar subquery: returns one value
+SELECT name, amount,
+    amount - (SELECT AVG(amount) FROM orders) AS diff_from_avg
+FROM orders;
+
+-- IN subquery: filter by a set
+SELECT * FROM customers
+WHERE id IN (
+    SELECT DISTINCT customer_id FROM orders WHERE amount > 500
+);
+
+-- EXISTS: more efficient than IN for large sets
+SELECT * FROM customers c
+WHERE EXISTS (
+    SELECT 1 FROM orders o WHERE o.customer_id = c.id AND o.amount > 500
+);
+
+-- Correlated subquery: references outer query (runs once per row — be careful)
+SELECT name, amount,
+    (SELECT COUNT(*) FROM orders o2 WHERE o2.customer_id = o1.customer_id) AS order_count
+FROM orders o1;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between IN and EXISTS?" — "IN executes the subquery once and compares against the full result set. EXISTS executes the subquery once per outer row and stops as soon as it finds one matching row. For large result sets, EXISTS is usually faster because it short-circuits. Also, NOT EXISTS is safer than NOT IN when NULLs might be present in the subquery result."

@@ -10,6 +10,12 @@ tags: [airflow, deployment, kubernetes, docker, local, architecture]
 
 # Airflow Deployment Patterns — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Airflow deployment like choosing between a food truck (Docker Compose — easy, portable), a diner (managed MWAA/Cloud Composer — someone else runs it), or building your own restaurant (Kubernetes — full control, full responsibility).
+
+---
 ## Airflow's Core Components
 
 Before choosing a deployment pattern, understand what needs to run:
@@ -196,6 +202,29 @@ git-sync:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Option 1: Docker Compose (local/dev)
+# docker-compose up airflow-init && docker-compose up
+
+# Option 2: Helm on Kubernetes (production)
+helm repo add apache-airflow https://airflow.apache.org
+helm upgrade --install airflow apache-airflow/airflow \
+  --namespace airflow \
+  --set executor=KubernetesExecutor \
+  --set dags.gitSync.enabled=true \
+  --set dags.gitSync.repo=https://github.com/org/dags \
+  -f values.yaml
+
+# Check pod status
+kubectl get pods -n airflow
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What executor would you choose for production?" — The right answer depends on scale and infrastructure. For a team running < 50 concurrent tasks on a single cloud VM, `LocalExecutor` is fine. For horizontal scaling needs, `CeleryExecutor`. For cloud-native with strong isolation requirements, `KubernetesExecutor`. Avoid giving a blanket answer — ask about the constraints first.

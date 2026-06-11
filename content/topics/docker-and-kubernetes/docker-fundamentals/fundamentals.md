@@ -10,6 +10,12 @@ tags: [docker, containers, images, data-engineering]
 
 # Docker Fundamentals — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Docker containers like shipping containers: the container packages your app and all its dependencies so it runs identically on your laptop, in CI, and in production — no 'works on my machine' surprises.
+
+---
 ## The Shipping Container Analogy
 
 Before shipping containers, loading a ship was chaos — every item needed custom rigging and stacking. Shipping containers standardized everything: you pack your goods into a standard box, and the crane, ship, and port equipment all know exactly how to handle it. Docker containers work the same way for software. You package your Spark job, Python dependencies, and config into one standard container image. Whether it runs on your laptop, a CI server, or a production Kubernetes cluster, it behaves identically. No more "works on my machine" — the container *is* the machine environment.
@@ -183,3 +189,32 @@ docker compose down -v      # also remove volumes
 | CI/CD pipeline execution | Consistent test environment |
 | Local development | Full stack without installing services |
 | Production deployment | Immutable, versioned artifacts |
+
+## ▶️ Try It Yourself
+
+```bash
+# Build an image from a Dockerfile
+docker build -t my-etl-job:1.0 .
+
+# Run the container
+docker run --rm my-etl-job:1.0
+
+# Run interactively (for debugging)
+docker run -it --rm my-etl-job:1.0 /bin/bash
+
+# Run with environment variables and volume mount
+docker run --rm \
+  -e DB_HOST=localhost \
+  -v $(pwd)/data:/data \
+  my-etl-job:1.0
+
+# List running containers
+docker ps
+
+# View logs
+docker logs <container_id>
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

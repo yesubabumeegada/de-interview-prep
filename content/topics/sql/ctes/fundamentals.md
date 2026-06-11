@@ -10,6 +10,12 @@ tags: [sql, ctes, common-table-expressions, with-clause, readability, subqueries
 
 # SQL CTEs — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of CTEs like named sub-reports you write first, then reference. Instead of nesting subqueries 5 levels deep, you name each step and build on it — same result, dramatically more readable.
+
+---
 ## What Is a CTE?
 
 A **CTE (Common Table Expression)** is a temporary, named result set that you define at the beginning of a query using the `WITH` keyword. Think of it as creating a temporary view that only exists for the duration of that single query.
@@ -302,6 +308,32 @@ SELECT * FROM deduped WHERE rn = 1;  -- Keep only the latest version
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+WITH
+daily_revenue AS (
+    SELECT DATE(order_date) AS day, SUM(amount) AS revenue
+    FROM orders
+    GROUP BY 1
+),
+moving_avg AS (
+    SELECT
+        day,
+        revenue,
+        AVG(revenue) OVER (ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS ma_7d
+    FROM daily_revenue
+)
+SELECT day, revenue, ROUND(ma_7d, 2) AS moving_avg_7d
+FROM moving_avg
+WHERE day >= '2024-01-01'
+ORDER BY day;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** When asked "write a query to find X," start with a CTE structure even if a subquery would work. It signals you write production-quality, maintainable SQL. Name your CTEs descriptively.

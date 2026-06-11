@@ -10,6 +10,12 @@ tags: [sql, indexing, b-tree, query-optimization, performance, postgresql, mysql
 
 # SQL Indexing Strategies — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of a database index like a book's index: instead of reading every page to find 'revenue,' you flip to the index, get the page numbers, and jump directly there.
+
+---
 ## What Is an Index?
 
 An **index** is a separate data structure maintained alongside a table that allows the database to find rows quickly without scanning every row. Think of it like the index in the back of a textbook — instead of reading every page to find "recursion," you jump directly to page 347.
@@ -262,6 +268,31 @@ WHERE avg_fragmentation_in_percent > 30;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- B-tree index (default): great for =, <, >, BETWEEN, ORDER BY
+CREATE INDEX idx_orders_date ON orders(order_date);
+
+-- Composite index: column order matters — most selective column first
+CREATE INDEX idx_orders_region_date ON orders(region, order_date);
+-- Supports: WHERE region='US' AND order_date > '2024-01-01' ✓
+-- Does NOT support: WHERE order_date > '2024-01-01' alone ✗ (skips region)
+
+-- Partial index: index only the rows you filter on
+CREATE INDEX idx_active_orders ON orders(customer_id)
+WHERE status = 'active';  -- Much smaller index, faster for active-only queries
+
+-- Check index usage (Postgres)
+SELECT schemaname, tablename, indexname, idx_scan
+FROM pg_stat_user_indexes
+ORDER BY idx_scan ASC;  -- Low scan count = unused index
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When should you add an index?" — "When a column is frequently used in WHERE, JOIN ON, or ORDER BY clauses, has high selectivity (many distinct values), and the table is large enough that a full scan is noticeably slow. I also check the read/write ratio — a heavily-written table with many indexes pays a high maintenance cost."

@@ -10,6 +10,12 @@ tags: [airflow, backfills, catchup, execution-date, data-interval, scheduler, hi
 
 # Airflow Backfills — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of backfilling like catching up on missed newspaper deliveries: Airflow re-runs past intervals that were skipped, treating each historical date as if it were today for that run.
+
+---
 ## What Is a Backfill?
 
 A **backfill** is the process of running a DAG for historical dates that it either missed or needs to reprocess. When a new pipeline is deployed, or when a bug is discovered and fixed, you often need to re-execute the pipeline over a past date range.
@@ -291,6 +297,28 @@ airflow dags backfill \
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Trigger a backfill for a date range
+airflow dags backfill my_etl_dag \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31
+
+# Check backfill status
+airflow dags list-runs -d my_etl_dag
+
+# Dry run (show what would run without executing)
+airflow dags backfill my_etl_dag \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-07 \
+    --dry-run
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between `catchup=True` and the backfill CLI command?" — "`catchup=True` is automatic — when the DAG activates, Airflow automatically creates and runs all intervals from `start_date` to now. The backfill CLI is manual — you explicitly specify a date range to process. Most production teams use `catchup=False` globally and run targeted backfills via CLI to avoid accidental mass re-runs on deploy."

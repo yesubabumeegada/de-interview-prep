@@ -10,6 +10,12 @@ tags: [sql, stored-procedures, plpgsql, t-sql, procedural-sql, parameters, trans
 
 # SQL Stored Procedures — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of stored procedures like pre-compiled macros saved in the database: complex multi-step logic (insert + update + audit log) runs in a single call, and the database only needs to parse and plan it once.
+
+---
 ## What Is a Stored Procedure?
 
 A **stored procedure** is a named, pre-compiled collection of SQL statements and optional control flow logic (IF/ELSE, loops, variables) stored in the database and executed by calling its name. Think of it as a function that lives inside the database.
@@ -365,6 +371,39 @@ $$;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Postgres stored procedure
+CREATE OR REPLACE PROCEDURE process_order(
+    p_order_id INT,
+    p_status TEXT
+)
+LANGUAGE plpgsql AS $$
+BEGIN
+    -- Update order status
+    UPDATE orders SET status = p_status, updated_at = NOW()
+    WHERE id = p_order_id;
+
+    -- Insert audit record
+    INSERT INTO audit_log (table_name, record_id, action, changed_at)
+    VALUES ('orders', p_order_id, 'STATUS_CHANGE', NOW());
+
+    -- Raise error if order not found
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Order % not found', p_order_id;
+    END IF;
+END;
+$$;
+
+-- Call it
+CALL process_order(42, 'completed');
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When would you use a stored procedure vs application-layer logic?" — "Stored procedures are useful for: operations requiring transactions that span multiple statements (like fund transfers), batch operations that are more efficient running in the database, enforcing business rules at the data layer, or granting specific access without exposing tables directly. Modern cloud data warehouses (Snowflake, BigQuery) support JavaScript/Python procedures too. For simple data access, I prefer application-layer logic for testability and version control."

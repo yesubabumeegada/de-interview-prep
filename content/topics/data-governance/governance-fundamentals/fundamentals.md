@@ -10,6 +10,12 @@ tags: [data-governance, policy, stewardship, framework, compliance]
 
 # Data Governance — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data governance like traffic laws for data: without them, everyone drives however they want (naming conventions, access, quality), and collisions (data inconsistencies, breaches) are inevitable.
+
+---
 ## What Is Data Governance?
 
 Data governance is the set of policies, processes, roles, and standards that ensure data is accurate, accessible, consistent, and protected across an organization.
@@ -163,6 +169,44 @@ def get_policies_for_table(table: str) -> List[DataPolicy]:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Minimal governance check: validate a dataset before it enters the catalog
+from dataclasses import dataclass, field
+from typing import Optional
+
+@dataclass
+class DatasetMetadata:
+    name: str
+    owner: str
+    description: str
+    sensitivity: str  # 'public', 'internal', 'confidential', 'restricted'
+    retention_days: int
+    pii_columns: list[str] = field(default_factory=list)
+
+def governance_check(meta: DatasetMetadata) -> list[str]:
+    errors = []
+    if not meta.owner:
+        errors.append("Dataset must have an owner")
+    if not meta.description or len(meta.description) < 20:
+        errors.append("Description must be at least 20 characters")
+    if meta.sensitivity not in ["public","internal","confidential","restricted"]:
+        errors.append(f"Invalid sensitivity level: {meta.sensitivity}")
+    if meta.pii_columns and meta.sensitivity == "public":
+        errors.append("Dataset with PII cannot be classified as public")
+    return errors
+
+meta = DatasetMetadata("orders","alice@co.com","Order data",
+                        "confidential", 365, ["email"])
+errors = governance_check(meta)
+print("PASSED" if not errors else f"FAILED: {errors}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is data governance?" — It's the framework of policies, roles, and processes that ensure data is trustworthy, secure, and compliant. Key pillars: data quality, access control, metadata, lineage, and compliance. Often confused with data management — governance is the *policy*, management is the *implementation*.

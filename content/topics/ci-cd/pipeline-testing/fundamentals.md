@@ -10,6 +10,12 @@ tags: [ci-cd, testing, pipelines, pytest, data-quality]
 
 # Pipeline Testing — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of pipeline testing like test-driving a car before selling it: unit tests check individual parts (functions), integration tests check that parts work together (source → transform → load), and end-to-end tests drive the full route.
+
+---
 ## The Building Inspector Analogy
 
 Testing a data pipeline is like a building inspector checking a construction site. You don't wait until the skyscraper is finished to discover the foundation is cracked. Inspectors check at every stage — foundation, framing, plumbing, electrical — before the next layer goes on top. Pipeline testing works the same way: catch bugs at the unit level (does this function transform data correctly?), then integration level (do these two components talk correctly?), then end-to-end (does the full pipeline produce the right output?). Waiting until production to find bugs is the data equivalent of discovering the foundation problem after moving in.
@@ -177,3 +183,35 @@ Run: `dbt test --select orders_daily`
 ```
 
 The goal: **every PR runs tests automatically, and failing tests block merge**.
+
+## ▶️ Try It Yourself
+
+```python
+import pytest
+import pandas as pd
+
+# Unit test: test the transformation function in isolation
+def transform_orders(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df = df[df["amount"] > 0]
+    df["amount_eur"] = df["amount"] * 0.92
+    return df
+
+def test_transform_filters_negative_amounts():
+    df = pd.DataFrame({"order_id":[1,2,3], "amount":[-50, 100, 200]})
+    result = transform_orders(df)
+    assert len(result) == 2
+    assert (result["amount"] > 0).all()
+
+def test_transform_adds_eur_column():
+    df = pd.DataFrame({"order_id":[1], "amount":[100.0]})
+    result = transform_orders(df)
+    assert "amount_eur" in result.columns
+    assert abs(result["amount_eur"].iloc[0] - 92.0) < 0.01
+
+# Run: pytest test_pipeline.py -v
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

@@ -10,6 +10,12 @@ tags: [etl, backfilling, airflow, catchup, reprocessing]
 
 # Backfilling — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of backfilling like catching up on missed lessons: if your pipeline was down for 5 days, you re-run it for each missed day in order, computing the same result as if it had run on time.
+
+---
 ## What Is Backfilling?
 
 **Backfilling** is the process of re-running a data pipeline for historical dates — either because the pipeline didn't exist yet (initial load) or because data needs to be corrected or recomputed.
@@ -239,6 +245,37 @@ def throttled_backfill(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from datetime import date, timedelta
+
+def run_daily_pipeline(run_date: date) -> dict:
+    """Idempotent: safe to run multiple times for same date."""
+    print(f"Processing {run_date}...")
+    # Simulates: read source, transform, overwrite partition
+    return {"date": str(run_date), "rows": 1000}
+
+def backfill(start_date: date, end_date: date):
+    """Re-run pipeline for each date in range."""
+    current = start_date
+    results = []
+    while current <= end_date:
+        result = run_daily_pipeline(current)
+        results.append(result)
+        current += timedelta(days=1)
+    return results
+
+# Backfill 5 missed days
+results = backfill(date(2024, 1, 1), date(2024, 1, 5))
+for r in results:
+    print(r)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always verify that your pipeline is idempotent before running a backfill. A non-idempotent backfill multiplies data. The key question: "If I run this for 2024-01-15 twice, do I get double the rows?"

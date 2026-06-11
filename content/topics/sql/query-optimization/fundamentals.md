@@ -10,6 +10,12 @@ tags: [sql, optimization, performance, indexes, execution-plan, where-clause]
 
 # SQL Query Optimization — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of query optimization like GPS route planning: the query planner evaluates multiple paths (full scan vs index scan, hash join vs merge join) and picks the cheapest one based on table statistics.
+
+---
 ## Why Queries Are Slow
 
 A query can be slow for three main reasons:
@@ -233,6 +239,33 @@ Before diving into complex optimization:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- See the execution plan (Postgres)
+EXPLAIN ANALYZE
+SELECT c.name, SUM(o.amount) AS total
+FROM orders o
+JOIN customers c ON o.customer_id = c.id
+WHERE o.order_date >= '2024-01-01'
+GROUP BY c.name;
+
+-- Common optimizations:
+-- 1. Add index on the filter column
+CREATE INDEX idx_orders_date ON orders(order_date);
+
+-- 2. Add index on join column
+CREATE INDEX idx_orders_cust ON orders(customer_id);
+
+-- 3. Avoid function on indexed column (prevents index use):
+-- BAD:  WHERE YEAR(order_date) = 2024
+-- GOOD: WHERE order_date >= '2024-01-01' AND order_date < '2025-01-01'
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you optimize a slow query?" — "First, I read the execution plan. I look for full table scans (add index), sorts on large data (add index on ORDER BY), and row estimate mismatches (refresh statistics). Then I check if I'm reading more data than needed (filter earlier, select fewer columns)."

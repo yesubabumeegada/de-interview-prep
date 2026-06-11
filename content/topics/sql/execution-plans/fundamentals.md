@@ -10,6 +10,12 @@ tags: [sql, execution-plans, explain, query-optimizer, seq-scan, index-scan, has
 
 # SQL Execution Plans — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of an execution plan like an X-ray of how the database actually runs your query — it reveals whether it's doing an expensive full table scan when it should be using an index, or a nested-loop join when a hash join would be faster.
+
+---
 ## What Is a Query Execution Plan?
 
 A **query execution plan** (or query plan) describes the sequence of steps the database engine takes to execute a SQL query. The **query optimizer** — a component of the database — analyzes the query, considers available indexes, table statistics, and estimated row counts, then chooses the most efficient strategy.
@@ -221,6 +227,31 @@ ROLLBACK;  -- Undo the actual deletion
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Postgres: EXPLAIN ANALYZE runs the query and shows actual times
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT c.name, COUNT(o.id), SUM(o.amount)
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+WHERE o.order_date >= '2024-01-01'
+GROUP BY c.name;
+
+-- Key things to look for:
+-- "Seq Scan" on large table → needs an index
+-- "Hash Join" vs "Nested Loop" → Hash is usually better for large tables
+-- "Rows Removed by Filter: 99000" → the filter should be pushed earlier
+-- Actual rows >> Estimated rows → stale statistics (run ANALYZE)
+
+-- Snowflake: use Query Profile in the UI or:
+-- SELECT * FROM TABLE(EXPLAIN_JSON($$your_query$$));
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between EXPLAIN and EXPLAIN ANALYZE?" — "EXPLAIN shows the query plan the optimizer chose, with estimated costs and row counts — without actually running the query. EXPLAIN ANALYZE actually executes the query and shows both estimated and actual metrics: actual row counts, actual execution time, and buffer hit/miss counts. The comparison between estimated and actual rows is the most valuable diagnostic tool — a large discrepancy indicates stale statistics."

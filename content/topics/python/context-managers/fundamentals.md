@@ -10,6 +10,12 @@ tags: [python, context-managers, with-statement, resource-management, cleanup]
 
 # Python Context Managers — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of context managers like a loan system: you borrow a resource (file, DB connection, lock), do your work, and the `with` block guarantees return — even if something crashes mid-way.
+
+---
 ## What Is a Context Manager?
 
 A context manager is a Python pattern that **automatically handles setup and cleanup** of resources — ensuring cleanup happens even if errors occur. You use them with the `with` statement.
@@ -246,6 +252,43 @@ with pipeline_resources("source://...", "target://...", "my-bucket") as (src, tg
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import contextlib
+
+# Class-based context manager
+class DatabaseConnection:
+    def __enter__(self):
+        print("Opening DB connection")
+        self.conn = {"status": "open"}  # Simulate connection
+        return self.conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print("Closing DB connection")
+        self.conn["status"] = "closed"
+        return False  # Don't suppress exceptions
+
+with DatabaseConnection() as conn:
+    print(f"Working with {conn}")
+    # Connection closes automatically even if exception occurs
+
+# Generator-based context manager (simpler)
+@contextlib.contextmanager
+def timer(label):
+    import time
+    start = time.perf_counter()
+    yield
+    print(f"{label}: {time.perf_counter()-start:.3f}s")
+
+with timer("data processing"):
+    total = sum(range(10**6))
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a context manager?" — "A pattern for resource management using the `with` statement. It guarantees cleanup (closing files, releasing connections, deleting temp resources) even when exceptions occur. Defined by implementing `__enter__` and `__exit__`, or using the `@contextmanager` decorator."

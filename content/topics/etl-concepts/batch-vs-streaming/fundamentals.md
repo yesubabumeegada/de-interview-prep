@@ -10,6 +10,12 @@ tags: [etl, batch, streaming, real-time, data-pipeline, architecture]
 
 # Batch vs Streaming — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of batch vs streaming like grocery shopping vs a vending machine. Batch is buying a week of groceries in one trip (efficient, but you wait for the weekly run). Streaming is the vending machine — data is processed the moment it arrives.
+
+---
 ## The Core Difference
 
 ```mermaid
@@ -144,3 +150,33 @@ flowchart LR
 ## Interview Tip 💡
 
 > The most common interview question here is: "When would you choose streaming over batch?" The strong answer discusses **latency requirements** first (does the business need sub-minute freshness?), then **complexity and cost** (streaming is harder and more expensive — only use it when batch latency is insufficient). Bonus: mention that many "real-time" requirements are actually fine with micro-batch (5-minute delay).
+
+## ▶️ Try It Yourself
+
+```python
+# Batch: process a day's worth of orders at once (runs at midnight)
+import pandas as pd
+from datetime import date
+
+def batch_daily_revenue(date_str: str):
+    df = pd.read_parquet(f"s3://data/orders/date={date_str}/")
+    return df.groupby("region")["amount"].sum()
+
+# Streaming: process each order as it arrives (Faust/Kafka)
+# import faust
+# app = faust.App("revenue", broker="kafka://localhost:9092")
+# @app.agent(app.topic("orders"))
+# async def process(stream):
+#     async for order in stream:
+#         print(f"Live: order {order['id']} = ${order['amount']}")
+
+# For demo: simulate a streaming-style loop
+import time
+events = [{"id":1,"amount":100}, {"id":2,"amount":200}]
+for event in events:
+    print(f"Processing event {event['id']} immediately: ${event['amount']}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

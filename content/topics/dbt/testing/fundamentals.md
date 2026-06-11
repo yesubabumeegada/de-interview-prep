@@ -10,6 +10,12 @@ tags: [dbt, testing, data-quality, generic-tests, singular-tests]
 
 # dbt Testing
 
+
+## 🎯 Analogy
+
+Think of dbt tests like automated quality control on an assembly line — every time data flows through, tests verify that IDs are unique, amounts are positive, and foreign keys aren't broken, before bad data reaches analysts.
+
+---
 ## Why Test in dbt?
 
 dbt tests validate that your data meets expectations. They run as SQL queries — if a test returns rows, it fails; if it returns 0 rows, it passes.
@@ -173,3 +179,33 @@ dbt build --select fct_orders
 | Dimension | `unique` + `not_null` on PK, `accepted_values` on enums |
 | Fact | `not_null` on PK, `relationships` on FKs, range checks on amounts |
 | Source | `not_null` + `unique` on natural keys, freshness |
+
+## ▶️ Try It Yourself
+
+```yaml
+# models/staging/schema.yml
+version: 2
+models:
+  - name: stg_orders
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['pending', 'completed', 'cancelled']
+      - name: customer_id
+        tests:
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+
+# Run only tests
+# dbt test --select stg_orders
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

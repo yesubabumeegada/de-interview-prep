@@ -10,6 +10,12 @@ tags: [pyspark, aqe, adaptive-query-execution, optimization, spark3]
 
 # PySpark Adaptive Query Execution — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of AQE like a GPS that recalculates the route mid-trip after seeing actual traffic. Instead of committing to a query plan upfront, Spark adjusts partition counts, join strategies, and skew handling based on real runtime statistics.
+
+---
 ## What Is AQE?
 
 Adaptive Query Execution (AQE) is a Spark 3.0+ feature that **re-optimizes the query plan at runtime** based on actual data statistics collected after each shuffle stage. Instead of relying solely on pre-execution estimates (which are often wrong), AQE adjusts the plan mid-flight.
@@ -142,6 +148,22 @@ df.explain("formatted")
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.master("local[*]")     .config("spark.sql.adaptive.enabled", "true")     .config("spark.sql.adaptive.coalescePartitions.enabled", "true")     .appName("aqe").getOrCreate()
+print(spark.conf.get("spark.sql.adaptive.enabled"))  # true
+# AQE automatically coalesces shuffle partitions after seeing data size
+data = [(i, i % 3) for i in range(1000)]
+df = spark.createDataFrame(data, ["id", "cat"])
+df.groupBy("cat").count().show()  # AQE may reduce shuffle partitions automatically
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is AQE?" — "Adaptive Query Execution is a Spark 3.0 feature that re-optimizes the query plan at runtime using actual statistics collected after each shuffle stage. It solves three problems automatically: coalesces tiny partitions, converts sort-merge joins to broadcast when one side is actually small, and handles data skew by splitting oversized partitions."

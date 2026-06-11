@@ -10,6 +10,12 @@ tags: [etl, idempotency, upsert, deduplication, exactly-once]
 
 # Idempotency — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of idempotency like a light switch: flipping it ON when it's already ON does nothing. An idempotent pipeline run produces the same result whether it runs once or ten times — safe to retry without creating duplicates.
+
+---
 ## What Is Idempotency?
 
 An operation is **idempotent** if applying it multiple times produces the same result as applying it once.
@@ -216,6 +222,35 @@ with DAG(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import hashlib
+
+def upsert_orders(orders: list[dict], conn):
+    """Idempotent: re-running with the same orders produces no change."""
+    for order in orders:
+        sql = (
+            'INSERT INTO orders (id, amount, region) '
+            'VALUES (:id, :amount, :region) '
+            'ON CONFLICT (id) DO UPDATE SET amount=EXCLUDED.amount, region=EXCLUDED.region'
+        )
+        conn.execute(sql, order)
+
+# Partition overwrite: idempotent batch pattern
+def write_partition(df, date_str: str, output_path: str):
+    # Overwrite entire partition — running twice gives same result
+    df.write.mode("overwrite").parquet(f"{output_path}/date={date_str}")
+
+# Bad (not idempotent): INSERT without ON CONFLICT — creates duplicates on retry
+# Good: MERGE / UPSERT / overwrite partition / DELETE+INSERT
+print("Idempotent write: safe to retry!")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Idempotency is one of the most important properties in pipeline design. Frame your answer around retries: "If Airflow retries this task at 3 AM, will we get duplicates?" If yes, the design is flawed.

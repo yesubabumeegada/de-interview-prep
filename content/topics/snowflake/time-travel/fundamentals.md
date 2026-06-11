@@ -10,6 +10,12 @@ tags: [snowflake, time-travel, history, undrop, restore, versioning]
 
 # Snowflake Time Travel — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Snowflake Time Travel like an 'undo' button for your data: accidentally dropped a table or a bad UPDATE ran? Travel back up to 90 days and restore exactly what was there.
+
+---
 ## What Is Time Travel?
 
 Time Travel lets you **access historical versions of data** — query, clone, or restore data as it existed at any point within the retention period (up to 90 days). It's like an automatic "undo" for your tables.
@@ -217,6 +223,33 @@ CREATE TRANSIENT TABLE staging.temp_data (...);
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Query data as it was 1 hour ago
+SELECT * FROM orders AT (OFFSET => -3600);  -- 3600 seconds = 1 hour ago
+
+-- Query data as it was at a specific timestamp
+SELECT * FROM orders AT (TIMESTAMP => '2024-01-15 09:00:00'::TIMESTAMP);
+
+-- Query data before a specific query (using query_id)
+SELECT * FROM orders BEFORE (STATEMENT => '01a2b3c4-...-query-id');
+
+-- Restore a dropped table (within retention period)
+UNDROP TABLE orders;
+
+-- Clone a table at a point in time (zero-copy!)
+CREATE TABLE orders_backup CLONE orders
+    AT (TIMESTAMP => '2024-01-14 00:00:00'::TIMESTAMP);
+
+-- Set retention period (default 1 day, max 90 days on Enterprise)
+ALTER TABLE orders SET DATA_RETENTION_TIME_IN_DAYS = 7;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Snowflake Time Travel?" — Ability to query, clone, or restore data as it existed at any point within the retention period (1-90 days). Uses historical micro-partitions that Snowflake retains. Enables: accident recovery (UNDROP, restore from clone), auditing (compare versions), and development (work with yesterday's data).

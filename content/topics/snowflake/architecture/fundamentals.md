@@ -10,6 +10,12 @@ tags: [snowflake, architecture, cloud-data-warehouse, separation-compute-storage
 
 # Snowflake Architecture — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Snowflake's architecture like a restaurant with a shared kitchen (storage), many cooking stations (virtual warehouses/compute), and a central menu board (the services layer). Adding a new cooking station doesn't affect the kitchen or other stations.
+
+---
 ## What Is Snowflake?
 
 Snowflake is a **cloud-native data warehouse** built from the ground up for the cloud. Its key innovation is the **separation of compute and storage** — you can scale processing power and data storage independently.
@@ -225,6 +231,36 @@ FROM analytics.raw.events;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Snowflake's three-layer architecture in practice:
+
+-- 1. Services layer: authentication, metadata, query compilation
+-- (You don't interact with this directly — it's always running)
+
+-- 2. Compute layer: Virtual Warehouses (independent, scalable)
+CREATE WAREHOUSE etl_wh WITH WAREHOUSE_SIZE = 'MEDIUM'
+    AUTO_SUSPEND = 60         -- Suspend after 60s idle (saves cost)
+    AUTO_RESUME = TRUE;       -- Resume automatically on query
+
+-- Scale up for big job
+ALTER WAREHOUSE etl_wh SET WAREHOUSE_SIZE = 'X-LARGE';
+-- Scale back down after
+ALTER WAREHOUSE etl_wh SET WAREHOUSE_SIZE = 'MEDIUM';
+
+-- 3. Storage layer: columnar, compressed, S3-backed
+-- Tables are physically stored in Snowflake-managed S3 micro-partitions
+-- Check storage usage
+SELECT TABLE_NAME, ACTIVE_BYTES/1e9 AS gb
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLE_STORAGE_METRICS
+ORDER BY ACTIVE_BYTES DESC LIMIT 10;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Explain Snowflake's architecture" — "Three layers: Cloud Services (optimizer, metadata, security — always on), Compute (virtual warehouses — independent, scalable, auto-suspend), Storage (micro-partitions in cloud object storage — columnar, compressed, immutable). The key innovation is that compute and storage scale independently."

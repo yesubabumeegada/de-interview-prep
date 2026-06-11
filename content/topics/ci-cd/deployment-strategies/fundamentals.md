@@ -10,6 +10,12 @@ tags: [ci-cd, deployment, blue-green, canary, rollback]
 
 # Deployment Strategies — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of deployment strategies like changing an airplane engine mid-flight: blue/green swaps to a fresh plane and transfers passengers over (zero downtime), canary sends 5% of passengers to the new plane first (low risk), rolling upgrades one seat at a time.
+
+---
 ## The Restaurant Menu Change Analogy
 
 A restaurant testing a new dish doesn't pull all the old menus and replace them overnight. Instead, they test the new dish at 10% of tables (canary), gather feedback, then roll it out fully. Deployment strategies for data pipelines follow the same logic: never flip a switch that could break everything at once. Test on a small slice, verify, then commit — with a rollback path.
@@ -92,3 +98,28 @@ Enable in staging first, validate, then enable in production — zero code deplo
 | dbt model | `git revert` + redeploy |
 | Schema migration | Backward-compatible migration |
 | Feature logic | Feature flag off |
+
+## ▶️ Try It Yourself
+
+```yaml
+# Kubernetes blue/green deployment
+# 1. Deploy Green (new version) alongside Blue (current)
+# 2. Switch Service selector to Green
+# 3. Delete Blue after validation
+
+# Step 1: Deploy green
+kubectl apply -f deployment-green.yaml  # image: my-app:v2
+
+# Step 2: Switch traffic instantly
+kubectl patch service my-app -p '{"spec":{"selector":{"version":"green"}}}'
+
+# Step 3: Verify, then delete blue
+kubectl delete deployment my-app-blue
+
+# Canary: route 10% of traffic to new version
+# (Using Argo Rollouts or Istio VirtualService weight splitting)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

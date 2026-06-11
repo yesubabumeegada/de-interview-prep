@@ -10,6 +10,12 @@ tags: [pyspark, memory, executor, driver, oom, heap]
 
 # PySpark Memory Management — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Spark memory like office space: execution memory is the desk where active work happens, storage memory is the filing cabinet for cached data, and when both are full, Spark spills work to disk (the slow storage room).
+
+---
 ## Why Memory Matters in Spark
 
 Spark processes data in memory for speed. When memory runs out, jobs either crash (OOM) or spill to disk (10-100x slower). Understanding memory layout helps you size clusters correctly and avoid failures.
@@ -176,6 +182,19 @@ Example: Process 500 GB of data
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+spark = SparkSession.builder     .master("local[*]")     .config("spark.memory.fraction", "0.8")     .config("spark.memory.storageFraction", "0.3")     .appName("memory").getOrCreate()
+print(spark.sparkContext.getConf().get("spark.memory.fraction"))
+# Inspect memory usage during a job via Spark UI at localhost:4040
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What causes OOM in Spark?" — "Three main causes: (1) Driver OOM from collect() or large broadcast. Fix: don't collect, write to storage. (2) Executor OOM from oversized partitions during join/groupBy. Fix: increase partitions or executor memory. (3) Executor OOM from broadcast that exceeds memory. Fix: remove broadcast hint, use sort-merge instead."

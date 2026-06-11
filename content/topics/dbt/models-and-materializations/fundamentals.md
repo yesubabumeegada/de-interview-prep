@@ -10,6 +10,12 @@ tags: [dbt, models, materializations, view, table, incremental]
 
 # dbt Models & Materializations
 
+
+## 🎯 Analogy
+
+Think of dbt materializations like different ways to serve food: a view is made-to-order (computed fresh every query), a table is pre-cooked and plated (computed once, stored), and incremental is keeping yesterday's meal and only cooking today's new dishes.
+
+---
 ## What Is a dbt Model?
 
 A dbt model is simply a **SQL SELECT statement** saved as a `.sql` file. dbt compiles it and executes it against your warehouse, materializing the result as a table, view, or other format.
@@ -163,3 +169,26 @@ models/
     ├── dim_{entity}.sql               # e.g. dim_customers.sql
     └── fct_{event}.sql                # e.g. fct_orders.sql
 ```
+
+## ▶️ Try It Yourself
+
+```sql
+-- models/staging/stg_orders.sql  (view — cheap, always fresh)
+{{ config(materialized='view') }}
+SELECT order_id, customer_id, amount, order_date
+FROM {{ source('raw', 'orders') }}
+WHERE amount > 0
+
+-- models/mart/orders_daily.sql  (incremental — only process new rows)
+{{ config(materialized='incremental', unique_key='order_date') }}
+SELECT DATE(order_date) AS order_date, SUM(amount) AS revenue
+FROM {{ ref('stg_orders') }}
+{% if is_incremental() %}
+  WHERE order_date > (SELECT MAX(order_date) FROM {{ this }})
+{% endif %}
+GROUP BY 1
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

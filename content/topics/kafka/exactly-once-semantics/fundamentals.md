@@ -10,6 +10,12 @@ tags: [kafka, exactly-once, EOS, idempotence, transactions, delivery-guarantees]
 
 # Exactly-Once Semantics — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of exactly-once semantics like a bank transfer that's guaranteed to happen exactly once: not zero times (lost), not twice (duplicate charge), but exactly once — even if the network hiccups.
+
+---
 ## Delivery Guarantees in Kafka
 
 Kafka supports three delivery guarantee levels. Understanding the tradeoffs is foundational.
@@ -153,6 +159,34 @@ EOS has real overhead. It's not always the right choice:
 | Billing / invoicing | Exactly-once mandatory |
 | ML feature pipelines | At-least-once + upsert destination |
 
+
+## ▶️ Try It Yourself
+
+```python
+from kafka import KafkaProducer, KafkaConsumer
+# Exactly-once requires: idempotent producer + transactions
+
+producer = KafkaProducer(
+    bootstrap_servers=["localhost:9092"],
+    enable_idempotence=True,         # Dedup producer retries
+    acks="all",
+    transactional_id="my-producer-1", # Unique ID for this producer
+)
+
+producer.init_transactions()
+try:
+    producer.begin_transaction()
+    producer.send("output-topic", key=b"k1", value=b"exactly-once message")
+    producer.commit_transaction()
+    print("Transaction committed — exactly once!")
+except Exception as e:
+    producer.abort_transaction()
+    print(f"Aborted: {e}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** When asked about Kafka delivery guarantees, always present all three levels before diving into the one the interviewer is interested in. This shows systematic thinking.

@@ -10,6 +10,12 @@ tags: [airflow, scheduler, performance, configuration, dag-parsing]
 
 # Airflow Scheduler Tuning — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of the Airflow scheduler like a restaurant kitchen manager — if the manager is slow at assigning tickets to chefs, the whole kitchen backs up even if chefs are idle. Scheduler tuning reduces that assignment lag.
+
+---
 ## What Does the Scheduler Do?
 
 The **scheduler** is the brain of Airflow. Every few seconds it:
@@ -128,6 +134,27 @@ max_active_runs_per_dag = 16
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Key scheduler config (airflow.cfg or environment variables)
+# AIRFLOW__SCHEDULER__SCHEDULER_HEARTBEAT_SEC=5      # How often scheduler loops
+# AIRFLOW__SCHEDULER__MAX_THREADS=4                  # Parallel DAG parsing threads
+# AIRFLOW__CORE__PARALLELISM=32                      # Max total running task instances
+# AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG=16         # Per-DAG task concurrency
+# AIRFLOW__CORE__DAG_FILE_PROCESSOR_TIMEOUT=50       # Abandon slow DAG parsers
+
+# Check scheduler health
+airflow jobs check --job-type SchedulerJob --hostname $(hostname)
+
+# List currently running tasks
+airflow tasks states-for-dag-run my_dag <run_id>
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** When asked "why are your tasks slow to start?", the answer is almost always one of: (1) scheduler parsing bottleneck, (2) executor worker pool full, (3) pool slots exhausted. Check the Airflow UI's "Clusters" tab and the scheduler logs before assuming it's a code issue.

@@ -10,6 +10,12 @@ tags: [python, pandas, dataframe, groupby, merge, filtering, transformations]
 
 # Python Pandas — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of pandas like a supercharged spreadsheet in Python: a DataFrame is rows and columns of data, and you can filter, group, merge, and reshape it with concise code — but it loads everything into memory, so use Spark or Polars for big data.
+
+---
 ## What is Pandas and When to Use It
 
 Pandas is Python's data manipulation library — the go-to tool for tabular data processing when datasets fit in memory (typically up to 5-10GB depending on your machine).
@@ -228,6 +234,36 @@ sample = df.sample(n=1000, random_state=42)
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pandas as pd
+
+# Create a DataFrame
+df = pd.DataFrame({
+    "date": pd.date_range("2024-01-01", periods=5),
+    "region": ["US","US","EU","EU","US"],
+    "revenue": [100, 200, 150, 300, 250],
+})
+
+# Filter, group, aggregate
+summary = (
+    df[df["revenue"] > 100]
+    .groupby("region")["revenue"]
+    .agg(["sum", "mean", "count"])
+    .round(2)
+)
+print(summary)
+
+# Window function equivalent
+df["cumulative"] = df.groupby("region")["revenue"].cumsum()
+print(df)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Know when to use Pandas vs PySpark: "I use Pandas for datasets under ~5GB, data exploration, and prototyping. For production pipelines processing 100GB+, I use PySpark. The API is similar enough that Pandas prototypes translate to Spark easily."

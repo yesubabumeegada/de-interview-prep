@@ -10,6 +10,12 @@ tags: [airflow, custom-operators, baseoperator, hooks, extensibility]
 
 # Airflow Custom Operators — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of custom operators like custom tools you build when off-the-shelf tools don't fit — you subclass BaseOperator and define `execute()` just like any plugin.
+
+---
 ## Why Build Custom Operators?
 
 Built-in and provider operators cover most common tasks, but you build a custom operator when:
@@ -175,6 +181,32 @@ class PostToMyApiOperator(BaseOperator):
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from airflow.models import BaseOperator
+from airflow.utils.decorators import apply_defaults
+
+class SlackAlertOperator(BaseOperator):
+    def __init__(self, message: str, channel: str = "#data-alerts", **kwargs):
+        super().__init__(**kwargs)
+        self.message = message
+        self.channel = channel
+
+    def execute(self, context):
+        # In real usage: call Slack API here
+        run_date = context["ds"]
+        print(f"[{self.channel}] {run_date}: {self.message}")
+        return {"channel": self.channel, "sent": True}
+
+# Usage in a DAG:
+# SlackAlertOperator(task_id="alert", message="Pipeline complete!")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When would you build a custom operator vs using a PythonOperator?" — Use `PythonOperator` for one-off task logic. Build a custom operator when the same pattern needs to be reused across multiple DAGs or teams. Custom operators are the Airflow equivalent of writing a library function instead of copy-pasting code.

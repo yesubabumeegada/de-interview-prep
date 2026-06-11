@@ -10,6 +10,12 @@ tags: [airflow, xcom, cross-communication, task-communication, metadata-db, push
 
 # Airflow XCom — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of XCom like sticky notes passed between coworkers: task A writes a note (pushes a value), task B reads it (pulls the value). Keep notes small — XCom is stored in the metadata DB, not in shared memory.
+
+---
 ## What Is XCom?
 
 **XCom** (short for **Cross-Communication**) is Airflow's built-in mechanism for tasks to share small pieces of data with each other. By default, tasks are isolated — they run in separate processes and can't directly share variables. XCom solves this by providing a lightweight key-value store backed by the Airflow metadata database.
@@ -314,6 +320,28 @@ with DAG(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+
+def produce(**ctx):
+    ctx["ti"].xcom_push(key="row_count", value=42000)
+
+def consume(**ctx):
+    count = ctx["ti"].xcom_pull(task_ids="producer", key="row_count")
+    print(f"Got {count} rows from upstream")
+
+with DAG("xcom_demo", start_date=datetime(2024,1,1), schedule=None) as dag:
+    PythonOperator(task_id="producer", python_callable=produce) >>     PythonOperator(task_id="consumer", python_callable=consume)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is XCom and what are its limitations?" — "XCom is Airflow's cross-task communication mechanism, stored in the metadata database. It's designed for small metadata like file paths, row counts, and job IDs. The key limitation is size — treat it as limited to ~48 KB in practice. Passing large data like DataFrames through XCom is an anti-pattern that slows down the metadata database and can cause memory issues."

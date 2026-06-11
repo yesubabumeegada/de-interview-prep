@@ -10,6 +10,12 @@ tags: [etl, incremental-loading, watermark, high-water-mark, batch]
 
 # Incremental Loading — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of incremental loading like syncing your phone: instead of re-downloading every photo every time, you only download photos taken since the last sync. Faster and lighter.
+
+---
 ## What Is Incremental Loading?
 
 Incremental loading is the practice of extracting and loading **only the new or changed records** since the last successful pipeline run, rather than re-processing the entire dataset every time.
@@ -210,6 +216,41 @@ def get_effective_hwm(stored_hwm: datetime) -> datetime:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import sqlite3
+from datetime import datetime
+
+def get_last_watermark(conn, table: str) -> str:
+    row = conn.execute(
+        "SELECT MAX(watermark) FROM etl_state WHERE table_name = ?", (table,)
+    ).fetchone()
+    return row[0] or "1970-01-01T00:00:00"
+
+def update_watermark(conn, table: str, new_mark: str):
+    conn.execute(
+        "INSERT OR REPLACE INTO etl_state (table_name, watermark) VALUES (?,?)",
+        (table, new_mark)
+    )
+
+# Usage
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE etl_state (table_name TEXT PRIMARY KEY, watermark TEXT)")
+conn.execute("CREATE TABLE orders (id INT, updated_at TEXT, amount REAL)")
+conn.execute("INSERT INTO orders VALUES (1,'2024-01-01T10:00:00',100)")
+conn.execute("INSERT INTO orders VALUES (2,'2024-01-02T10:00:00',200)")
+
+last = get_last_watermark(conn, "orders")
+rows = conn.execute("SELECT * FROM orders WHERE updated_at > ?", (last,)).fetchall()
+print(f"New rows since {last}: {rows}")
+update_watermark(conn, "orders", datetime.now().isoformat())
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always clarify whether source records can be updated (mutable) or only inserted (immutable) — this fundamentally determines whether you need append or merge semantics.

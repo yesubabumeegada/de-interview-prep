@@ -14,6 +14,12 @@ Testing PySpark jobs is one of the most neglected skills in data engineering —
 
 ---
 
+
+## 🎯 Analogy
+
+Think of PySpark testing like testing a pipeline on a small model train set before running it on a full freight train — local mode lets you verify logic fast without a cluster.
+
+---
 ## Why Test PySpark Jobs?
 
 Unlike a web API where a bug causes an immediate 500 error, bad data pipelines often fail silently: wrong aggregation logic produces slightly off numbers, a NULL-handling bug drops 0.1% of rows, a schema change passes the write but corrupts downstream reports.
@@ -282,3 +288,26 @@ pytest tests/ --cov=src --cov-report=html
 3. **Always test nulls and empty DataFrames** — these are the most common sources of silent pipeline failures.
 4. **Assert schema + values** — checking only values means a type change can go undetected.
 5. **`local[2]` + small test DataFrames** — tests should run in under 30 seconds total. If they don't, you're using too much data or missing the `scope="session"` on the fixture.
+
+## ▶️ Try It Yourself
+
+```python
+import pytest
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
+
+@pytest.fixture(scope="session")
+def spark():
+    return SparkSession.builder.master("local[2]").appName("test").getOrCreate()
+
+def test_filter_logic(spark):
+    data = [(1, "US", 100), (2, "EU", 200), (3, "US", 50)]
+    df = spark.createDataFrame(data, ["id", "region", "amount"])
+    result = df.filter(col("region") == "US")
+    assert result.count() == 2
+    assert result.filter(col("amount") > 75).count() == 1
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

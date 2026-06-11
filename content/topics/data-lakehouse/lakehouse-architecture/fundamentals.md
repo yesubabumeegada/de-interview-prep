@@ -10,6 +10,12 @@ tags: [lakehouse, architecture, delta-lake, data-lake, data-warehouse]
 
 # Lakehouse Architecture — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of a data lakehouse like a warehouse built inside a lake: you get the storage flexibility and low cost of a data lake (raw files in S3/GCS) plus the ACID transactions, schema enforcement, and query performance of a data warehouse.
+
+---
 ## What Is a Data Lakehouse?
 
 A data lakehouse combines the low-cost, flexible storage of a data lake with the ACID transactions, schema enforcement, and query performance of a data warehouse — in a single architecture.
@@ -108,6 +114,32 @@ How Lakehouse solves these:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Delta Lake: lakehouse on top of object storage
+# pip install delta-spark pyspark
+
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder     .master("local[*]")     .config("spark.jars.packages", "io.delta:delta-core_2.12:2.4.0")     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")     .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog")     .appName("lakehouse").getOrCreate()
+
+# Write raw data to Delta (Bronze layer)
+data = [("US", 300.0), ("EU", 200.0)]
+df = spark.createDataFrame(data, ["region", "revenue"])
+df.write.format("delta").mode("overwrite").save("/tmp/bronze/orders")
+
+# ACID guarantees: this either fully succeeds or fully fails
+df.write.format("delta").mode("append").save("/tmp/bronze/orders")
+
+print("Lakehouse: S3 storage + ACID + SQL + time travel!")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What problem does the lakehouse solve?" — The classic answer: it eliminates the "two-tier tax" — storing and pipeling data twice. A lakehouse provides ACID transactions and schema enforcement directly on open-format files in object storage, so you no longer need to copy data into a proprietary warehouse to get reliability.

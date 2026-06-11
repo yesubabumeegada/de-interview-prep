@@ -10,6 +10,12 @@ tags: [kafka, retention, compaction, log-cleanup, storage, topic-configuration]
 
 # Kafka Retention and Compaction — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Kafka retention like a DVR: time-based retention deletes old recordings after N days. Log compaction is like keeping only the most recent episode of a series — for each key, only the latest value survives.
+
+---
 ## How Kafka Stores Data
 
 Kafka stores messages in **log segments** — append-only files on disk. Each partition is a directory containing multiple segment files.
@@ -144,6 +150,28 @@ graph TD
 
 The log cleaner runs in background threads (`log.cleaner.threads`, default 1). It maintains a ratio called **dirty ratio** — the fraction of the log that has been modified since last clean. Compaction triggers when dirty ratio exceeds `min.cleanable.dirty.ratio` (default 0.5 = 50%).
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Set time-based retention on a topic (7 days)
+kafka-configs.sh --bootstrap-server localhost:9092 \
+    --entity-type topics --entity-name orders \
+    --alter --add-config retention.ms=604800000
+
+# Enable log compaction (keep latest value per key)
+kafka-configs.sh --bootstrap-server localhost:9092 \
+    --entity-type topics --entity-name user-profiles \
+    --alter --add-config cleanup.policy=compact
+
+# View current topic config
+kafka-configs.sh --bootstrap-server localhost:9092 \
+    --entity-type topics --entity-name orders --describe
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** The most common misconception: retention policies apply to **closed segments**, not individual records. The active segment (currently being written to) is NEVER deleted. A topic with a 1-hour retention but only one active segment (no records for a day) still keeps that segment.

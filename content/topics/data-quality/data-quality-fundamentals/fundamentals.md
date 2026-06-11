@@ -10,6 +10,12 @@ tags: [data-quality, dimensions, validation, completeness, accuracy]
 
 # Data Quality Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data quality like water quality testing: you measure specific dimensions (pH=accuracy, no contaminants=completeness, fresh=timeliness) against defined standards — and failures trigger remediation, not just alerts.
+
+---
 ## What Is Data Quality?
 
 Data quality measures how well data fits its intended use. Poor quality data costs organizations an estimated **$12.9 million per year** on average (Gartner). A data engineer's job is not just to move data — it's to move *trustworthy* data.
@@ -206,6 +212,43 @@ def compute_dq_metrics(df: pd.DataFrame, table_name: str) -> dict:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pandas as pd
+
+def quality_report(df: pd.DataFrame, table: str) -> dict:
+    report = {"table": table, "row_count": len(df), "issues": []}
+
+    # Completeness
+    for col in df.columns:
+        null_pct = df[col].isna().mean() * 100
+        if null_pct > 0:
+            report["issues"].append({"check":"completeness","col":col,"null_pct":round(null_pct,1)})
+
+    # Uniqueness (if 'id' column exists)
+    if "id" in df.columns:
+        dup = df["id"].duplicated().sum()
+        if dup:
+            report["issues"].append({"check":"uniqueness","col":"id","duplicates":int(dup)})
+
+    # Timeliness (if 'updated_at' exists)
+    if "updated_at" in df.columns:
+        max_age_h = (pd.Timestamp.now() - df["updated_at"].max()).total_seconds() / 3600
+        if max_age_h > 25:
+            report["issues"].append({"check":"timeliness","max_age_hours":round(max_age_h,1)})
+
+    report["passed"] = len(report["issues"]) == 0
+    return report
+
+df = pd.DataFrame({"id":[1,2,2],"amount":[100,None,200],"updated_at":pd.to_datetime(["2024-01-01"]*3)})
+print(quality_report(df, "orders"))
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Name the 6 dimensions of data quality." — Completeness, Accuracy, Consistency, Timeliness, Uniqueness, Validity. Memorize these cold.

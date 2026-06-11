@@ -10,6 +10,12 @@ tags: [dbt, exposures, metrics, semantic-layer, metricflow]
 
 # dbt Exposures & Metrics
 
+
+## 🎯 Analogy
+
+Think of exposures like the final door of a supply chain: they document which dashboards, reports, or ML models consume your dbt models — so lineage goes all the way from source tables to Tableau dashboards.
+
+---
 ## Exposures — Document Downstream Consumers
 
 Exposures tell dbt what uses your models — dashboards, APIs, ML models. They appear in the lineage graph.
@@ -183,3 +189,36 @@ df = client.query(
     where=["order__region = 'US'"]
 )
 ```
+
+## ▶️ Try It Yourself
+
+```yaml
+# models/exposures.yml
+version: 2
+exposures:
+  - name: revenue_dashboard
+    type: dashboard
+    maturity: high
+    url: https://tableau.company.com/revenue
+    description: "Executive revenue dashboard refreshed daily"
+    owner:
+      name: Finance Team
+      email: finance@company.com
+    depends_on:
+      - ref('orders_daily')
+      - ref('customers')
+
+# metrics (dbt Semantic Layer / MetricFlow)
+metrics:
+  - name: monthly_revenue
+    label: Monthly Revenue
+    model: ref('orders_daily')
+    measure:
+      expr: amount
+      agg: sum
+    dimensions: [region, product_category]
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

@@ -10,6 +10,12 @@ tags: [pyspark, window-functions, ranking, analytics, partitioning, ordering]
 
 # PySpark Window Functions — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of window functions like a running scoreboard at a sports game — each row 'sees' the scores of nearby rows (its window) without collapsing all rows into one total.
+
+---
 ## What Are Window Functions in PySpark?
 
 Window functions compute a value for each row based on a "window" of related rows — without collapsing the DataFrame. Same concept as SQL window functions but expressed through PySpark's API.
@@ -283,6 +289,23 @@ df.select(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import rank, sum as spark_sum
+from pyspark.sql.window import Window
+spark = SparkSession.builder.master("local[*]").appName("window").getOrCreate()
+data = [("Alice","Q1",300),("Alice","Q2",400),("Bob","Q1",200),("Bob","Q2",350)]
+df = spark.createDataFrame(data, ["name","quarter","sales"])
+w = Window.partitionBy("name").orderBy("quarter")
+df.withColumn("running_total", spark_sum("sales").over(w)).show()
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you find top N per group in PySpark?" — "Window with row_number() partitioned by the group column, ordered by the metric descending, then filter where row_number <= N. This is the single most common PySpark interview question."

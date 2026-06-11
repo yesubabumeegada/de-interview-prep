@@ -10,6 +10,12 @@ tags: [etl, data-reconciliation, row-count, checksum, validation]
 
 # Data Reconciliation — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data reconciliation like a bank balancing its books: you compare what the source says (account balances) with what your system says, and investigate any gap before closing the books.
+
+---
 ## What Is Data Reconciliation?
 
 **Data reconciliation** is the process of comparing data between two or more systems to verify that they agree. In ETL, it verifies that what was extracted from the source arrived correctly in the target.
@@ -254,6 +260,37 @@ FROM (
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pandas as pd
+
+def reconcile(source_df: pd.DataFrame, target_df: pd.DataFrame,
+              key: str = "order_id", value_col: str = "amount") -> dict:
+    merged = source_df[[key, value_col]].merge(
+        target_df[[key, value_col]], on=key, how="outer",
+        suffixes=("_src", "_tgt")
+    )
+    missing_in_target = merged[merged[f"{value_col}_tgt"].isna()]
+    missing_in_source = merged[merged[f"{value_col}_src"].isna()]
+    mismatched = merged.dropna().query(f"{value_col}_src != {value_col}_tgt")
+
+    return {
+        "missing_in_target": len(missing_in_target),
+        "missing_in_source": len(missing_in_source),
+        "mismatched_values": len(mismatched),
+        "passed": len(missing_in_target) == 0 and len(mismatched) == 0,
+    }
+
+source = pd.DataFrame({"order_id":[1,2,3], "amount":[100,200,300]})
+target = pd.DataFrame({"order_id":[1,2],   "amount":[100,250]})  # 3 missing, 2 mismatched
+print(reconcile(source, target))
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Row count reconciliation is the minimum viable reconciliation check. Mention it first — it catches the majority of data loss scenarios instantly and cheaply.

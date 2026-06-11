@@ -10,6 +10,12 @@ tags: [airflow, sensors, poke, reschedule, FileSensor, HttpSensor, ExternalTaskS
 
 # Airflow Sensors — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of sensors like a security guard checking if a package has arrived: they keep polling (checking the mailroom) until the package shows up, then signal the next task to proceed.
+
+---
 ## What Is a Sensor?
 
 A **sensor** is a special type of Airflow operator that **waits for a condition to be true** before allowing downstream tasks to proceed. Instead of performing an action (like running a query or launching a Spark job), a sensor repeatedly checks whether something has happened — a file arrived, an API responded, an external DAG finished — and only succeeds once the condition is met.
@@ -359,6 +365,30 @@ with DAG(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from airflow import DAG
+from airflow.sensors.filesystem import FileSensor
+from airflow.operators.python import PythonOperator
+from datetime import datetime
+
+with DAG("sensor_demo", start_date=datetime(2024,1,1), schedule="@daily", catchup=False) as dag:
+    wait_for_file = FileSensor(
+        task_id="wait_for_data_file",
+        filepath="/tmp/daily_export_{{ ds_nodash }}.csv",
+        poke_interval=60,   # Check every 60 seconds
+        timeout=3600,       # Fail after 1 hour
+        mode="reschedule",  # Release worker slot while waiting
+    )
+    process = PythonOperator(task_id="process", python_callable=lambda: print("File found!"))
+    wait_for_file >> process
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between poke and reschedule mode?" — "Poke mode holds a worker slot continuously, which can cause deadlock if many sensors wait simultaneously. Reschedule mode releases the worker slot between checks, allowing the slot to be used by other tasks. For any sensor that might wait more than a few minutes, reschedule mode is strongly preferred."

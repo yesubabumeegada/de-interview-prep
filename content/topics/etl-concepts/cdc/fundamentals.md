@@ -10,6 +10,12 @@ tags: [etl, cdc, debezium, binlog, wal, kafka]
 
 # Change Data Capture (CDC) — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of CDC (Change Data Capture) like a bank statement instead of a balance report: instead of reading the entire database every time, you capture only what changed (inserts, updates, deletes) — the transaction log.
+
+---
 ## What Is CDC?
 
 **Change Data Capture** is a pattern for identifying and delivering the changes made to a database (inserts, updates, deletes) to downstream consumers in near-real-time. Instead of periodically querying a source table for new data, CDC reads the database's own internal change log.
@@ -256,6 +262,36 @@ During snapshot, the source table is typically read with `REPEATABLE READ` isola
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Debezium CDC via Kafka — Python consumer reading CDC events
+from kafka import KafkaConsumer
+import json
+
+consumer = KafkaConsumer(
+    "dbserver.public.orders",  # Debezium topic: <server>.<schema>.<table>
+    bootstrap_servers=["localhost:9092"],
+    value_deserializer=lambda m: json.loads(m),
+    auto_offset_reset="earliest",
+    group_id="cdc-processor",
+)
+
+for msg in consumer:
+    event = msg.value
+    op = event.get("op")  # 'c'=create, 'u'=update, 'd'=delete, 'r'=snapshot
+    if op == "c":
+        print(f"INSERT: {event['after']}")
+    elif op == "u":
+        print(f"UPDATE: {event['before']} → {event['after']}")
+    elif op == "d":
+        print(f"DELETE: {event['before']}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** The core value of log-based CDC over polling is **capture of deletes and before/after images** without requiring any schema changes on the source. This is often the deciding factor when choosing CDC.
