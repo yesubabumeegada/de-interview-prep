@@ -11,6 +11,7 @@
  *   - Mobile slide-in overlay with focus trap + keyboard nav
  */
 import topicsConfig from '../../../content/topics.config.json';
+import { getIconColor, getIconBg } from '../../utils/iconColors';
 
 interface Props {
   activeTopic?: string;
@@ -96,6 +97,8 @@ const topics = topicsConfig.topics.sort((a, b) => a.order - b.order);
                 <ul class="list-none m-0 p-0 py-1 space-y-0.5" role="list">
                   {sortedSubtopics.map((subtopic) => {
                     const isSubActive = isActive && subtopic.id === activeSubtopic;
+                    const accentColor = getIconColor((topic as any).icon ?? '');
+                    const accentBg = getIconBg((topic as any).icon ?? '', 0.10);
                     return (
                       <li class="sidebar-subtopic-item">
                         <a
@@ -103,12 +106,13 @@ const topics = topicsConfig.topics.sort((a, b) => a.order - b.order);
                           class:list={[
                             'flex items-center gap-2 px-3 py-[5px] rounded-md text-[0.78rem] leading-tight transition-colors duration-100',
                             isSubActive
-                              ? 'text-[var(--color-primary)] font-medium bg-[var(--color-primary)]/8'
+                              ? 'font-medium'
                               : 'text-[var(--color-content-tertiary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)]',
                           ]}
+                          style={isSubActive ? `color: ${accentColor}; background: ${accentBg};` : undefined}
                           aria-current={isSubActive ? 'page' : undefined}
                         >
-                          {isSubActive && <span class="w-1 h-1 rounded-full bg-[var(--color-primary)] shrink-0" aria-hidden="true" />}
+                          {isSubActive && <span class="w-1 h-1 rounded-full shrink-0" style={`background: ${accentColor};`} aria-hidden="true" />}
                           {subtopic.displayName}
                         </a>
                       </li>
@@ -193,6 +197,8 @@ const topics = topicsConfig.topics.sort((a, b) => a.order - b.order);
                 <ul class="list-none m-0 p-0 py-1 space-y-0.5" role="list">
                   {sortedSubtopics.map((subtopic) => {
                     const isSubActive = isActive && subtopic.id === activeSubtopic;
+                    const accentColor = getIconColor((topic as any).icon ?? '');
+                    const accentBg = getIconBg((topic as any).icon ?? '', 0.10);
                     return (
                       <li class="sidebar-subtopic-item">
                         <a
@@ -200,13 +206,14 @@ const topics = topicsConfig.topics.sort((a, b) => a.order - b.order);
                           class:list={[
                             'flex items-center gap-2 px-3 py-[5px] rounded-md text-[0.75rem] leading-snug transition-all duration-100',
                             isSubActive
-                              ? 'text-[var(--color-primary)] font-medium bg-[var(--color-primary)]/8'
+                              ? 'font-medium'
                               : 'text-[var(--color-content-tertiary)] hover:text-[var(--color-content)] hover:bg-[var(--color-surface-tertiary)]',
                           ]}
+                          style={isSubActive ? `color: ${accentColor}; background: ${accentBg};` : undefined}
                           aria-current={isSubActive ? 'page' : undefined}
                         >
                           {isSubActive
-                            ? <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] shrink-0" aria-hidden="true" />
+                            ? <span class="w-1.5 h-1.5 rounded-full shrink-0" style={`background: ${accentColor};`} aria-hidden="true" />
                             : <span class="w-1.5 h-1.5 shrink-0" aria-hidden="true" />
                           }
                           {subtopic.displayName}

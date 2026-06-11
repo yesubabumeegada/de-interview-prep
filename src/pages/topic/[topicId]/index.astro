@@ -17,6 +17,7 @@ import MainLayout from '../../../layouts/MainLayout.astro';
 import SidebarNav from '../../../components/layout/SidebarNav.astro';
 import Breadcrumbs from '../../../components/layout/Breadcrumbs.astro';
 import TopicIcon from '../../../components/ui/TopicIcon.astro';
+import { getIconColor, getIconBg } from '../../../utils/iconColors';
 import topicsConfig from '../../../../content/topics.config.json';
 import { sortSubtopics } from '../../../services/navigationService';
 
@@ -61,7 +62,9 @@ const hasContent = sortedSubtopics.length > 0;
   <!-- Topic Header -->
   <header class="mb-[32px]">
     <div class="flex items-center gap-[16px] mb-[12px]">
-      <TopicIcon iconKey={topic.icon} size={48} />
+      <div class="w-16 h-16 rounded-xl flex items-center justify-center shrink-0" style={`background: ${getIconBg(topic.icon, 0.14)}; border: 1.5px solid ${getIconBg(topic.icon, 0.30)}; box-shadow: 0 0 0 4px ${getIconBg(topic.icon, 0.07)};`}>
+        <TopicIcon iconKey={topic.icon} size={40} />
+      </div>
       <h1 class="text-heading-1 text-[var(--color-content)] m-0">
         {topic.displayName}
       </h1>

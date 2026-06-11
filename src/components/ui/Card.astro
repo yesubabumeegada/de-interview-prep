@@ -9,9 +9,10 @@
 interface Props {
   href?: string;
   class?: string;
+  accentColor?: string;
 }
 
-const { href, class: className = '' } = Astro.props;
+const { href, class: className = '', accentColor } = Astro.props;
 const Tag = href ? 'a' : 'div';
 ---
 
@@ -20,8 +21,10 @@ const Tag = href ? 'a' : 'div';
   class:list={[
     'card-premium block rounded-xl p-4 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2',
     href && 'no-underline cursor-pointer',
+    accentColor && 'card-has-accent',
     className,
   ]}
+  style={accentColor ? `--card-accent: ${accentColor};` : undefined}
 >
   <slot />
 </Tag>
@@ -43,6 +46,15 @@ const Tag = href ? 'a' : 'div';
     transform: translateY(-4px) scale(1.005);
     box-shadow: var(--shadow-card-hover);
     border-color: var(--color-primary-light);
+  }
+
+  .card-has-accent:hover {
+    border-color: color-mix(in srgb, var(--card-accent) 60%, transparent);
+    box-shadow: var(--shadow-card-hover), inset 3px 0 0 var(--card-accent);
+  }
+
+  .dark .card-has-accent:hover {
+    border-color: color-mix(in srgb, var(--card-accent) 50%, transparent);
   }
 
   .dark .card-premium:hover {

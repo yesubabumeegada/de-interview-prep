@@ -15,6 +15,7 @@ import MainLayout from '../layouts/MainLayout.astro';
 import SidebarNav from '../components/layout/SidebarNav.astro';
 import Card from '../components/ui/Card.astro';
 import TopicIcon from '../components/ui/TopicIcon.astro';
+import { getIconColor, getIconBg } from '../utils/iconColors';
 import topicsConfig from '../../content/topics.config.json';
 import { type TopicConfig } from '../services/navigationService';
 
@@ -104,10 +105,10 @@ const topicFileStats = topics.map(topic => {
         const topic = topics.find((t) => t.id === stat.topicId);
 
         return (
-          <Card href={`${import.meta.env.BASE_URL}topic/${stat.topicId}/`} class="card-stagger">
+          <Card href={`${import.meta.env.BASE_URL}topic/${stat.topicId}/`} class="card-stagger" accentColor={topic ? getIconColor(topic.icon) : undefined}>
             <div class="flex items-start gap-3">
-              <!-- Icon badge -->
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background: var(--gradient-subtle); border: 1px solid var(--color-surface-tertiary);">
+              <!-- Icon badge with brand tint -->
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={`background: ${topic ? getIconBg(topic.icon, 0.12) : 'var(--gradient-subtle)'}; border: 1px solid ${topic ? getIconBg(topic.icon, 0.25) : 'var(--color-surface-tertiary)'};`}>
                 {topic && <TopicIcon iconKey={topic.icon} size={24} />}
               </div>
 
@@ -116,7 +117,7 @@ const topicFileStats = topics.map(topic => {
                   {stat.displayName}
                 </h3>
                 <p class="text-xs text-[var(--color-content-tertiary)] m-0 mt-0.5">
-                  {stat.subtopicsWithContent}/{stat.totalSubtopics} subtopics
+                  {stat.subtopicsWithContent} subtopics · {Math.round((stat.subtopicsWithContent / Math.max(stat.totalSubtopics, 1)) * 100)}% complete
                 </p>
 
                 <!-- Stats row -->
