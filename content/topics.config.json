@@ -487,6 +487,48 @@
         { "id": "interview-process-formats", "displayName": "Interview Process & Formats", "order": 4 },
         { "id": "negotiation-and-leveling", "displayName": "Negotiation & Leveling", "order": 5 }
       ]
+    },
+    {
+      "id": "ci-cd",
+      "displayName": "CI/CD for Data Engineering",
+      "order": 28,
+      "icon": "cicd",
+      "subtopics": [
+        { "id": "pipeline-testing", "displayName": "Pipeline Testing", "order": 1 },
+        { "id": "github-actions", "displayName": "GitHub Actions", "order": 2 },
+        { "id": "docker-builds", "displayName": "Docker Builds in CI", "order": 3 },
+        { "id": "deployment-strategies", "displayName": "Deployment Strategies", "order": 4 },
+        { "id": "environment-management", "displayName": "Environment Management", "order": 5 },
+        { "id": "monitoring-and-alerting", "displayName": "Monitoring & Alerting", "order": 6 }
+      ]
+    },
+    {
+      "id": "git-and-github",
+      "displayName": "Git & GitHub",
+      "order": 29,
+      "icon": "git",
+      "subtopics": [
+        { "id": "git-fundamentals", "displayName": "Git Fundamentals", "order": 1 },
+        { "id": "branching-strategies", "displayName": "Branching Strategies", "order": 2 },
+        { "id": "pull-requests-and-code-review", "displayName": "Pull Requests & Code Review", "order": 3 },
+        { "id": "gitops-for-data", "displayName": "GitOps for Data", "order": 4 },
+        { "id": "monorepo-patterns", "displayName": "Monorepo Patterns", "order": 5 },
+        { "id": "git-hooks-and-automation", "displayName": "Git Hooks & Automation", "order": 6 }
+      ]
+    },
+    {
+      "id": "docker-and-kubernetes",
+      "displayName": "Docker & Kubernetes",
+      "order": 30,
+      "icon": "kubernetes",
+      "subtopics": [
+        { "id": "docker-fundamentals", "displayName": "Docker Fundamentals", "order": 1 },
+        { "id": "dockerfile-best-practices", "displayName": "Dockerfile Best Practices", "order": 2 },
+        { "id": "kubernetes-basics", "displayName": "Kubernetes Basics", "order": 3 },
+        { "id": "kubernetes-for-data", "displayName": "Kubernetes for Data", "order": 4 },
+        { "id": "helm-and-operators", "displayName": "Helm & Operators", "order": 5 },
+        { "id": "container-security", "displayName": "Container Security", "order": 6 }
+      ]
     }
   ]
 }
