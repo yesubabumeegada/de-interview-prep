@@ -16,6 +16,7 @@
 import MainLayout from '../../../layouts/MainLayout.astro';
 import SidebarNav from '../../../components/layout/SidebarNav.astro';
 import Breadcrumbs from '../../../components/layout/Breadcrumbs.astro';
+import TopicIcon from '../../../components/ui/TopicIcon.astro';
 import topicsConfig from '../../../../content/topics.config.json';
 import { sortSubtopics } from '../../../services/navigationService';
 
@@ -46,28 +47,6 @@ const sortedSubtopics = sortSubtopics(topic.subtopics);
 const hasContent = sortedSubtopics.length > 0;
 
 // Icon map for display
-const topicIcons: Record<string, string> = {
-  'aws': '☁️',
-  'databricks': '🧱',
-  'snowflake': '❄️',
-  'hadoop': '🐘',
-  'oracle': '🔴',
-  'teradata': '🟢',
-  'python': '🐍',
-  'pyspark': '⚡',
-  'sql': '🗃️',
-  'airflow': '🌊',
-  'bash': '💻',
-  'kafka': '📨',
-  'nifi': '🔄',
-  'etl': '🔀',
-  'powerbi': '📊',
-  'ai-rag': '🤖',
-  'ai': '🧠',
-  'data-modeling': '📐',
-};
-
-const icon = topicIcons[topic.icon] || '📖';
 ---
 
 <MainLayout title={topic.displayName}>
@@ -82,7 +61,7 @@ const icon = topicIcons[topic.icon] || '📖';
   <!-- Topic Header -->
   <header class="mb-[32px]">
     <div class="flex items-center gap-[16px] mb-[12px]">
-      <span class="text-[3rem] leading-none" aria-hidden="true">{icon}</span>
+      <TopicIcon iconKey={topic.icon} size={48} />
       <h1 class="text-heading-1 text-[var(--color-content)] m-0">
         {topic.displayName}
       </h1>

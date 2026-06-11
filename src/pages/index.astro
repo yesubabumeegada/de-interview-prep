@@ -14,6 +14,7 @@
 import MainLayout from '../layouts/MainLayout.astro';
 import SidebarNav from '../components/layout/SidebarNav.astro';
 import Card from '../components/ui/Card.astro';
+import TopicIcon from '../components/ui/TopicIcon.astro';
 import topicsConfig from '../../content/topics.config.json';
 import { type TopicConfig } from '../services/navigationService';
 
@@ -65,35 +66,6 @@ const topicFileStats = topics.map(topic => {
 });
 
 // Icon map for topic display
-const topicIcons: Record<string, string> = {
-  'aws': '☁️',
-  'databricks': '🧱',
-  'snowflake': '❄️',
-  'hadoop': '🐘',
-  'oracle': '🔴',
-  'teradata': '🟢',
-  'python': '🐍',
-  'pyspark': '⚡',
-  'sql': '🗃️',
-  'airflow': '🌊',
-  'bash': '💻',
-  'kafka': '📨',
-  'nifi': '🔄',
-  'etl': '🔀',
-  'powerbi': '📊',
-  'ai-rag': '🤖',
-  'ai': '🧠',
-  'data-modeling': '📐',
-  'dbt': '🧬',
-  'data-quality': '✅',
-  'azure': '🔷',
-  'lakehouse': '🏠',
-  'streaming': '📡',
-  'governance': '🛡️',
-  'gcp': '🌐',
-  'system-design': '🏗️',
-  'interview': '🎤',
-};
 ---
 
 <MainLayout title="Topic Dashboard">
@@ -137,14 +109,13 @@ const topicIcons: Record<string, string> = {
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {topicFileStats.map((stat) => {
         const topic = topics.find((t) => t.id === stat.topicId);
-        const icon = topic ? topicIcons[topic.icon] || '📖' : '📖';
-        
+
         return (
           <Card href={`${import.meta.env.BASE_URL}topic/${stat.topicId}/`} class="card-stagger">
             <div class="flex items-start gap-3">
               <!-- Icon badge -->
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-xl" style="background: var(--gradient-subtle); border: 1px solid var(--color-surface-tertiary);">
-                {icon}
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background: var(--gradient-subtle); border: 1px solid var(--color-surface-tertiary);">
+                {topic && <TopicIcon iconKey={topic.icon} size={24} />}
               </div>
 
               <div class="min-w-0 flex-1">
