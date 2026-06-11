@@ -10,6 +10,12 @@ tags: [fact-tables, dimension-tables, star-schema, surrogate-keys, grain, data-w
 
 # Fact and Dimension Tables — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of fact tables as your transaction receipts (numbers, foreign keys, events) and dimension tables as the context printed on the receipt (who, what, where, when). Facts are narrow and tall; dimensions are wide and stable.
+
+---
 ## The Core Concept
 
 Every analytical data warehouse organizes data into two table types:
@@ -244,6 +250,45 @@ graph TD
 
 **Rule:** Start with the finest grain possible. You can always aggregate up, but you can never drill down below your stored grain.
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Fact table: tall, narrow, additive measures + foreign keys
+CREATE TABLE fact_sales (
+    sale_sk      BIGINT PRIMARY KEY,
+    -- Foreign keys to dimensions
+    customer_sk  INT REFERENCES dim_customer(customer_sk),
+    product_sk   INT REFERENCES dim_product(product_sk),
+    date_sk      INT REFERENCES dim_date(date_sk),
+    -- Measures (additive: safe to SUM across all dimensions)
+    quantity     INT,
+    unit_price   DECIMAL(10,2),
+    discount_amt DECIMAL(10,2),
+    revenue      DECIMAL(12,2)   -- quantity * unit_price - discount
+);
+
+-- Dimension table: wide, descriptive, slowly changing
+CREATE TABLE dim_product (
+    product_sk   INT PRIMARY KEY,        -- Surrogate key
+    product_id   VARCHAR(50),            -- Natural key from source
+    name         VARCHAR(200),
+    category     VARCHAR(100),
+    subcategory  VARCHAR(100),
+    brand        VARCHAR(100),
+    unit_cost    DECIMAL(10,2),
+    is_active    BOOLEAN DEFAULT TRUE
+);
+
+-- Query: revenue by category and quarter
+SELECT p.category, d.quarter, SUM(f.revenue)
+FROM fact_sales f JOIN dim_product p USING(product_sk) JOIN dim_date d USING(date_sk)
+GROUP BY p.category, d.quarter;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between fact and dimension tables?" — Fact tables store quantitative measurements (revenue, quantity — the numbers you aggregate). Dimension tables store descriptive context (customer name, product category — how you slice and filter). Facts are tall and narrow; dimensions are short and wide.

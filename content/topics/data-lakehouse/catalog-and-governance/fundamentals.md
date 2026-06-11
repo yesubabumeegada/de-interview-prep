@@ -10,6 +10,12 @@ tags: [catalog, governance, metadata, data-discovery, lineage]
 
 # Catalog & Governance — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of the lakehouse catalog like a librarian who knows where every book is: Unity Catalog, AWS Glue Catalog, or Hive Metastore tracks table locations, schemas, and permissions — query engines ask the catalog 'where is silver.orders?' before reading a byte.
+
+---
 ## What Is a Data Catalog?
 
 A data catalog is a metadata management tool that indexes all data assets in an organization (tables, columns, dashboards, ML models, pipelines) and makes them discoverable, understandable, and trustworthy.
@@ -118,6 +124,40 @@ Data classification:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Unity Catalog (Databricks) — three-level namespace
+# catalog.schema.table  →  prod.silver.orders
+
+# Glue Catalog (AWS) — register an Iceberg table
+import boto3
+glue = boto3.client("glue", region_name="us-east-1")
+
+glue.create_table(
+    DatabaseName="silver",
+    TableInput={
+        "Name": "orders",
+        "TableType": "EXTERNAL_TABLE",
+        "Parameters": {
+            "table_type": "ICEBERG",
+            "metadata_location": "s3://my-bucket/iceberg/silver/orders/metadata/",
+        },
+        "StorageDescriptor": {
+            "Location": "s3://my-bucket/iceberg/silver/orders/",
+            "InputFormat": "org.apache.iceberg.mr.mapred.IcebergInputFormat",
+            "OutputFormat": "org.apache.iceberg.mr.mapred.IcebergOutputFormat",
+            "SerdeInfo": {"SerializationLibrary": "org.apache.iceberg.mr.hive.HiveIcebergSerDe"},
+        },
+    },
+)
+print("Table registered in Glue Catalog — queryable from Athena, EMR, Spark")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between a technical catalog (Hive Metastore) and a business catalog (DataHub)?" — A technical catalog stores schema metadata (column names, types, partition info, table location) for query engines to function — Spark reads from Hive Metastore to understand what tables exist. A business catalog adds discoverability layers: search, descriptions, ownership, lineage, quality scores. Most mature organizations need both: a technical catalog (Glue/Hive) for compute and a business catalog (Atlan/DataHub) for governance.

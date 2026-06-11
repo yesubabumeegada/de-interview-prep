@@ -10,6 +10,12 @@ tags: [anomaly-detection, statistical, z-score, iqr, freshness]
 
 # Anomaly Detection — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of anomaly detection like a smoke alarm for your data: instead of manually checking row counts every day, you set statistical thresholds based on historical patterns — and the alarm triggers automatically when today's data is wildly different from the norm.
+
+---
 ## What Is Data Anomaly Detection?
 
 Data anomaly detection automatically identifies when data deviates from expected patterns — without needing to define every rule manually. Unlike schema validation (structural checks), anomaly detection catches **behavioral** anomalies: unusual row counts, sudden metric drops, value distribution shifts.
@@ -187,6 +193,41 @@ if not result["fresh"]:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pandas as pd
+import numpy as np
+
+def detect_anomalies(history: pd.Series, current_value: float,
+                     z_threshold: float = 3.0) -> dict:
+    mean = history.mean()
+    std = history.std()
+    z_score = (current_value - mean) / std if std > 0 else 0
+    is_anomaly = abs(z_score) > z_threshold
+    return {
+        "current": current_value,
+        "historical_mean": round(mean, 2),
+        "historical_std": round(std, 2),
+        "z_score": round(z_score, 2),
+        "is_anomaly": is_anomaly,
+        "direction": "spike" if z_score > 0 else "drop" if is_anomaly else "normal",
+    }
+
+# Simulate 30 days of row counts (normal ~50k rows/day)
+np.random.seed(42)
+history = pd.Series(np.random.normal(50000, 2000, 30))
+
+# Today: 10k rows (data pipeline likely failed)
+result = detect_anomalies(history, current_value=10000)
+print(result)
+# {'current': 10000, 'z_score': -19.8, 'is_anomaly': True, 'direction': 'drop'}
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How does anomaly detection differ from DQ rules?" — DQ rules are explicit thresholds: "amount must be > 0." Anomaly detection is adaptive: "today's revenue is 3 standard deviations below the 30-day average." Rules catch known failure modes; anomaly detection catches unexpected behavior.

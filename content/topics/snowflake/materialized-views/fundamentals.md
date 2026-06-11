@@ -10,6 +10,12 @@ tags: [snowflake, materialized-views, performance, query-acceleration, caching]
 
 # Snowflake Materialized Views — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of materialized views like a pre-computed answer sheet: Snowflake runs the heavy query once and stores the result. Subsequent queries hit the cached result instead of re-scanning billions of rows — automatically kept fresh as base data changes.
+
+---
 ## What Are Materialized Views?
 
 A Materialized View (MV) is a **pre-computed query result stored as a table** that Snowflake automatically maintains. When the source data changes, the MV is refreshed in the background — and the query optimizer automatically uses it to speed up queries.
@@ -179,6 +185,33 @@ ORDER BY START_TIME DESC;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Create a materialized view (Snowflake refreshes it incrementally)
+CREATE MATERIALIZED VIEW gold.daily_revenue_mv AS
+SELECT
+    order_date,
+    region,
+    SUM(amount) AS revenue,
+    COUNT(*) AS order_count
+FROM silver.orders
+GROUP BY order_date, region;
+
+-- Query hits the materialized result (fast!)
+SELECT * FROM gold.daily_revenue_mv WHERE order_date = CURRENT_DATE;
+
+-- Check MV refresh status
+SHOW MATERIALIZED VIEWS IN SCHEMA gold;
+
+-- Note: Snowflake MVs don't support all SQL features
+-- Use Dynamic Tables for more complex transformations
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What are Materialized Views in Snowflake?" — Pre-computed query results stored as a table, automatically maintained by Snowflake. The optimizer transparently rewrites matching queries to use the MV (users don't need to reference it directly). Best for: accelerating repeated aggregation queries on a single source table.

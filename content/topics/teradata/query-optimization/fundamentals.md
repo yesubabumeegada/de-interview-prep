@@ -10,6 +10,12 @@ tags: [teradata, query-optimization, explain, optimizer, execution-plan]
 
 # Query Optimization — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Teradata query optimization like a relay race: each AMP runs its leg in parallel. Redistribute steps (moving rows between AMPs) are the handoffs — minimize them by choosing Primary Indexes that co-locate frequently joined data.
+
+---
 ## The Teradata Optimizer
 
 Teradata uses a **cost-based optimizer (CBO)** that generates multiple execution plan candidates and chooses the lowest-cost one based on:
@@ -141,6 +147,35 @@ COLLECT STATISTICS ON orders INDEX (customer_id); -- PI stats
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- EXPLAIN: see the query plan before running
+EXPLAIN
+SELECT c.region, SUM(o.amount) revenue
+FROM orders o JOIN customers c ON o.customer_id = c.customer_id
+WHERE o.order_date >= '2024-01-01'
+GROUP BY c.region;
+
+-- Look for in EXPLAIN output:
+-- "no redistribution required" = good (co-located join)
+-- "redistributed by hash" = extra network step (check PI)
+
+-- Collect statistics (must be done manually in Teradata)
+COLLECT STATISTICS COLUMN (customer_id) ON orders;
+COLLECT STATISTICS COLUMN (order_date)  ON orders;
+
+-- Check stale statistics
+SELECT DatabaseName, TableName, ColumnName, LastCollectTimeStamp
+FROM DBC.ColumnStatsV
+WHERE TableName = 'orders'
+ORDER BY LastCollectTimeStamp;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you troubleshoot a slow Teradata query?" — "First, run EXPLAIN to see the execution plan. Look for product joins (catastrophic), all-AMP scans on large tables (expected but tunable), and confidence levels. If confidence is 'none', missing statistics is likely the cause. Then COLLECT STATISTICS on the relevant columns."

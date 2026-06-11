@@ -10,6 +10,12 @@ tags: [hadoop, pig, pig-latin, mapreduce, etl, data-processing]
 
 # Pig — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Pig Latin like SQL's lazy cousin: a dataflow language where you load, filter, group, and store data in explicit steps — easier to write than raw MapReduce, less declarative than SQL.
+
+---
 ## What is Apache Pig?
 
 Apache Pig is a high-level data flow scripting language (Pig Latin) that compiles to MapReduce jobs. It abstracts the complexity of writing MapReduce Java code, letting analysts and engineers process large datasets with a SQL-like but more flexible syntax.
@@ -224,6 +230,37 @@ graph TD
     F --> G["HDFS Output"]
 ```
 
+
+## ▶️ Try It Yourself
+
+```bash
+-- Pig Latin script: find top 10 regions by revenue
+-- Save as top_regions.pig and run: pig -f top_regions.pig
+
+orders = LOAD '/data/raw/orders/' USING PigStorage(',')
+         AS (order_id:long, amount:float, region:chararray, order_date:chararray);
+
+-- Filter out nulls and negatives
+clean = FILTER orders BY amount > 0 AND region IS NOT NULL;
+
+-- Group by region
+by_region = GROUP clean BY region;
+
+-- Sum revenue per region
+revenue = FOREACH by_region GENERATE
+    group AS region,
+    SUM(clean.amount) AS total_revenue;
+
+-- Sort descending and take top 10
+sorted = ORDER revenue BY total_revenue DESC;
+top10  = LIMIT sorted 10;
+
+STORE top10 INTO '/data/gold/top_regions/' USING PigStorage(',');
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Pig Latin is a data flow language, not a query language. Each statement produces a new relation — no data moves until you run `DUMP`, `STORE`, or `EXPLAIN`. This lazy evaluation lets Pig optimize the entire script before execution.

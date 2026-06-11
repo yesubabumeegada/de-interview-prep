@@ -10,6 +10,12 @@ tags: [streaming, watermarks, windows, event-time, tumbling, hopping, session, f
 
 # Watermarks & Windows — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of watermarks like a postal deadline: events that arrive after the watermark (late by more than N seconds) are discarded. Windows are the time slots (5-minute buckets) that accumulate events until the watermark passes their end time.
+
+---
 ## Why Event Time and Watermarks Matter
 
 ```
@@ -201,6 +207,42 @@ How to set the right watermark tolerance:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import window, col, sum as spark_sum, to_timestamp
+
+spark = SparkSession.builder.master("local[*]").appName("watermark").getOrCreate()
+spark.sparkContext.setLogLevel("WARN")
+
+# Simulate events with timestamps (some late)
+data = [
+    ("2024-01-15 10:00:00", "US", 100.0),
+    ("2024-01-15 10:01:00", "EU", 200.0),
+    ("2024-01-15 09:58:00", "US", 50.0),   # 2 min late — within watermark
+    ("2024-01-15 09:50:00", "EU", 999.0),   # 10 min late — dropped by watermark
+]
+df = spark.createDataFrame(data, ["event_time", "region", "amount"])
+df = df.withColumn("event_time", to_timestamp("event_time"))
+
+stream = df.writeStream  # In practice: readStream from Kafka
+
+# Watermark: tolerate up to 5 minutes of late data
+result = (
+    df
+    .withWatermark("event_time", "5 minutes")
+    .groupBy(window("event_time", "10 minutes"), "region")
+    .agg(spark_sum("amount").alias("revenue"))
+)
+
+result.show(truncate=False)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between event time, processing time, and ingestion time?" — Event time: when the event actually occurred (timestamp in the data payload). Processing time: wall-clock time when the streaming engine processes the record (e.g., when Flink's operator runs). Ingestion time: when the record entered the messaging system (Kafka timestamp). For analytics, always use event time — it gives correct results even when the pipeline is restarted or falls behind. Processing time is only appropriate when approximate results are acceptable and ordering/late data doesn't matter (e.g., monitoring dashboards).

@@ -10,6 +10,12 @@ tags: [system-design, fault-tolerance, reliability, retry, idempotency, checkpoi
 
 # Fault Tolerance & Reliability — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of fault tolerance like redundancy in aircraft: two engines aren't because both are likely to fail, but because one can fail and you still land safely. In data systems, idempotency, retries, dead-letter queues, and checkpointing are your backup engines.
+
+---
 ## Why Fault Tolerance Matters
 
 In distributed data systems, failures are not exceptions — they are expected:
@@ -162,6 +168,48 @@ Benefits:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import time, logging
+from functools import wraps
+
+logger = logging.getLogger(__name__)
+
+def retry_with_backoff(max_retries: int = 3, base_delay: float = 1.0):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning("Attempt %d failed, retrying in %.1fs: %s", attempt+1, delay, e)
+                    time.sleep(delay)
+        return wrapper
+    return decorator
+
+@retry_with_backoff(max_retries=3)
+def load_to_warehouse(data: list) -> int:
+    import random
+    if random.random() < 0.5:
+        raise ConnectionError("Warehouse unavailable")
+    return len(data)
+
+try:
+    rows = load_to_warehouse([1, 2, 3])
+    print(f"Loaded {rows} rows successfully")
+except ConnectionError:
+    print("Sending to dead-letter queue for manual investigation")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between fault tolerance and high availability?" — Fault tolerance: the system continues working correctly even when components fail (no data loss, no errors). High availability: the system remains accessible and responsive (uptime). A system can be highly available but not fault tolerant (serves stale data during a failure). In DE: fault tolerance = pipeline retries and produces correct output; HA = pipeline runs 24/7 without downtime.

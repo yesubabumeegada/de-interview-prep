@@ -10,6 +10,12 @@ tags: [databricks, photon, performance, vectorized, query-engine]
 
 # Photon Engine — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Photon like a Formula 1 engine replacing the stock engine in your Spark car: it's a native C++ vectorized execution engine that processes columnar data faster than the JVM-based Spark engine — especially for SQL workloads on Delta tables.
+
+---
 ## What Is Photon?
 
 Photon is Databricks' **next-generation vectorized query engine** written in C++ that replaces the JVM-based Spark SQL execution engine. It processes data in columnar batches using CPU SIMD instructions, delivering 2-8x faster performance for SQL and DataFrame operations.
@@ -176,6 +182,31 @@ BENCHMARK_RESULTS = {
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Photon is enabled at the cluster level (no code changes needed)
+-- Just enable Photon in cluster settings and your SQL queries run faster
+
+-- Verify Photon is running: check Spark UI → SQL tab for "Photon" label
+
+-- Workloads that benefit most from Photon:
+-- Wide aggregations on large tables
+SELECT region, product_category, SUM(amount) revenue, AVG(amount) avg_order
+FROM gold.orders
+GROUP BY region, product_category;
+
+-- Large joins (Photon implements hash join natively in C++)
+SELECT o.order_id, c.name, o.amount
+FROM gold.orders o JOIN gold.customers c ON o.customer_id = c.id;
+
+-- Note: Python UDFs bypass Photon (use SQL/built-in functions for max speed)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Photon?" — A C++ vectorized query engine that replaces Spark's JVM-based SQL execution. It processes data in columnar batches using SIMD instructions, delivering 2-8x speedup for SQL/DataFrame operations. Drop-in replacement: same code, just change the runtime version. Default on all SQL Warehouses.

@@ -10,6 +10,12 @@ tags: [snowflake, stored-procedures, sql, javascript, python, automation]
 
 # Snowflake Stored Procedures — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Snowflake stored procedures like reusable scripts stored in the warehouse: complex multi-step logic (load → validate → merge → audit) runs in a single CALL statement, in JavaScript, Python, or SQL.
+
+---
 ## What Are Stored Procedures?
 
 Stored Procedures are **reusable blocks of code** stored in Snowflake that execute SQL, JavaScript, Python, Java, or Scala logic. They support: variables, loops, conditionals, error handling, and multi-statement transactions.
@@ -231,6 +237,45 @@ AS $$ ... $$;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Snowflake stored procedure in SQL (Snowflake Scripting)
+CREATE OR REPLACE PROCEDURE process_daily_orders(process_date DATE)
+RETURNS STRING
+LANGUAGE SQL
+AS
+$$
+BEGIN
+    -- Step 1: Load from stage
+    COPY INTO raw.orders_staging
+    FROM @raw_s3_stage/orders/:process_date/
+    FILE_FORMAT = (TYPE = PARQUET)
+    PURGE = FALSE;
+
+    -- Step 2: Upsert into main table
+    MERGE INTO silver.orders AS target
+    USING raw.orders_staging AS source
+    ON target.order_id = source.order_id
+    WHEN MATCHED THEN UPDATE SET amount = source.amount, region = source.region
+    WHEN NOT MATCHED THEN INSERT VALUES (source.order_id, source.amount, source.region, source.order_date);
+
+    -- Step 3: Audit log
+    INSERT INTO ops.pipeline_log (run_date, table_name, status)
+    VALUES (:process_date, 'silver.orders', 'SUCCESS');
+
+    RETURN 'Processed ' || :process_date::STRING;
+END;
+$$;
+
+-- Call it
+CALL process_daily_orders('2024-01-15');
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When do you use stored procedures vs Dynamic Tables/Tasks?" — Stored procedures for: complex conditional logic (IF/ELSE), multi-step transactions, error handling with logging, administrative tasks, and calling external services. Dynamic Tables for: declarative SQL transformations. Tasks for: scheduling simple SQL. Combine: Task calls a stored procedure (scheduling + complex logic).

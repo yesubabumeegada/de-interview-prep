@@ -10,6 +10,12 @@ tags: [system-design, data-warehouse, star-schema, snowflake-schema, dimensional
 
 # Data Warehouse Design — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data warehouse design like designing a city: star schema streets are straight and fast (denormalized), data vault neighborhoods are modular and extensible (append-only history), and the warehouse's transit hubs (Redshift/Snowflake clusters) must handle rush hour (end-of-day reporting) without gridlock.
+
+---
 ## OLTP vs OLAP
 
 | Property | OLTP | OLAP |
@@ -153,6 +159,36 @@ WHERE customer_id = 'C1001';
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Data warehouse design decision tree
+-- Q1: Query pattern? OLAP (aggregates) → columnar (Snowflake, Redshift, BigQuery)
+-- Q2: Schema? Known dimensions → Star. Evolving → Data Vault. Simple → Wide/OBT
+-- Q3: SCD? History needed → Type 2. Just current → Type 1.
+
+-- Example: dimension with SCD Type 2 + surrogate key
+CREATE TABLE dim_customer (
+    customer_sk     BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    customer_id     VARCHAR(50) NOT NULL,  -- Natural key
+    name            VARCHAR(200),
+    tier            VARCHAR(50),           -- Bronze/Silver/Gold
+    region          VARCHAR(50),
+    valid_from      DATE NOT NULL DEFAULT CURRENT_DATE,
+    valid_to        DATE NOT NULL DEFAULT '9999-12-31',
+    is_current      BOOLEAN NOT NULL DEFAULT TRUE,
+    dw_load_ts      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Current snapshot view (hides SCD complexity from analysts)
+CREATE VIEW v_current_customers AS
+SELECT * FROM dim_customer WHERE is_current = TRUE;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why do we use star schema instead of normalized schema in a DW?" — Normalized (3NF) schema minimizes redundancy, great for OLTP writes. But analytics queries need to join many tables to get results — expensive on large data. Star schema denormalizes dimensions (trades some storage for query speed). Analysts write simple 2-3 table joins instead of 10+ table joins. BI tools like Tableau work better with star schemas (auto-detected hierarchies, drag-and-drop).

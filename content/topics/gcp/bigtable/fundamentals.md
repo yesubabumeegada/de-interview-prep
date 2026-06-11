@@ -9,6 +9,12 @@ tags: [gcp, bigtable, interview]
 
 # Bigtable — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Bigtable like an infinitely wide spreadsheet with rows sorted by key: you look up a row by key in milliseconds regardless of billions of rows, but you can only efficiently query by row key or key prefix — not arbitrary columns.
+
+---
 ## Plain-English Analogy
 
 Think of it like a gigantic library where every book is filed by **one single label on its spine**, and the only fast way to find anything is to know that label or browse shelves in label order. There is no card catalog, no search by author, no "find all red books." If you label books well (e.g., `topic#author#year`), you can walk straight to a shelf and grab a whole run of related books in one motion. Label them badly (e.g., by purchase date) and every new delivery piles onto the same shelf while the rest of the library sits empty — and that one shelf becomes a bottleneck.
@@ -183,3 +189,37 @@ You pay for: **nodes per hour** (each node ≈ up to ~10k reads or writes/sec an
 4. Where is data physically stored? → *SSTables on Colossus; nodes only serve tablets.*
 5. What's atomic in Bigtable? → *Single-row mutations only.*
 6. HBase relationship? → *Bigtable exposes an HBase-compatible client, easing HBase migrations.*
+
+## ▶️ Try It Yourself
+
+```python
+from google.cloud import bigtable
+from google.cloud.bigtable import column_family, row_filters
+
+client = bigtable.Client(project="my-project", admin=True)
+instance = client.instance("my-instance")
+table = instance.table("user-events")
+
+# Write a row (key = user_id#timestamp for time-series)
+row_key = b"user42#2024-01-15T10:00:00"
+row = table.direct_row(row_key)
+row.set_cell("events", "event_type", "page_view")
+row.set_cell("events", "page", "/products/123")
+row.commit()
+
+# Read a single row
+row = table.read_row(b"user42#2024-01-15T10:00:00")
+print(row.cells["events"][b"event_type"][0].value.decode())
+
+# Scan a range of rows by key prefix (user42's events)
+rows = table.read_rows(
+    start_key=b"user42#",
+    end_key=b"user42#z",
+)
+for r in rows:
+    print(r.row_key.decode())
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

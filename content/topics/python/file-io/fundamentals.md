@@ -10,6 +10,12 @@ tags: [python, file-io, csv, json, pathlib, encoding, reading, writing]
 
 # Python File I/O — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of file I/O patterns like reading a newspaper: you can read the whole thing at once (small files), page by page (chunked reading for large files), or use a delivery service (streaming).
+
+---
 ## Why File I/O Matters in Data Engineering
 
 Every data pipeline starts with reading data and ends with writing it. Whether it's CSV exports, JSON API responses, or log files — understanding file I/O is the foundation of data processing.
@@ -275,6 +281,51 @@ flowchart LR
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import csv
+import json
+from pathlib import Path
+
+# Write a CSV
+Path("/tmp/orders.csv").write_text("id,amount,region
+1,100,US
+2,200,EU
+")
+
+# Read CSV efficiently (generator — memory-constant for large files)
+def read_csv_chunks(path: str, chunk_size: int = 1000):
+    with open(path, newline="") as f:
+        reader = csv.DictReader(f)
+        chunk = []
+        for row in reader:
+            chunk.append(row)
+            if len(chunk) >= chunk_size:
+                yield chunk
+                chunk.clear()
+        if chunk:
+            yield chunk
+
+for chunk in read_csv_chunks("/tmp/orders.csv"):
+    print(f"Processing chunk: {len(chunk)} rows")
+
+# JSON lines (JSONL) — one JSON object per line, streamable
+with open("/tmp/events.jsonl", "w") as f:
+    for i in range(3):
+        f.write(json.dumps({"id": i, "event": "click"}) + "
+")
+
+with open("/tmp/events.jsonl") as f:
+    for line in f:
+        event = json.loads(line)
+        print(event)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always use `with open(...)` context managers — never manual `f.close()`. If an exception occurs between open and close, the file leaks. This is the most basic but critical Python I/O pattern, and getting it wrong in an interview signals lack of production experience.

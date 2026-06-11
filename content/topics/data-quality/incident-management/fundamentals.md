@@ -10,6 +10,12 @@ tags: [incident-management, on-call, runbook, postmortem, escalation]
 
 # Incident Management — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data quality incident management like a software on-call process: severity is defined upfront (P1 = revenue impact, P2 = stale dashboards, P3 = non-critical), runbooks prescribe response steps, and post-mortems prevent recurrence.
+
+---
 ## What Is a Data Incident?
 
 A data incident is any event that causes data to be unavailable, inaccurate, or late in a way that impacts business operations. Data engineers are often on-call to respond to these incidents.
@@ -177,6 +183,47 @@ A runbook is a step-by-step guide for handling known incidents:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+
+class Severity(Enum):
+    P1 = "P1 - Critical (revenue/compliance impact)"
+    P2 = "P2 - High (analytics broken)"
+    P3 = "P3 - Medium (non-critical)"
+
+@dataclass
+class DataIncident:
+    title: str
+    severity: Severity
+    pipeline: str
+    detected_at: datetime = field(default_factory=datetime.now)
+    status: str = "open"
+    root_cause: str = ""
+    resolution: str = ""
+
+    def time_to_detect_minutes(self) -> int:
+        # In practice: compare to when data was actually bad
+        return 0
+
+def create_incident(title: str, pipeline: str, impact: str) -> DataIncident:
+    severity = Severity.P1 if "revenue" in impact.lower() or "compliance" in impact.lower()                else Severity.P2 if "dashboard" in impact.lower()                else Severity.P3
+    incident = DataIncident(title=title, severity=severity, pipeline=pipeline)
+    print(f"[INCIDENT CREATED] {severity.value}")
+    print(f"  Pipeline: {pipeline}")
+    print(f"  Next: page on-call if P1, create Jira ticket, post to #data-incidents")
+    return incident
+
+create_incident("Revenue metric dropped 40%", "orders_daily", "Revenue dashboard broken")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Walk me through how you'd handle a production data incident." — Acknowledge, assess scope (which tables/dashboards affected), investigate using standard checklist (source OK? job started? recent changes?), mitigate (rerun or restore), communicate status every 15 min to stakeholders, resolve, then write RCA.

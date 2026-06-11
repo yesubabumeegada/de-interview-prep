@@ -10,6 +10,12 @@ tags: [azure, synapse, data-warehouse, sql-pool, spark, analytics]
 
 # Azure Synapse Analytics — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Azure Synapse as a Swiss Army knife for analytics: it combines a dedicated SQL pool (cloud data warehouse), Spark pools (big data processing), serverless SQL on ADLS, and pipelines (ADF-like orchestration) — all in one workspace.
+
+---
 ## What Is Azure Synapse Analytics?
 
 Azure Synapse Analytics is a **unified analytics platform** that combines enterprise data warehousing, big data processing, and data integration in one service. Think of it as Azure SQL Data Warehouse + Spark + Data Factory combined.
@@ -153,6 +159,40 @@ Use cases:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Synapse Dedicated SQL Pool: create an external table on ADLS
+CREATE EXTERNAL DATA SOURCE adls_orders
+WITH (
+    TYPE = HADOOP,
+    LOCATION = 'abfss://raw@mydatalake.dfs.core.windows.net',
+    CREDENTIAL = managed_identity_cred
+);
+
+CREATE EXTERNAL FILE FORMAT parquet_format
+WITH (FORMAT_TYPE = PARQUET);
+
+CREATE EXTERNAL TABLE external_orders (
+    order_id BIGINT,
+    amount DECIMAL(12,2),
+    region NVARCHAR(50),
+    order_date DATE
+)
+WITH (
+    LOCATION = 'orders/2024/',
+    DATA_SOURCE = adls_orders,
+    FILE_FORMAT = parquet_format
+);
+
+-- Query data directly from ADLS without loading
+SELECT region, SUM(amount) FROM external_orders GROUP BY region;
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between Dedicated SQL Pool and Serverless SQL Pool?" — Dedicated SQL Pool: provisioned MPP warehouse with columnar storage, fixed cost per DWU-hour whether running queries or not, data stored in Synapse internal storage (not raw ADLS), supports INSERT/UPDATE/UPSERT, optimized for repeated BI queries. Serverless SQL Pool: no provisioned resources, reads directly from ADLS, pay-per-query ($5/TB), read-only (can CETAS to write), best for ad-hoc exploration and ELT on data lake. Most architectures use both: Serverless for exploration/ELT, Dedicated for serving layer.

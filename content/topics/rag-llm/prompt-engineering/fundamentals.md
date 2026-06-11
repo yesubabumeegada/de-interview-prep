@@ -10,6 +10,12 @@ tags: [prompt-engineering, llm, openai, few-shot, chain-of-thought, data-enginee
 
 # Prompt Engineering — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of prompt engineering like writing precise instructions for a very literal contractor: vague prompts get vague results, but structured prompts with role, context, format, and constraints get consistent, useful outputs.
+
+---
 ## Why This Matters for Data Engineers
 
 Prompt engineering isn't just about chatting with GPT — it's about building **reliable, repeatable LLM-powered components** in data pipelines. As a DE, you'll design prompts for data quality validation, SQL generation, metadata extraction, and anomaly detection. The difference between a good prompt and a bad one is the difference between a production system and a toy demo.
@@ -414,6 +420,54 @@ for issue in result.issues:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+# Basic prompt vs structured prompt
+vague = "Tell me about data pipelines"
+
+structured = (
+    "You are a senior data engineer with 10 years of experience.
+"
+    'A junior engineer asks: "What is a data pipeline?"
+
+'
+    "Respond in 3 bullet points, each under 30 words, focused on practical DE work.
+"
+    "Do not use jargon without explanation."
+)
+
+# Few-shot prompting: show examples of desired output format
+few_shot = (
+    "Classify these SQL queries as OLTP or OLAP:
+
+"
+    "Example 1: SELECT * FROM orders WHERE id = 42 -> OLTP
+"
+    "Example 2: SELECT region, SUM(amount) FROM orders GROUP BY region -> OLAP
+
+"
+    "Now classify: SELECT name FROM customers WHERE email = 'alice@example.com'
+"
+    "Answer:"
+)
+
+response = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=200,
+    messages=[{"role": "user", "content": few_shot}]
+)
+print(response.content[0].text)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always mention `temperature=0.0` for pipeline tasks. Interviewers want to hear you understand determinism in data systems.

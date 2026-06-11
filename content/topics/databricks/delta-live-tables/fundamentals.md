@@ -10,6 +10,12 @@ tags: [databricks, dlt, delta-live-tables, declarative, pipelines, data-quality]
 
 # Delta Live Tables (DLT) — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Delta Live Tables like dbt but for Spark streaming: you declare tables with `@dlt.table` decorators, define quality constraints with `@dlt.expect`, and DLT handles the execution order, dependency graph, checkpointing, and data quality enforcement.
+
+---
 ## What Is Delta Live Tables?
 
 Delta Live Tables is Databricks' **declarative ETL framework**. Instead of writing imperative code (read → transform → write), you declare WHAT you want (the result), and DLT handles HOW (orchestration, dependencies, error handling, optimization).
@@ -258,6 +264,39 @@ def gold_daily_revenue():
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import dlt  # Databricks Delta Live Tables SDK
+from pyspark.sql.functions import col
+
+# Bronze: raw ingestion (always append)
+@dlt.table(name="orders_raw", comment="Raw orders from S3")
+def orders_raw():
+    return (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "json")
+        .load("s3://my-bucket/raw/orders/")
+    )
+
+# Silver: cleaned with quality constraints
+@dlt.table(name="orders_cleaned")
+@dlt.expect("positive_amount", "amount > 0")
+@dlt.expect_or_drop("valid_region", "region IS NOT NULL")
+def orders_cleaned():
+    return dlt.read_stream("orders_raw").select("order_id", "amount", "region")
+
+# Gold: aggregated
+@dlt.table(name="revenue_by_region")
+def revenue_by_region():
+    return dlt.read("orders_cleaned").groupBy("region").sum("amount")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is DLT?" — A declarative ETL framework where you define WHAT each table should look like (transformation logic), and DLT handles HOW (execution order, incremental processing, error handling, optimization). It's like dbt but for Spark — with added features like streaming tables and built-in data quality expectations.

@@ -10,6 +10,12 @@ tags: [azure, event-hubs, kafka, streaming, ingestion, partitions]
 
 # Event Hubs — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Event Hubs like Kafka as a managed Azure service: producers publish events, partitions provide parallelism and ordering, consumer groups read independently — and Azure handles the infrastructure.
+
+---
 ## What Is Azure Event Hubs?
 
 Azure Event Hubs is a **fully managed, real-time data streaming and event ingestion service**. It acts as the "front door" for event pipelines — applications publish events to Event Hubs, and multiple consumers read those events independently.
@@ -158,6 +164,34 @@ while True:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from azure.eventhub import EventHubProducerClient, EventData
+from azure.eventhub.aio import EventHubConsumerClient
+from azure.identity import DefaultAzureCredential
+import json
+
+# Producer: send events
+cred = DefaultAzureCredential()
+producer = EventHubProducerClient(
+    fully_qualified_namespace="my-hub.servicebus.windows.net",
+    eventhub_name="orders",
+    credential=cred,
+)
+
+with producer:
+    batch = producer.create_batch()
+    batch.add(EventData(json.dumps({"order_id": 1, "amount": 150.0})))
+    batch.add(EventData(json.dumps({"order_id": 2, "amount": 200.0})))
+    producer.send_batch(batch)
+    print("Events sent to Event Hub")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between Event Hubs and Kafka?" — They're almost the same: Event Hubs implements the Kafka wire protocol, so Kafka clients work with Event Hubs without code changes. Key differences: Event Hubs is fully managed (no cluster administration), has tighter Azure integration (Managed Identity auth, Private Link, Azure Monitor), and caps partition count at 32 (Kafka clusters have no hard limit). Kafka gives more control: custom compaction, tiered storage configs, complex ACLs. Use Event Hubs if you're Azure-first and don't want cluster management. Use Kafka (HDInsight or Confluent) if you need Kafka ecosystem tools (Kafka Streams, KSQL, Kafka Connect).

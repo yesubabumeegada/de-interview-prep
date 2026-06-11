@@ -10,6 +10,12 @@ tags: [ai, model-serving, fastapi, flask, rest-api, latency, throughput]
 
 # Model Serving — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of model serving like a food delivery app: the trained model is the restaurant (stays in one place), the serving layer is the delivery app (handles requests, routes to the right restaurant), and the prediction is the meal delivered to the user in milliseconds.
+
+---
 ## What Is Model Serving?
 
 Model serving is the process of deploying a trained ML model to make predictions on new data. The goal is to expose model predictions via an API that other services and applications can call reliably, with acceptable latency.
@@ -439,6 +445,47 @@ async def add_request_id(request: Request, call_next):
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install fastapi uvicorn mlflow scikit-learn
+from fastapi import FastAPI
+from pydantic import BaseModel
+import mlflow.sklearn
+import numpy as np
+
+app = FastAPI()
+
+# Load model from MLflow registry (or local path)
+# model = mlflow.sklearn.load_model("models:/churn-prediction/Production")
+# For demo: train a simple model inline
+from sklearn.ensemble import RandomForestClassifier
+model = RandomForestClassifier(n_estimators=10, random_state=42)
+model.fit([[1,2,3],[4,5,6],[7,8,9]], [0,1,0])
+
+class PredictionRequest(BaseModel):
+    features: list[float]
+
+@app.post("/predict")
+def predict(request: PredictionRequest):
+    X = np.array(request.features).reshape(1, -1)
+    prediction = int(model.predict(X)[0])
+    probability = float(model.predict_proba(X)[0][1])
+    return {"prediction": prediction, "churn_probability": round(probability, 3)}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+# Run: uvicorn serving:app --port 8000
+# Test: curl -X POST localhost:8000/predict -d '{"features":[1,2,3]}'
+print("Model serving API defined")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why use FastAPI over Flask for model serving?" — "FastAPI provides async support (handles I/O-bound tasks without blocking), automatic request validation with Pydantic (no manual error checking), and auto-generated OpenAPI docs. For CPU-bound inference, the async advantage is smaller, but for models that do feature fetches from Redis/databases, async matters significantly. Flask is simpler but synchronous."

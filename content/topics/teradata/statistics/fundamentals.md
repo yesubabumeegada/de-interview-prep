@@ -10,6 +10,12 @@ tags: [teradata, statistics, collect-statistics, optimizer, query-performance]
 
 # Statistics — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of statistics in Teradata like a GPS map: without up-to-date statistics, the optimizer makes guesses about row counts and distributions. Wrong guesses lead to bad join strategies — always collect stats after large data loads.
+
+---
 ## Why Statistics Matter
 
 Teradata's optimizer is **cost-based** — it chooses query plans based on estimated costs. Those estimates come from statistics. Without accurate statistics, the optimizer makes wrong decisions that can turn a 2-minute query into a 2-hour disaster.
@@ -130,6 +136,32 @@ COLLECT STATISTICS USING SAMPLE 10 PERCENT ON large_table COLUMN (region);
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Collect statistics on frequently filtered/joined columns
+COLLECT STATISTICS
+    COLUMN (customer_id)                  -- Join column
+  , COLUMN (order_date)                   -- Filter column
+  , COLUMN (region)                       -- Group-by column
+  , INDEX (order_id)                      -- Primary index
+ON raw.orders;
+
+-- Check when statistics were last collected and how many rows they saw
+SELECT ColumnName, LastCollectTimeStamp, SampleSize, RowCount
+FROM DBC.ColumnStatsV
+WHERE DatabaseName = 'raw' AND TableName = 'orders'
+ORDER BY LastCollectTimeStamp;
+
+-- Auto-stats: let Teradata decide when to re-collect
+COLLECT STATISTICS USING THRESHOLD 10 PERCENT
+ON raw.orders COLUMN (order_date);
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why do we collect statistics in Teradata?" — "The cost-based optimizer uses statistics to estimate row counts and data distribution for every step in the execution plan. Without statistics, it falls back to wrong defaults (1,000 rows, uniform distribution), leading to product joins, wrong join order, and spool explosions."

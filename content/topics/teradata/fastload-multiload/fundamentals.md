@@ -10,6 +10,12 @@ tags: [teradata, fastload, multiload, tpt, bulk-load, etl]
 
 # FastLoad and MultiLoad — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of FastLoad like a freight train loading dock: it bypasses the AMP row hash routing for empty tables, loading data directly in parallel — very fast for initial loads. MultiLoad handles incremental inserts, updates, and deletes on existing tables.
+
+---
 ## Why Bulk Load Tools?
 
 Standard SQL `INSERT` statements in BTEQ process one row at a time, triggering all table maintenance (index updates, constraint checks) for every row. For loading millions or billions of rows, this is impractically slow.
@@ -219,6 +225,40 @@ DESCRIPTION 'Load orders from CSV'
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# FastLoad script (for empty tables — fastest initial load)
+# fastload_orders.fl
+
+.LOGON my-teradata/etl_user,secret
+DATABASE raw;
+
+DROP TABLE orders_fl_error1;
+DROP TABLE orders_fl_error2;
+
+BEGIN LOADING raw.orders_staging
+    ERRORFILES raw.orders_fl_error1, raw.orders_fl_error2
+    CHECKPOINT 10000;
+
+    DEFINE
+        order_id  (INTEGER),
+        amount    (DECIMAL(12,2)),
+        region    (CHAR(50))
+    FILE=orders_20240115.txt;
+
+    INSERT INTO raw.orders_staging VALUES (:order_id, :amount, :region);
+
+END LOADING;
+.LOGOFF
+
+# Run: fastload < fastload_orders.fl
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between FastLoad and MultiLoad?" — "FastLoad bulk-inserts into empty tables using a two-phase protocol — fastest throughput but requires an empty table and no secondary indexes. MultiLoad supports DML (INSERT/UPDATE/DELETE/UPSERT) on existing tables with data, up to 5 tables simultaneously, with automatic restart capability."

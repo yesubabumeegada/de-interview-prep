@@ -10,6 +10,12 @@ tags: [oracle, pl-sql, procedures, functions, cursors, exceptions]
 
 # PL/SQL — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of PL/SQL like Python for Oracle: stored procedures, functions, packages, and triggers that run inside the database engine — much faster than round-tripping SQL calls from application code for complex multi-step logic.
+
+---
 ## What Is PL/SQL?
 
 PL/SQL (Procedural Language/SQL) is Oracle's procedural extension to SQL. It allows you to write programs that combine SQL statements with procedural logic (loops, conditions, exception handling).
@@ -276,6 +282,50 @@ END;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- PL/SQL stored procedure with exception handling
+CREATE OR REPLACE PROCEDURE process_order(
+    p_order_id  IN  orders.order_id%TYPE,
+    p_status    IN  VARCHAR2,
+    p_rows_out  OUT NUMBER
+)
+AS
+BEGIN
+    UPDATE orders SET status = p_status, updated_at = SYSDATE
+    WHERE order_id = p_order_id;
+
+    p_rows_out := SQL%ROWCOUNT;
+
+    IF p_rows_out = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Order ' || p_order_id || ' not found');
+    END IF;
+
+    INSERT INTO audit_log (order_id, action, changed_at)
+    VALUES (p_order_id, 'STATUS_CHANGE_' || p_status, SYSDATE);
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END process_order;
+/
+
+-- Execute
+DECLARE v_rows NUMBER;
+BEGIN
+    process_order(42, 'COMPLETED', v_rows);
+    DBMS_OUTPUT.PUT_LINE('Updated ' || v_rows || ' rows');
+END;
+/
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between a procedure and a function in PL/SQL?" — A function must return a value (via RETURN) and can be used in SQL expressions. A procedure doesn't return a value (but can use OUT parameters) and cannot be used directly in SQL. Use functions for calculations; use procedures for DML operations or business logic with multiple OUT values.

@@ -10,6 +10,12 @@ tags: [databricks, lakehouse, architecture, delta-lake, medallion, data-engineer
 
 # Lakehouse Architecture — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of the Databricks Lakehouse like a single platform replacing both your data lake (cheap storage, raw data) and your data warehouse (reliable, fast SQL): Delta Lake provides the ACID foundation, Unity Catalog the governance, and Photon the query speed.
+
+---
 ## What Is a Lakehouse?
 
 A Lakehouse combines the best of **data warehouses** (ACID transactions, schema enforcement, BI performance) with **data lakes** (low-cost storage, flexible formats, ML support). It's a unified architecture for all data workloads.
@@ -212,6 +218,36 @@ OPTIMIZE orders ZORDER BY (customer_id);  -- Data skipping
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Lakehouse medallion pattern in Databricks SQL
+-- Bronze: raw, append-only
+CREATE TABLE IF NOT EXISTS raw.orders_bronze
+USING DELTA
+LOCATION 's3://my-bucket/delta/bronze/orders';
+
+-- Silver: cleaned
+CREATE OR REPLACE TABLE clean.orders_silver
+USING DELTA AS
+SELECT order_id, CAST(amount AS DECIMAL(12,2)) amount,
+       UPPER(region) region, CAST(order_date AS DATE) order_date
+FROM raw.orders_bronze
+WHERE amount > 0 AND region IS NOT NULL;
+
+-- Gold: business aggregates
+CREATE OR REPLACE TABLE gold.revenue_daily
+USING DELTA AS
+SELECT order_date, region,
+       SUM(amount) AS revenue, COUNT(*) AS orders
+FROM clean.orders_silver
+GROUP BY order_date, region;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a lakehouse?" — It combines data lake economics (cheap object storage, open formats) with data warehouse capabilities (ACID transactions, schema enforcement, fast BI queries). Delta Lake is the technology that bridges the gap — it adds warehouse features on top of lake storage.

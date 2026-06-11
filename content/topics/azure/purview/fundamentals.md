@@ -10,6 +10,12 @@ tags: [azure, purview, data-governance, catalog, lineage, classification, compli
 
 # Microsoft Purview — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Azure Purview like a data catalog + governance layer for the Microsoft ecosystem: it automatically scans ADLS, Azure SQL, Synapse, and Power BI to build a unified data map, lineage graph, and classification inventory.
+
+---
 ## What Is Microsoft Purview?
 
 Microsoft Purview is a **unified data governance and compliance platform** that helps organizations discover, classify, understand, and govern their data across the entire data estate — on-premises, multi-cloud, and SaaS.
@@ -154,6 +160,35 @@ OpenLineage integration:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from azure.purview.catalog import PurviewCatalogClient
+from azure.identity import DefaultAzureCredential
+
+cred = DefaultAzureCredential()
+client = PurviewCatalogClient(
+    endpoint="https://my-purview.purview.azure.com",
+    credential=cred,
+)
+
+# Search the catalog for tables with PII classification
+results = client.discovery.query(
+    body={
+        "keywords": "orders",
+        "filter": {"classification": "MICROSOFT.PERSONAL.EMAIL"},
+        "limit": 10,
+    }
+)
+
+for entity in results.get("value", []):
+    print(entity["qualifiedName"], entity.get("classification", []))
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between a data catalog and a data governance platform?" — A data catalog is primarily a searchable inventory of data assets (what data exists, where, and what schema). A data governance platform adds: policy enforcement (access control managed centrally), compliance management (DLP, sensitivity labels, GDPR), data quality tracking, business glossary with ownership, and lineage tracking. Microsoft Purview is a governance platform that includes catalog functionality. AWS Glue Data Catalog is a technical catalog only (no business glossary, no DLP, no lineage UI). Organizations often start with catalog needs and grow into governance.

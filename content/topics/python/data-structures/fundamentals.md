@@ -10,6 +10,12 @@ tags: [python, data-structures, lists, dicts, sets, tuples]
 
 # Python Data Structures — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Python data structures like containers in a kitchen: lists are drawers (ordered, allows duplicates), sets are bowls with no duplicates (fast membership checks), dicts are labeled jars (fast key lookups), and deques are conveyor belts (fast add/remove from both ends).
+
+---
 ## Why This Matters for DE Interviews
 
 Python data structures are the foundation of every data pipeline. Interviewers test whether you know **which structure to use when** — and the performance implications at scale (millions of records).
@@ -306,6 +312,40 @@ discrepancies = source_ids ^ target_ids
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Lists: ordered, mutable, allows duplicates
+orders = [100, 200, 100, 300]
+orders.append(400)
+print(orders[-1])   # 400 (last element)
+
+# Sets: unordered, unique values — O(1) membership test
+regions = {"US", "EU", "APAC"}
+print("US" in regions)   # True — O(1)
+unique_orders = list(set(orders))  # Deduplicate
+
+# Dicts: key-value, ordered (Python 3.7+), O(1) lookup
+revenue = {"US": 1000, "EU": 2000}
+revenue["APAC"] = 1500
+print(revenue.get("JP", 0))  # 0 (default if missing)
+
+# Counter: frequency dict made easy
+from collections import Counter, deque
+freq = Counter(["US","EU","US","US","EU"])
+print(freq.most_common(2))  # [('US', 3), ('EU', 2)]
+
+# Deque: O(1) append/pop from both ends (queue/stack)
+queue = deque(maxlen=3)
+queue.append(1); queue.append(2); queue.append(3)
+queue.append(4)   # Evicts 1 (maxlen=3)
+print(list(queue))  # [2, 3, 4]
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** The most common DS question for DE: "How would you efficiently find records in source but not in target?" Answer: `source_ids - target_ids` (set difference). O(n) vs O(n²) for nested loops. Always mention the complexity.

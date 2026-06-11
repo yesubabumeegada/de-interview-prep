@@ -10,6 +10,12 @@ tags: [metadata, data-catalog, data-governance, data-discovery, data-engineering
 
 # Metadata Management — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of metadata management in data modeling like the index and footnotes of a textbook: without them, readers spend more time figuring out what 'amount' means than reading the content. Good model metadata makes the data self-documenting.
+
+---
 ## What is Metadata?
 
 Metadata is **data about data**. It describes the structure, meaning, origin, quality, and usage of your data assets.
@@ -230,6 +236,42 @@ models:
         tests: [not_null]
 ```
 
+
+## ▶️ Try It Yourself
+
+```yaml
+# dbt schema.yml: metadata lives alongside the model definition
+version: 2
+models:
+  - name: orders_daily
+    description: >
+      Daily revenue aggregated from silver.stg_orders.
+      Grain: one row per (order_date, region).
+      Updated: nightly at 02:00 UTC via Airflow.
+    meta:
+      owner: data-platform@company.com
+      tier: gold
+      sla_hours: 6            # Must be ready by 08:00 UTC
+    columns:
+      - name: order_date
+        description: "Calendar date of the orders (UTC)"
+        tests: [not_null, unique]
+      - name: region
+        description: "Shipping region (US, EU, APAC)"
+        tests:
+          - accepted_values:
+              values: [US, EU, APAC, OTHER]
+      - name: revenue
+        description: "Sum of order amounts in USD (excluding refunds)"
+        tests: [not_null]
+        meta:
+          pii: false
+          glossary_term: Revenue
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What are the types of metadata?" — Three types: (1) Technical (schema, types, storage — the structure), (2) Business (descriptions, ownership, glossary — the meaning), (3) Operational (freshness, job status, usage — the state). All three are needed for a complete picture.

@@ -10,6 +10,12 @@ tags: [data-vault, hubs, links, satellites, modeling, data-engineering]
 
 # Data Vault Modeling — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Data Vault like a federal archive: Hubs are unique business keys (the filing label), Links are relationships between business keys (the cross-reference), and Satellites are the descriptive attributes (the content that changes over time). Raw history, never updated, always append-only.
+
+---
 ## What is Data Vault?
 
 Data Vault is a **database modeling methodology** designed for enterprise data warehouses. It was created by Dan Linstedt in the 1990s to address the limitations of 3NF and dimensional modeling when dealing with:
@@ -193,6 +199,45 @@ sequenceDiagram
 - Direct reporting (need star schema on top)
 - Real-time/streaming (better suited for batch)
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Data Vault 2.0 core structures
+
+-- Hub: unique business keys + hash key + load date + source
+CREATE TABLE hub_customer (
+    customer_hk  CHAR(32) PRIMARY KEY,   -- MD5 hash of customer_id
+    customer_id  VARCHAR(50) NOT NULL,   -- Business key from source
+    load_date    TIMESTAMP NOT NULL,
+    record_source VARCHAR(100) NOT NULL
+);
+
+-- Link: relationship between two hubs
+CREATE TABLE link_order_customer (
+    order_customer_hk CHAR(32) PRIMARY KEY,
+    order_hk          CHAR(32) NOT NULL,   -- FK to hub_order
+    customer_hk       CHAR(32) NOT NULL,   -- FK to hub_customer
+    load_date         TIMESTAMP NOT NULL,
+    record_source     VARCHAR(100) NOT NULL
+);
+
+-- Satellite: descriptive attributes (one row per change)
+CREATE TABLE sat_customer_details (
+    customer_hk  CHAR(32) NOT NULL,
+    load_date    TIMESTAMP NOT NULL,
+    load_end_date TIMESTAMP,
+    hash_diff    CHAR(32),               -- Detects changes (no re-insert if unchanged)
+    name         VARCHAR(200),
+    email        VARCHAR(200),
+    region       VARCHAR(50),
+    PRIMARY KEY (customer_hk, load_date)
+);
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Data Vault?" — A modeling method with 3 building blocks: Hubs (business keys), Links (relationships), Satellites (descriptive history). Designed for auditability, agility, and parallel loading in enterprise data warehouses.

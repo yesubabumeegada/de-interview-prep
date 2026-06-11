@@ -10,6 +10,12 @@ tags: [data-contracts, schema, agreement, producer, consumer]
 
 # Data Contracts — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data contracts like API contracts for data: the producer (upstream team/pipeline) formally agrees to a schema, SLA, and quality guarantees. If they break it, downstream consumers can escalate — shifting data quality from a hope to a commitment.
+
+---
 ## What Is a Data Contract?
 
 A data contract is a formal, versioned agreement between a **data producer** (the team publishing data) and **data consumers** (teams using that data). It specifies:
@@ -210,6 +216,47 @@ print("Contract validation passed ✓")
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```yaml
+# data-contracts/orders.yaml  — soda-core or custom contract format
+apiVersion: v1
+kind: DataContract
+metadata:
+  name: silver.orders
+  owner: data-platform@company.com
+  consumers:
+    - analytics-team
+    - ml-team
+spec:
+  schema:
+    - name: order_id
+      type: bigint
+      nullable: false
+      unique: true
+    - name: amount
+      type: decimal(12,2)
+      nullable: false
+      minimum: 0
+    - name: region
+      type: varchar(50)
+      nullable: false
+      enum: [US, EU, APAC, OTHER]
+  freshness:
+    max_lag_hours: 6
+  volume:
+    min_rows_per_day: 10000
+  sla:
+    availability_pct: 99.5
+    contact: "#data-quality Slack channel"
+
+# Validate with soda-core: soda scan -d snowflake -c orders.yaml
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a data contract?" — A formal YAML/JSON agreement between producer and consumer specifying schema, semantics, quality SLAs, and change policies. Validated at runtime to catch drift before it breaks downstream.

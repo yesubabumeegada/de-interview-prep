@@ -10,6 +10,12 @@ tags: [metadata, data-catalog, technical-metadata, business-metadata, operationa
 
 # Metadata Management — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of metadata management like keeping an accurate address book for your data: without it, analysts ask 'what does this column mean?' ten times a day. With it, descriptions, owners, and lineage are searchable — data finds users, not the other way around.
+
+---
 ## What Is Metadata?
 
 Metadata is "data about data." It describes the structure, content, quality, and context of data assets. Good metadata makes data discoverable, trustworthy, and governable.
@@ -187,6 +193,43 @@ def extract_metadata_from_dbt(manifest_path: str) -> list[dict]:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Simulate a metadata registry (in practice: DataHub, Alation, Atlan)
+metadata_registry = {}
+
+def register_table(table: str, owner: str, description: str, columns: dict):
+    metadata_registry[table] = {
+        "owner": owner,
+        "description": description,
+        "columns": columns,
+        "registered_at": "2024-01-15",
+    }
+
+def search(query: str) -> list:
+    q = query.lower()
+    return [
+        name for name, meta in metadata_registry.items()
+        if q in name.lower() or q in meta["description"].lower()
+           or any(q in col.lower() for col in meta["columns"])
+    ]
+
+register_table(
+    "gold.orders",
+    owner="data-platform@company.com",
+    description="Cleaned, deduplicated order transactions from POS and e-commerce",
+    columns={"order_id": "Unique order identifier", "amount": "Order value in USD", "region": "Shipping region"},
+)
+
+print(search("order"))   # ['gold.orders']
+print(search("revenue")) # [] — description doesn't mention revenue → improve description
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is metadata and why does it matter for data engineering?" — Metadata makes data discoverable (search), trustworthy (quality context), and governed (owner, sensitivity). Without metadata, analysts waste time finding and understanding data. DEs build pipelines that capture and maintain metadata automatically — it shouldn't require manual work.

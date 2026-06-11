@@ -10,6 +10,12 @@ tags: [teradata, workload-management, tasm, tdwm, priority, throttling]
 
 # Workload Management — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Teradata TASM (Teradata Active System Management) like a highway lane system: high-priority ETL jobs get a dedicated fast lane, ad-hoc analyst queries get a standard lane, and runaway queries get throttled before they consume all resources.
+
+---
 ## Why Workload Management Matters
 
 In a shared Teradata system, many different users and processes compete for the same AMP CPUs, memory, and I/O:
@@ -164,6 +170,33 @@ Most workload management configuration in production is done via Viewpoint rathe
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Check current workload management configuration
+SELECT * FROM DBC.WorkloadDefinition ORDER BY Priority;
+
+-- See active sessions and their workload classification
+SELECT SessionNo, UserName, WDName, ReqPhysIO, AMPCPUTime
+FROM DBC.SessionInfo
+WHERE WDName IS NOT NULL
+ORDER BY AMPCPUTime DESC;
+
+-- Check query bands (used for workload routing)
+-- Applications set query bands so TASM can classify their requests
+SET QUERY_BAND = 'ApplicationName=RevenueETL;Priority=HIGH;' FOR SESSION;
+
+-- Monitor active requests by workload
+SELECT WD_Name, COUNT(*) active_requests, SUM(CPUTime) total_cpu
+FROM DBC.QRYLOG
+WHERE StartTime > NOW - INTERVAL '1' HOUR
+GROUP BY 1 ORDER BY 3 DESC;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is TASM?" — "TASM (Teradata Active System Management) is Teradata's workload management system. It classifies incoming queries into workload groups based on user, session, or query characteristics, then applies priority and throttle rules to control resource allocation. It ensures tactical queries get CPU before batch jobs."

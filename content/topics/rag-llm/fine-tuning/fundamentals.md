@@ -10,6 +10,12 @@ tags: [rag, llm, fine-tuning, training, openai, customization]
 
 # Fine-Tuning LLMs — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of fine-tuning like training a medical student after general education: a pre-trained LLM has broad knowledge, and fine-tuning adapts it to your specific domain (Snowflake SQL syntax, your company's data model) with a small labeled dataset.
+
+---
 ## What Is Fine-Tuning?
 
 Fine-tuning is the process of **further training a pre-trained LLM on your specific data** to adapt it for a particular task, domain, or style. It's like taking a general-purpose engineer and training them on your company's specific tech stack.
@@ -283,6 +289,43 @@ The most important factor for fine-tuning success is **training data quality**:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Fine-tuning with Anthropic API (model fine-tuning)
+# Fine-tuning requires the Anthropic Fine-tuning API (check current availability)
+# General pattern using a local model (Llama) via Hugging Face:
+
+# pip install transformers datasets peft trl
+
+from datasets import Dataset
+
+# Training data format: instruction + input -> expected output
+train_data = [
+    {
+        "instruction": "Write a Snowflake SQL query to get daily revenue by region",
+        "input": "Table: orders(order_id, amount, region, order_date)",
+        "output": "SELECT order_date::DATE, region, SUM(amount) AS revenue
+FROM orders
+GROUP BY 1, 2
+ORDER BY 1, revenue DESC;"
+    },
+    {
+        "instruction": "Explain what a Slowly Changing Dimension Type 2 is",
+        "input": "",
+        "output": "SCD Type 2 preserves full history by adding a new row for each change, with valid_from, valid_to, and is_current columns to track which version is active."
+    },
+]
+
+dataset = Dataset.from_list(train_data)
+print(f"Training dataset: {len(dataset)} examples")
+print("Fine-tuning adapts the model to domain-specific SQL and terminology")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When would you fine-tune vs use RAG?" — Fine-tune for behavior/style (consistent JSON output, classification, domain writing style). RAG for knowledge (finding and citing specific facts from documents). They're complementary: fine-tune the generation model to cite RAG results better.

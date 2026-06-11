@@ -10,6 +10,12 @@ tags: [rag, llm, evaluation, metrics, ragas, precision, recall, faithfulness]
 
 # RAG Evaluation Metrics — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of RAG evaluation like grading an open-book exam: you measure whether the retriever found the right pages (retrieval recall/precision), whether the LLM used them correctly (faithfulness/groundedness), and whether the answer actually helps the user (answer relevancy).
+
+---
 ## Why Evaluation Matters
 
 Without evaluation, you're flying blind. Changes to chunking, embedding models, or prompts may help or hurt — you won't know until users complain. Evaluation gives you quantitative feedback on every change.
@@ -293,6 +299,45 @@ Return as JSON: [{{"question": "...", "answer": "...", "doc_id": "{doc['id']}"}}
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install ragas datasets
+# RAGAS: Retrieval Augmented Generation Assessment
+
+# Key metrics:
+# Faithfulness:     Does the answer only use information from the retrieved context?
+# Answer Relevancy: Does the answer actually address the question?
+# Context Precision: Are the retrieved chunks actually relevant?
+# Context Recall:   Does the context contain all info needed to answer?
+
+from ragas.metrics import faithfulness, answer_relevancy, context_precision
+from ragas import evaluate
+from datasets import Dataset
+
+# Evaluation dataset
+eval_data = {
+    "question": ["What tool handles SQL transforms with testing?"],
+    "answer": ["dbt (data build tool) handles SQL transforms with built-in testing and documentation."],
+    "contexts": [["dbt transforms SQL models with testing and documentation built in."]],
+    "ground_truth": ["dbt"]
+}
+
+dataset = Dataset.from_dict(eval_data)
+# result = evaluate(dataset, metrics=[faithfulness, answer_relevancy, context_precision])
+# print(result)
+
+# Manual faithfulness check (no API needed)
+answer = "dbt handles SQL transforms with built-in testing"
+context = "dbt transforms SQL models with testing and documentation built in."
+overlap = set(answer.lower().split()) & set(context.lower().split())
+print(f"Token overlap (proxy for faithfulness): {len(overlap)} common words")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you evaluate a RAG system?" — The RAG triad: (1) Context Relevance (retrieval found right docs?), (2) Faithfulness (answer only uses retrieved info?), (3) Answer Relevance (answer addresses the question?). Measure all three because fixing one doesn't guarantee the others improve.

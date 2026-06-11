@@ -10,6 +10,12 @@ tags: [oracle, materialized-views, query-rewrite, fast-refresh, mv-log]
 
 # Materialized Views — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Oracle materialized views like a summary report pre-printed and kept in a drawer: instead of running a complex GROUP BY every time, Oracle serves the pre-computed result and refreshes it on a schedule or on-commit.
+
+---
 ## What Is a Materialized View?
 
 A materialized view (MV) is a database object that stores the result of a query physically on disk — unlike a regular view which just stores the query definition. When queried, an MV returns pre-computed results (no re-execution of the underlying query).
@@ -156,6 +162,37 @@ SELECT * FROM TABLE(DBMS_MVIEW.EXPLAIN_REWRITE(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Create a materialized view with fast refresh (needs MV log)
+CREATE MATERIALIZED VIEW LOG ON orders
+WITH PRIMARY KEY, ROWID, SEQUENCE
+INCLUDING NEW VALUES;
+
+CREATE MATERIALIZED VIEW mv_daily_revenue
+BUILD IMMEDIATE
+REFRESH FAST ON COMMIT  -- Incremental refresh on each transaction commit
+ENABLE QUERY REWRITE    -- Optimizer automatically uses MV when possible
+AS
+SELECT TRUNC(order_date) AS order_day,
+       region,
+       SUM(amount) AS revenue,
+       COUNT(*) AS order_count
+FROM orders
+GROUP BY TRUNC(order_date), region;
+
+-- Query rewrite: this query is automatically served from the MV
+SELECT region, SUM(amount)
+FROM orders
+WHERE TRUNC(order_date) = TRUNC(SYSDATE)
+GROUP BY region;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between a view and a materialized view?" — A view is just a stored SQL query — every time you query it, Oracle re-executes the underlying SQL. A materialized view stores the actual result set on disk. Querying a materialized view reads the pre-computed result directly — no re-execution. MVs are significantly faster for complex aggregations, but require refresh to stay current with base data.

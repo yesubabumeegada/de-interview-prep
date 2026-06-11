@@ -10,6 +10,12 @@ tags: [nifi, back-pressure, flow-control, connections, queues, data-engineering]
 
 # NiFi Back Pressure — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of NiFi back-pressure like a water reservoir with safety valves: when a connection queue fills up (10,000 FlowFiles or 1 GB default), NiFi stops the upstream processor from producing more — preventing memory exhaustion downstream.
+
+---
 ## What is Back Pressure?
 
 Back pressure is NiFi's **built-in flow control mechanism** that prevents a fast producer from overwhelming a slow consumer. When a connection queue fills up to its threshold, NiFi automatically **pauses the upstream processor** until the queue drains.
@@ -206,6 +212,37 @@ graph TD
 | Penalty | FlowFile | Processing failure | Delay one FlowFile |
 | Swap | System | Memory limit | Spill queue to disk |
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Back-pressure is configured per connection in NiFi:
+# Back Pressure Object Threshold: 10000 (FlowFile count)
+# Back Pressure Data Size Threshold: 1 GB
+
+# When back-pressure triggers:
+# 1. Upstream processor stops scheduling (no new FlowFiles created)
+# 2. Downstream processor continues draining the queue
+# 3. Upstream resumes when queue drops below threshold
+
+# Monitor via NiFi API:
+# GET /nifi-api/flow/process-groups/{id}/status
+# Look for: "queuedCount" approaching "backPressureObjectThreshold"
+
+# Tune back-pressure per connection based on FlowFile size:
+# Small events (1KB): threshold=100000 objects, 100MB size
+# Large files (1GB): threshold=10 objects, 20GB size
+
+# Check current queue depths across all connections
+# GET /nifi-api/process-groups/root/connections
+# -> check status.aggregateSnapshot.queuedCount vs backPressureObjectThreshold
+
+echo "High queue depth + back-pressure = downstream bottleneck — check slow processors"  
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is back pressure in NiFi?" — A flow control mechanism on connections (queues) between processors. When a queue reaches its configured threshold (FlowFile count or data size), the upstream processor is automatically paused until the queue drains. Prevents memory overflow and ensures the system doesn't crash when producers are faster than consumers.

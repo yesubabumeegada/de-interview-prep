@@ -10,6 +10,12 @@ tags: [databricks, auto-loader, ingestion, streaming, cloudfiles, incremental]
 
 # Auto Loader — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Auto Loader like an intelligent file watcher for your data lake: instead of listing millions of S3 files each run to find new ones, it uses cloud notifications (SNS/SQS or Azure Event Grid) to know exactly which files arrived since last checkpoint.
+
+---
 ## What Is Auto Loader?
 
 Auto Loader is Databricks' **incremental file ingestion** solution. It automatically discovers and processes new files as they arrive in cloud storage (S3, ADLS, GCS) — without you tracking which files have already been loaded.
@@ -267,6 +273,37 @@ enriched_df = (raw_df
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.master("local[*]").appName("autoloader").getOrCreate()
+
+# Auto Loader: incrementally ingest new files from a cloud storage path
+df = (
+    spark.readStream
+    .format("cloudFiles")
+    .option("cloudFiles.format", "parquet")
+    .option("cloudFiles.schemaLocation", "/tmp/schema_hints/orders")
+    # On Databricks + cloud: use cloudFiles.useNotifications=true for scale
+    .load("s3://my-bucket/raw/orders/")
+)
+
+(
+    df.writeStream
+    .format("delta")
+    .option("checkpointLocation", "/tmp/checkpoint/auto_loader_orders")
+    .outputMode("append")
+    .start("/tmp/delta/orders_silver")
+    .awaitTermination(30)
+)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Auto Loader and when do you use it?" — Auto Loader incrementally ingests new files from cloud storage into Delta tables. Use it whenever files arrive over time (landing zone pattern, CDC exports, log files). It handles file discovery, deduplication, schema evolution, and exactly-once guarantees automatically.

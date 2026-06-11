@@ -10,6 +10,12 @@ tags: [databricks, workflows, jobs, scheduling, orchestration, tasks]
 
 # Databricks Workflows & Jobs — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Databricks Workflows like Airflow inside Databricks: you define a DAG of tasks (notebook, Python, dbt, Delta Live Tables), set dependencies, schedule the run, and Databricks handles retries and notifications.
+
+---
 ## What Are Databricks Workflows?
 
 Databricks Workflows is the **native orchestration service** for scheduling and managing data pipelines on Databricks. It replaces external schedulers (Airflow, Cron) for Databricks-native workloads.
@@ -306,6 +312,47 @@ print(f"Validating {rows} rows from {source_date}")
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import requests
+import os
+
+DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST", "https://adb-xxx.azuredatabricks.net")
+TOKEN = os.environ.get("DATABRICKS_TOKEN", "dapi...")
+
+# Create a multi-task workflow job
+job_def = {
+    "name": "orders-etl-pipeline",
+    "tasks": [
+        {
+            "task_key": "ingest",
+            "notebook_task": {
+                "notebook_path": "/pipelines/01_ingest_orders",
+                "base_parameters": {"date": "2024-01-15"},
+            },
+        },
+        {
+            "task_key": "transform",
+            "depends_on": [{"task_key": "ingest"}],
+            "notebook_task": {"notebook_path": "/pipelines/02_transform_orders"},
+        },
+    ],
+    "schedule": {"quartz_cron_expression": "0 0 6 * * ?", "timezone_id": "UTC"},
+}
+
+resp = requests.post(
+    f"{DATABRICKS_HOST}/api/2.1/jobs/create",
+    headers={"Authorization": f"Bearer {TOKEN}"},
+    json=job_def,
+)
+print("Job created:", resp.json().get("job_id"))
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What are Databricks Workflows?" — The native orchestration service for scheduling and running data pipelines. Jobs contain tasks (notebooks, SQL, DLT, Python scripts) with dependencies. Tasks execute on job clusters (cheaper than all-purpose). Supports cron scheduling, file-arrival triggers, and API triggers.

@@ -10,6 +10,12 @@ tags: [databricks, structured-streaming, spark, real-time, delta-lake, kafka]
 
 # Structured Streaming on Databricks — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Databricks structured streaming like a continuous dbt run: micro-batch or continuous mode, checkpointing saves progress so restarts never re-process, and Delta as a sink gives ACID landing with exactly-once semantics.
+
+---
 ## What Is Structured Streaming?
 
 Structured Streaming is Spark's stream processing engine that treats streaming data as a continuously appending table. On Databricks, it integrates natively with Delta Lake for exactly-once, fault-tolerant stream processing.
@@ -291,6 +297,36 @@ print(f"Processed: {query.lastProgress}")
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import from_json, col
+from pyspark.sql.types import StructType, StringType, DoubleType
+
+spark = SparkSession.builder.master("local[*]").appName("streaming").getOrCreate()
+
+schema = StructType()     .add("order_id", StringType())     .add("amount", DoubleType())     .add("region", StringType())
+
+# Read from Kafka (or use rate source for local demo)
+stream = spark.readStream.format("rate").option("rowsPerSecond", 10).load()
+
+query = (
+    stream.writeStream
+    .format("delta")
+    .option("checkpointLocation", "/tmp/checkpoint/orders")
+    .outputMode("append")
+    .start("/tmp/delta/orders_stream")
+)
+
+import time; time.sleep(10); query.stop()
+print("Streaming wrote to Delta with checkpointing")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Structured Streaming on Databricks?" — Spark's stream processing engine that treats data as a continuously appending table. On Databricks, it integrates with Auto Loader (file ingestion), Kafka (event streams), and Delta Lake (exactly-once writes). Same DataFrame API as batch — just `readStream` instead of `read`.

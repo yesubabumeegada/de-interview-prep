@@ -10,6 +10,12 @@ tags: [bash, environment-variables, config, secrets, linux]
 
 # Environment Variables — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of environment variables like configuration knobs outside your script: instead of hardcoding DB passwords or S3 paths, you read them from the environment — so the same script works in dev (pointing at test DB) and prod (pointing at production DB) without code changes.
+
+---
 ## What Are Environment Variables?
 
 Environment variables are **key-value pairs** available to all processes in a shell session. They configure: application behavior, credentials, paths, and runtime settings without hardcoding values in scripts.
@@ -219,6 +225,43 @@ DB_HOST=staging-db python etl.py
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+#!/bin/bash
+
+# Read from environment (with defaults for optional vars)
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
+DB_NAME="${DB_NAME:?ERROR: DB_NAME must be set}"  # Fail if not set
+
+# Never hardcode secrets — use environment or secrets manager
+# BAD:  PASSWORD="super_secret_123"
+# GOOD: PASSWORD="${DB_PASSWORD:?DB_PASSWORD must be set}"
+
+echo "Connecting to $DB_HOST:$DB_PORT/$DB_NAME"
+
+# Export to child processes
+export PYTHONPATH="/app/src:$PYTHONPATH"
+export LOG_LEVEL="${LOG_LEVEL:-INFO}"
+
+# .env file pattern (for local dev — never commit)
+# Create: echo "DB_HOST=localhost" >> .env
+# Load:   export $(grep -v '^#' .env | xargs)
+# Better: use direnv or dotenv-cli
+
+# Check required variables at script start
+required_vars=(DB_HOST DB_NAME DB_PASSWORD S3_BUCKET)
+for var in "${required_vars[@]}"; do
+    [[ -z "${!var}" ]] && { echo "ERROR: $var is not set"; exit 1; }
+done
+echo "All required variables set"  
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you manage configuration across environments?" — .env files per environment (production.env, staging.env, development.env). Load the right one based on an ENVIRONMENT variable. Never commit .env files to git (add to .gitignore). Same script code works in all environments — only the config differs.

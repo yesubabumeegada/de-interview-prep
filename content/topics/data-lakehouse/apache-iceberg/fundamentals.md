@@ -10,6 +10,12 @@ tags: [iceberg, table-format, lakehouse, parquet, schema-evolution]
 
 # Apache Iceberg — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Apache Iceberg like a catalog with hidden superpowers: it stores table metadata (manifest files, snapshot history) in the object store itself, enabling time travel, partition evolution, and schema evolution without moving data.
+
+---
 ## What Is Apache Iceberg?
 
 Apache Iceberg is an open table format for huge analytic datasets. It adds a metadata layer on top of Parquet (or ORC/Avro) files stored in object storage, enabling ACID transactions, schema evolution, and time-travel — for any query engine that supports the spec.
@@ -109,6 +115,38 @@ Metadata hierarchy:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyiceberg.catalog import load_catalog
+from pyiceberg.schema import Schema
+from pyiceberg.types import NestedField, LongType, FloatType, StringType
+
+# Load REST catalog (or Glue, Hive, JDBC)
+catalog = load_catalog("default", **{
+    "type": "rest",
+    "uri": "http://localhost:8181",
+})
+
+# Create a namespace and table
+catalog.create_namespace("silver")
+schema = Schema(
+    NestedField(1, "order_id", LongType(), required=True),
+    NestedField(2, "amount", FloatType()),
+    NestedField(3, "region", StringType()),
+)
+catalog.create_table("silver.orders", schema=schema)
+
+# Read with Iceberg Python (or use Spark/Trino/Flink)
+table = catalog.load_table("silver.orders")
+print("Schema:", table.schema())
+print("Snapshots:", list(table.history()))
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why was Iceberg created when Parquet already existed?" — Parquet is a file format (how data is stored in a single file). Iceberg is a table format (how a collection of files form a consistent, transactional table). Parquet has no concept of ACID, schema evolution across files, or time-travel. Iceberg adds the metadata layer on top of Parquet files to provide these table-level guarantees.

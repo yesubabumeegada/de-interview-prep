@@ -10,6 +10,12 @@ tags: [oracle, data-guard, standby, dr, redo-transport, switchover, failover]
 
 # Data Guard — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Oracle Data Guard like a shadow copy of your database that's always in sync: the primary sends redo logs to standby databases in real time. If the primary fails, standby takes over in seconds — RPO near zero, RTO seconds to minutes.
+
+---
 ## What Is Oracle Data Guard?
 
 Oracle Data Guard maintains one or more standby databases as synchronized copies of the primary database. It automatically ships redo log data from the primary to standbys, keeping them current. Used for disaster recovery (DR) and high availability.
@@ -168,6 +174,36 @@ ALTER SYSTEM SET DG_BROKER_START = TRUE;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- On PRIMARY: check Data Guard status
+SELECT db_unique_name, database_role, protection_mode, protection_level
+FROM v$database;
+
+-- Check log shipping lag to standby
+SELECT dest_id, status, target, archiver,
+       ROUND(applied_seq# - error_seq#) AS gap
+FROM v$archive_dest_status
+WHERE target = 'STANDBY';
+
+-- On STANDBY: check apply lag
+SELECT NAME, VALUE, TIME_COMPUTED
+FROM v$dataguard_stats
+WHERE name IN ('apply lag', 'transport lag');
+
+-- Switchover (planned, zero data loss)
+-- On primary:
+ALTER DATABASE COMMIT TO SWITCHOVER TO STANDBY;
+-- On standby:
+ALTER DATABASE COMMIT TO SWITCHOVER TO PRIMARY;
+ALTER DATABASE OPEN;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between switchover and failover?" — Switchover is a planned, graceful role reversal: primary drains sessions, sends all redo to standby, then both databases swap roles. No data loss. Used for planned maintenance, patching, or datacenter moves. Failover is unplanned: the primary has crashed and can't be reached. The standby is promoted to primary immediately. There may be data loss (redo that was in the primary's online redo log but not yet transported to the standby).

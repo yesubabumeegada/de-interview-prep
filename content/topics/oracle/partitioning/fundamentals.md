@@ -10,6 +10,12 @@ tags: [oracle, partitioning, range-partition, list-partition, hash-partition, pr
 
 # Partitioning — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Oracle partitioning like organizing a massive filing room into date-labeled cabinets: when you query Q1 2024 data, Oracle opens only that cabinet (partition pruning) — dramatically reducing I/O for large historical tables.
+
+---
 ## What Is Partitioning?
 
 Partitioning divides a large table (or index) into smaller, physically separate segments called partitions. Each partition is stored separately but appears as one logical table. The database transparently routes queries to only the relevant partitions.
@@ -175,6 +181,39 @@ SUBPARTITION BY HASH (region) SUBPARTITIONS 4
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Create a range-partitioned table by year-month
+CREATE TABLE orders (
+    order_id    NUMBER PRIMARY KEY,
+    amount      NUMBER(12,2),
+    region      VARCHAR2(50),
+    order_date  DATE NOT NULL
+)
+PARTITION BY RANGE (order_date)
+INTERVAL (NUMTOYMINTERVAL(1, 'MONTH'))  -- Auto-create monthly partitions
+(
+    PARTITION orders_2024_01 VALUES LESS THAN (DATE '2024-02-01')
+);
+
+-- Partition pruning in action: query only reads 2024-01 partition
+SELECT region, SUM(amount)
+FROM orders
+WHERE order_date BETWEEN DATE '2024-01-01' AND DATE '2024-01-31'
+GROUP BY region;
+
+-- Check partition details
+SELECT partition_name, num_rows, high_value
+FROM user_tab_partitions
+WHERE table_name = 'ORDERS'
+ORDER BY partition_position;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is partition pruning and why is it important?" — Partition pruning is Oracle's ability to skip entire partitions that can't contain rows matching a query's WHERE clause. If a sales table is partitioned by month and you query for January 2024, Oracle reads only the January 2024 partition — ignoring all other partitions. For a table with 5 years of monthly data (60 partitions), a monthly query reads 1/60th of the data.

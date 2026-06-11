@@ -10,6 +10,12 @@ tags: [snowflake, dynamic-tables, declarative, incremental, etl, pipelines]
 
 # Snowflake Dynamic Tables — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Dynamic Tables like materialized views with automatic refresh scheduling: you define a SQL query, set a lag target (e.g., '1 minute'), and Snowflake incrementally refreshes the result — no Streams+Tasks boilerplate needed.
+
+---
 ## What Are Dynamic Tables?
 
 Dynamic Tables are Snowflake's **declarative data transformation** feature. You define WHAT the table should look like (a SQL query), and Snowflake automatically keeps it refreshed — handling incremental processing, scheduling, and dependency management.
@@ -210,6 +216,37 @@ WHERE SCHEMA_NAME = 'SILVER';
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Dynamic Table: auto-refreshes to keep lag within 1 minute
+CREATE OR REPLACE DYNAMIC TABLE silver.orders_cleaned
+  TARGET_LAG = '1 minute'
+  WAREHOUSE = etl_wh
+AS
+SELECT
+    order_id,
+    customer_id,
+    amount::DECIMAL(12,2) AS amount,
+    UPPER(region) AS region,
+    order_date::DATE AS order_date
+FROM raw.orders_raw
+WHERE amount > 0 AND region IS NOT NULL;
+
+-- Check refresh history and lag
+SELECT name, state, target_lag, last_suspended_on
+FROM INFORMATION_SCHEMA.DYNAMIC_TABLES
+WHERE name = 'ORDERS_CLEANED';
+
+-- Suspend / resume automatic refresh
+ALTER DYNAMIC TABLE silver.orders_cleaned SUSPEND;
+ALTER DYNAMIC TABLE silver.orders_cleaned RESUME;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What are Dynamic Tables?" — Declarative transformation: you write a SELECT query and set a TARGET_LAG (freshness SLA). Snowflake automatically refreshes the table within that lag — handling scheduling, incremental processing, and dependency management. Like dbt models but fully managed by Snowflake.

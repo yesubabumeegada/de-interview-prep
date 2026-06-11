@@ -10,6 +10,12 @@ tags: [databricks, repos, git, ci-cd, version-control, deployment]
 
 # Databricks Repos and CI/CD — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Databricks Repos like a Git checkout inside Databricks: your notebooks are versioned files in GitHub/GitLab, and CI/CD pipelines run `databricks repos update` to pull the latest code before running jobs — same workflow as software engineering.
+
+---
 ## What Are Databricks Repos?
 
 Databricks Repos lets you **sync Git repositories directly into your workspace**. Notebooks, Python files, and configs are version-controlled with standard Git workflows (branches, PRs, merges).
@@ -240,6 +246,40 @@ source_path = config[environment]["source"]
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```yaml
+# .github/workflows/deploy_databricks.yml
+name: Deploy to Databricks
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Databricks CLI
+        run: pip install databricks-cli
+
+      - name: Update Databricks Repo (pull latest code)
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          databricks repos update --path /Repos/prod/de-pipelines --branch main
+
+      - name: Run dbt models on Databricks SQL
+        run: |
+          dbt run --profiles-dir . --target prod --select tag:daily
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you version-control Databricks notebooks?" — Use Databricks Repos: sync a Git repository into the workspace. Code lives in Git (branches, PRs, merges), Repos syncs it for execution. Workflows reference notebook paths under /Repos/production/. Same Git workflow as any software project.

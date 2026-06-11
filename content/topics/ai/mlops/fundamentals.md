@@ -10,6 +10,12 @@ tags: [ai, mlops, cicd, model-registry, experiment-tracking, production]
 
 # MLOps — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of MLOps like DevOps for machine learning: the same principles (CI/CD, version control, monitoring) applied to models. The pipeline is: code commit -> automated training -> model validation -> staged deployment -> production monitoring -> re-training on drift.
+
+---
 ## What Is MLOps?
 
 MLOps (Machine Learning Operations) is the practice of applying DevOps principles to ML systems. It covers the full lifecycle: data preparation, experimentation, training, deployment, monitoring, and retraining.
@@ -326,6 +332,41 @@ pydantic==2.5.3
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```yaml
+# .github/workflows/mlops_pipeline.yml
+name: MLOps Pipeline
+on:
+  push:
+    branches: [main]
+    paths: [src/models/**, data/features/**]
+
+jobs:
+  train-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run feature pipeline
+        run: python src/features/build_features.py
+      - name: Train model
+        run: python src/models/train.py --experiment churn-v2
+      - name: Validate model (must beat baseline)
+        run: python src/models/validate.py --min-f1 0.75
+      - name: Register model in MLflow
+        run: python src/models/register.py --stage Staging
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_URI }}
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between MLOps and DevOps?" — "DevOps manages code and infrastructure. MLOps adds management of data (versioned, validated), models (registered, staged), and experiments (tracked, reproducible). A key difference is non-determinism — the same code on different data produces different models, so you must version and track far more artifacts. Also, ML systems degrade silently (model drift) in ways software rarely does."

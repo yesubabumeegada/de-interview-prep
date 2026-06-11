@@ -10,6 +10,12 @@ tags: [python, multithreading, multiprocessing, concurrency, parallelism, GIL]
 
 # Python Multithreading & Multiprocessing — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of threading vs multiprocessing like restaurant staff: threads are waiters sharing the same kitchen (GIL limits true CPU parallelism — good for I/O), processes are separate kitchens (true CPU parallelism — good for compute).
+
+---
 ## Why Concurrency Matters in Data Engineering
 
 Data pipelines spend time doing two things:
@@ -195,6 +201,36 @@ Is your bottleneck...
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import concurrent.futures
+import time
+
+def io_task(n: int) -> str:
+    time.sleep(0.1)  # Simulate I/O wait
+    return f"IO result {n}"
+
+def cpu_task(n: int) -> int:
+    return sum(i * i for i in range(n * 100000))  # CPU-bound
+
+# Threading: good for I/O-bound (network, disk, DB calls)
+with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    start = time.perf_counter()
+    results = list(executor.map(io_task, range(10)))
+    print(f"Threading (I/O): {time.perf_counter()-start:.2f}s for 10 tasks")
+
+# Multiprocessing: good for CPU-bound (transforms, parsing, compression)
+with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+    start = time.perf_counter()
+    results = list(executor.map(cpu_task, range(8)))
+    print(f"Multiprocessing (CPU): {time.perf_counter()-start:.2f}s for 8 tasks")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** When asked about the GIL, say: "The GIL prevents parallel CPU execution in threads, but it's released during I/O. For API extraction, threads are fine. For heavy transforms, I use multiprocessing or move to PySpark." This shows nuanced understanding.

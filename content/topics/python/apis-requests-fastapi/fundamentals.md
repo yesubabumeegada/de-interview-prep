@@ -10,6 +10,12 @@ tags: [python, apis, requests, http, json, authentication, pagination]
 
 # Python APIs — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of requests as a polite customer asking an API for data, and FastAPI as the restaurant building its own API menu: requests is the client side, FastAPI is the server side — both use HTTP under the hood.
+
+---
 ## HTTP Basics for Data Engineers
 
 APIs are the primary way data pipelines extract data from external systems. Understanding HTTP fundamentals is essential for building reliable data connectors.
@@ -315,6 +321,53 @@ flowchart TD
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import requests
+
+# Client: call an external REST API
+resp = requests.get(
+    "https://jsonplaceholder.typicode.com/todos/1",
+    timeout=10,
+)
+resp.raise_for_status()  # Raise on 4xx/5xx
+print(resp.json())
+
+# Server: expose your own API with FastAPI
+# pip install fastapi uvicorn
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class Order(BaseModel):
+    order_id: int
+    amount: float
+    region: str
+
+orders_db = []
+
+@app.post("/orders")
+def create_order(order: Order):
+    orders_db.append(order)
+    return {"status": "created", "order_id": order.order_id}
+
+@app.get("/orders")
+def list_orders(region: str = None):
+    if region:
+        return [o for o in orders_db if o.region == region]
+    return orders_db
+
+# Run: uvicorn main:app --reload
+# Test: curl http://localhost:8000/orders
+print("FastAPI server defined — run with uvicorn")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always mention timeouts when discussing API calls. "Without a timeout, a request to an unresponsive server will hang forever, blocking your pipeline indefinitely. I set both connect timeout (5s) and read timeout (30s) on every request." This shows production awareness.

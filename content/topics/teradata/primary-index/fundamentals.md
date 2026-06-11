@@ -10,6 +10,12 @@ tags: [teradata, primary-index, upi, nupi, row-hashing, data-distribution]
 
 # Primary Index — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of the Primary Index like a postal code for your data: Teradata hashes it to decide which AMP (machine) stores that row. Choose it poorly (low cardinality) and all rows pile up on one AMP — a traffic jam that kills parallelism.
+
+---
 ## What Is a Primary Index?
 
 The **Primary Index (PI)** is the single most important design decision in Teradata. It determines **which AMP stores each row** by hashing the PI column value(s) to produce a row hash, which maps to an AMP.
@@ -145,6 +151,39 @@ The **combined hash** of all PI columns determines AMP placement. Useful when no
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- UPI: Unique Primary Index (like a primary key — exactly one row per AMP slot)
+CREATE TABLE orders (
+    order_id INTEGER NOT NULL,
+    customer_id INTEGER,
+    amount DECIMAL(12,2),
+    order_date DATE
+)
+UNIQUE PRIMARY INDEX (order_id);
+
+-- NUPI: Non-Unique Primary Index (multiple rows can hash to same AMP)
+-- Good when you frequently join on customer_id
+CREATE TABLE orders (
+    order_id INTEGER,
+    customer_id INTEGER NOT NULL,
+    amount DECIMAL(12,2),
+    order_date DATE
+)
+PRIMARY INDEX (customer_id);  -- Co-locates orders with same customer → faster joins
+
+-- Secondary index for alternate access paths
+CREATE INDEX (order_date) ON orders;
+
+-- Check if tables will join without redistribution (same PI = spool-free join)
+EXPLAIN SELECT * FROM orders o JOIN customers c ON o.customer_id = c.customer_id;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a Primary Index in Teradata?" — "The PI is a column (or set of columns) whose hash value determines which AMP stores each row. It's the most important table design decision — it controls data distribution, join performance, and single-row access speed."

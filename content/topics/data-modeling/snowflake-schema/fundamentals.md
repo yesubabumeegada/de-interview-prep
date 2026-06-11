@@ -10,6 +10,12 @@ tags: [snowflake-schema, star-schema, normalization, dimension-hierarchies, data
 
 # Snowflake Schema — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of a snowflake schema like a star schema that keeps branching: product → subcategory → category → department. More normalized (less redundancy) but more joins — suits OLTP better than star schema for pure analytics.
+
+---
 ## What is a Snowflake Schema?
 
 A snowflake schema is a **normalized variation of the star schema** where dimension tables are broken into multiple related tables (sub-dimensions) representing hierarchy levels.
@@ -191,6 +197,40 @@ In reality, most data warehouses use a **hybrid** — some dimensions are flat (
 -- Date and customer are flat and simple → no benefit to snowflaking.
 ```
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Snowflake schema: dimension tables are normalized (have their own parents)
+CREATE TABLE dim_product_subcategory (
+    subcategory_sk INT PRIMARY KEY,
+    subcategory_name VARCHAR(100),
+    category_sk INT REFERENCES dim_product_category(category_sk)
+);
+
+CREATE TABLE dim_product_category (
+    category_sk  INT PRIMARY KEY,
+    category_name VARCHAR(100)
+);
+
+CREATE TABLE dim_product (
+    product_sk     INT PRIMARY KEY,
+    product_name   VARCHAR(200),
+    subcategory_sk INT REFERENCES dim_product_subcategory(subcategory_sk)
+);
+
+-- Query requires 3 joins to get category name (vs 1 in star schema)
+SELECT c.category_name, SUM(f.revenue)
+FROM fact_sales f
+JOIN dim_product p ON f.product_sk = p.product_sk
+JOIN dim_product_subcategory s ON p.subcategory_sk = s.subcategory_sk
+JOIN dim_product_category c ON s.category_sk = c.category_sk
+GROUP BY c.category_name;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a snowflake schema?" — A normalized star schema where dimension tables are split into sub-tables representing hierarchy levels. Instead of one flat dim_product with category/department columns, you have dim_product → dim_subcategory → dim_category → dim_department. Reduces redundancy but adds joins.

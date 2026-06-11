@@ -10,6 +10,12 @@ tags: [ai, data-versioning, dvc, git-lfs, reproducibility]
 
 # Data Versioning — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data versioning like Git for datasets: when you re-train a model next month, you need to know exactly which version of the training data was used — not just the schema but the exact rows, splits, and transformations.
+
+---
 ## Why Version Data?
 
 Code versioning (git) is universal. Data versioning is equally important for ML but often overlooked.
@@ -204,6 +210,45 @@ dvc status   # Shows which tracked files have changed
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# DVC (Data Version Control) — git for data
+# pip install dvc dvc-s3
+
+# Initialize DVC in a git repo
+# dvc init
+
+# Track a large dataset file
+# dvc add data/training_orders.parquet
+# -> creates data/training_orders.parquet.dvc (small, committed to git)
+# -> adds data/training_orders.parquet to .gitignore
+
+# Push data to remote storage
+# dvc remote add -d s3remote s3://my-bucket/dvc-cache
+# dvc push
+
+# Reproduce experiment pipeline
+# dvc.yaml defines pipeline stages:
+# stages:
+#   prepare:
+#     cmd: python src/prepare.py
+#     deps: [data/raw/orders.csv, src/prepare.py]
+#     outs: [data/features/train.parquet]
+#   train:
+#     cmd: python src/train.py
+#     deps: [data/features/train.parquet, src/train.py]
+#     outs: [models/churn_model.pkl]
+#     metrics: [metrics/scores.json]
+
+# dvc repro  -> only re-runs stages whose inputs changed
+print("DVC enables reproducible ML experiments with tracked data versions")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why can't you just store ML data in git?" — "Git stores file diffs efficiently for text, but ML datasets are binary blobs (parquet, numpy arrays, images) — git can't diff them meaningfully and storing them inflates repo size rapidly. A 10GB dataset committed to git makes every clone download 10GB and grows the repo permanently. DVC stores a hash pointer (200 bytes) in git and the actual file in S3."

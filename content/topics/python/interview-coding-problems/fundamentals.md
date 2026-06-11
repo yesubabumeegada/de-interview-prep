@@ -13,6 +13,12 @@ These are the Python problems Data Engineers actually get in phone screens. Not 
 
 ---
 
+
+## 🎯 Analogy
+
+Think of Python interview problems like algorithmic crosswords: each puzzle tests a specific skill (sliding window, two pointers, hash map frequency counts). The trick is recognizing the pattern, not memorizing solutions.
+
+---
 ## Problem 1: Word Frequency from a Messy String
 
 **Interview prompt:** "Given a string of text, return the top 3 most common words, case-insensitive, ignoring punctuation."
@@ -303,3 +309,41 @@ At the junior level, interviewers want to see:
 4. Stating complexity unprompted ("this is O(n), one pass, constant memory per group")
 
 They are NOT testing algorithmic cleverness. They are testing whether you can be trusted to write the glue code that moves data every day.
+
+## ▶️ Try It Yourself
+
+```python
+# Classic: find pairs that sum to target (two-pointer / hash map)
+def two_sum(nums: list[int], target: int) -> list[int]:
+    seen = {}
+    for i, n in enumerate(nums):
+        complement = target - n
+        if complement in seen:
+            return [seen[complement], i]
+        seen[n] = i
+    return []
+
+print(two_sum([2, 7, 11, 15], 9))   # [0, 1]
+
+# Sliding window: max sum subarray of size k
+def max_sum_subarray(nums: list[int], k: int) -> int:
+    window = sum(nums[:k])
+    best = window
+    for i in range(k, len(nums)):
+        window += nums[i] - nums[i - k]
+        best = max(best, window)
+    return best
+
+print(max_sum_subarray([1, 4, 2, 9, 7, 3], 3))  # 18 (9+7+2? -> 4+2+9=15, 2+9+7=18)
+
+# Frequency count: top-k elements
+from collections import Counter
+def top_k(nums: list[int], k: int) -> list[int]:
+    return [x for x, _ in Counter(nums).most_common(k)]
+
+print(top_k([1, 1, 1, 2, 2, 3], 2))  # [1, 2]
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---

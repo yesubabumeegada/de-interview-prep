@@ -10,6 +10,12 @@ tags: [data-profiling, pandas-profiling, ydata, statistics, exploration]
 
 # Data Profiling — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data profiling like a medical check-up for your dataset: you measure completeness (no null organs), uniqueness (no duplicate patients), distribution (healthy weight range), and freshness (recent check-up) — before any treatment (transformation).
+
+---
 ## What Is Data Profiling?
 
 Data profiling is the process of examining and analyzing a dataset to understand its structure, content, and quality. It's done before building pipelines, defining DQ rules, or writing transformations.
@@ -181,6 +187,42 @@ def classify_columns(profile: dict) -> dict:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pandas as pd
+import numpy as np
+
+def profile_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    stats = []
+    for col in df.columns:
+        series = df[col]
+        stats.append({
+            "column": col,
+            "dtype": str(series.dtype),
+            "null_count": int(series.isna().sum()),
+            "null_pct": round(series.isna().mean() * 100, 1),
+            "unique_count": int(series.nunique()),
+            "unique_pct": round(series.nunique() / len(df) * 100, 1),
+            "min": series.min() if series.dtype != object else series.str.len().min(),
+            "max": series.max() if series.dtype != object else series.str.len().max(),
+            "mean": round(float(series.mean()), 2) if series.dtype in [np.float64, np.int64] else None,
+            "sample": str(series.dropna().iloc[0]) if len(series.dropna()) > 0 else None,
+        })
+    return pd.DataFrame(stats)
+
+df = pd.DataFrame({
+    "order_id": [1, 2, 2, 3, None],
+    "amount":   [100.0, -50.0, 200.0, 300.0, 150.0],
+    "region":   ["US", "EU", "EU", None, "US"],
+})
+print(profile_dataframe(df).to_string(index=False))
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the first thing you do when given a new dataset?" — Profile it. Before writing a single transformation: understand shape, types, null rates, cardinality, and distribution. YData Profiling generates a comprehensive HTML report in one line.

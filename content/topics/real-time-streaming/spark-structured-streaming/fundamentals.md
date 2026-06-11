@@ -10,6 +10,12 @@ tags: [spark, structured-streaming, streaming, kafka, delta-lake, micro-batch]
 
 # Spark Structured Streaming — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Spark Structured Streaming like running your batch DataFrame code on a continuous input source: the same API (groupBy, join, filter), but the input is a live stream of micro-batches instead of a static file.
+
+---
 ## What Is Spark Structured Streaming?
 
 Spark Structured Streaming is a **scalable, fault-tolerant stream processing engine** built on the Spark SQL engine. It treats a live data stream as an unbounded table — new data continuously appended, queries run continuously.
@@ -186,6 +192,39 @@ result.writeStream.outputMode("append").format("delta").start(path)
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import window, sum as spark_sum, col
+
+spark = SparkSession.builder.master("local[*]").appName("sss_demo").getOrCreate()
+spark.sparkContext.setLogLevel("WARN")
+
+# Rate source generates (timestamp, value) rows continuously
+stream = (
+    spark.readStream
+    .format("rate")
+    .option("rowsPerSecond", 10)
+    .load()
+)
+
+# Windowed aggregation: sum every 5 seconds
+agg = (
+    stream
+    .withColumn("value_usd", col("value") * 10)
+    .groupBy(window("timestamp", "5 seconds"))
+    .agg(spark_sum("value_usd").alias("total_revenue"))
+)
+
+query = agg.writeStream.format("console").outputMode("complete").start()
+import time; time.sleep(15); query.stop()
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the checkpoint in Spark Structured Streaming?" — The checkpoint stores the streaming query's progress: which Kafka offsets have been processed, and the state of any stateful operations (aggregations, joins). On failure and restart, Spark reads the checkpoint to resume from the last committed offset — no data is processed twice. The checkpoint is stored in a durable location (HDFS, S3, ADLS). Without a checkpoint, restarting the query would start from scratch (`startingOffsets=latest`) or replay everything (`earliest`). Checkpoint location is set per query and must be unique per streaming query.

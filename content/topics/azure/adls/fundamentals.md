@@ -10,6 +10,12 @@ tags: [azure, adls, data-lake, storage, hierarchical-namespace]
 
 # ADLS Gen2 — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Azure Data Lake Storage Gen2 like an S3 for Azure with a filesystem API bolted on: you get hierarchical namespaces (real folders, not prefixes), POSIX-like permissions, and Spark reads it as fast as local HDFS.
+
+---
 ## What Is ADLS Gen2?
 
 Azure Data Lake Storage Gen2 (ADLS Gen2) is Azure's **enterprise-grade cloud object storage** optimized for big data analytics. It combines Azure Blob Storage with a **Hierarchical Namespace (HNS)** to provide true directory semantics and atomic operations.
@@ -145,6 +151,35 @@ Lifecycle management: automate tier transitions
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from azure.storage.filedatalake import DataLakeServiceClient
+from azure.identity import DefaultAzureCredential
+
+cred = DefaultAzureCredential()
+service = DataLakeServiceClient(
+    account_url="https://mydatalake.dfs.core.windows.net",
+    credential=cred,
+)
+
+# Create a filesystem (container) and upload a file
+fs = service.get_file_system_client("raw")
+directory = fs.get_directory_client("orders/2024/01")
+directory.create_directory()
+
+file_client = directory.create_file("orders_20240115.parquet")
+with open("/tmp/orders_20240115.parquet", "rb") as f:
+    data = f.read()
+    file_client.upload_data(data, overwrite=True)
+
+print("Uploaded to ADLS Gen2 — accessible by Databricks, Synapse, and ADF")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why does ADLS Gen2 require a Hierarchical Namespace for big data analytics?" — Without HNS, directories are virtual (just object key prefixes like `bronze/orders/`). A rename or delete on a "folder" requires listing all objects under that prefix and copying/deleting each one individually — for a million files, this is millions of API calls and is non-atomic (failure halfway = corrupted state). With HNS, rename is a single metadata operation on the directory entry — milliseconds, atomic. Spark workflows depend on atomic renames for commit protocols (file-based commits use rename to make output visible).

@@ -10,6 +10,12 @@ tags: [databricks, unity-catalog, governance, data-access, metastore, security]
 
 # Unity Catalog — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Unity Catalog like a central passport authority for Databricks: one governance layer across all workspaces — tables, volumes, models, and functions all have a three-part name (catalog.schema.table) and permissions managed in one place.
+
+---
 ## What Is Unity Catalog?
 
 Unity Catalog is Databricks' **unified governance solution** for all data and AI assets. It provides a single place to manage access control, auditing, lineage, and discovery across all workspaces, clouds, and data formats.
@@ -218,6 +224,35 @@ ORDER BY event_time DESC;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Unity Catalog three-level namespace: catalog.schema.table
+CREATE CATALOG IF NOT EXISTS prod;
+CREATE SCHEMA IF NOT EXISTS prod.gold;
+
+-- Create a managed table (data stored in Unity Catalog's managed location)
+CREATE TABLE IF NOT EXISTS prod.gold.orders (
+    order_id BIGINT,
+    amount DECIMAL(12,2),
+    region STRING
+)
+USING DELTA;
+
+-- Grant column-level access
+GRANT SELECT ON TABLE prod.gold.orders TO `analyst-group`;
+REVOKE SELECT ON TABLE prod.gold.orders FROM `intern-group`;
+
+-- Row-level security via row filter
+CREATE ROW ACCESS POLICY orders_region_policy
+    AS (region STRING) RETURNS BOOLEAN
+    RETURN is_member('us-team') AND region = 'US' OR is_account_admin();
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Unity Catalog?" — A centralized governance layer for Databricks that provides: unified access control (GRANT/REVOKE across all workspaces), automatic data lineage, audit logging, and data discovery. It uses a three-level namespace: catalog.schema.table.

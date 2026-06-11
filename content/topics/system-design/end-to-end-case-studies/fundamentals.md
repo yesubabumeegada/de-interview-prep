@@ -10,6 +10,12 @@ tags: [system-design, case-study, architecture, interview, design-process]
 
 # End-to-End Case Studies — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of end-to-end case studies like a system design interview on paper: you start from the business requirement ('process 1M orders/day, results by 6am'), work backwards through the components (source, ingestion, transform, serve), and justify every technology choice.
+
+---
 ## How to Approach a System Design Interview
 
 Data engineering system design interviews expect you to design a complete data system from scratch. Use this framework:
@@ -110,6 +116,50 @@ Use these numbers in interviews to show credibility:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Template: system design for a daily revenue pipeline
+design = {
+    "requirement": "Process 1M orders/day, revenue dashboard ready by 6am UTC",
+    "sla": {"latency": "6 hours", "availability": "99.5%", "data_freshness": "daily"},
+    "components": {
+        "ingestion": {
+            "tool": "Fivetran / Airbyte",
+            "pattern": "incremental CDC from Postgres",
+            "why": "managed, reliable, handles schema changes",
+        },
+        "storage": {
+            "tool": "S3 + Delta Lake",
+            "pattern": "Bronze/Silver/Gold medallion",
+            "why": "cheap, scalable, ACID, time travel for debugging",
+        },
+        "transform": {
+            "tool": "dbt + Databricks SQL",
+            "pattern": "incremental models (only process new partitions)",
+            "why": "SQL-first, tested, documented, version-controlled",
+        },
+        "orchestration": {
+            "tool": "Airflow (MWAA)",
+            "pattern": "daily DAG at midnight, 5h window before SLA",
+            "why": "mature, retry logic, monitoring built-in",
+        },
+        "serving": {
+            "tool": "Snowflake / Databricks SQL Warehouse",
+            "pattern": "pre-aggregated gold tables + BI tool connection",
+            "why": "fast SQL for Tableau/Looker, auto-suspend saves cost",
+        },
+    },
+}
+
+for layer, spec in design["components"].items():
+    print(f"{layer.upper()}: {spec['tool']} — {spec['why']}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you start a system design interview?" — Start with questions, not solutions. "Before I dive in — can I clarify a few things? What's the approximate data volume? What latency do the consumers need? Are there any existing systems I'm integrating with?" This shows maturity. Interviewers want to see you understand that the best design depends on requirements. Then: draw the three tiers (ingestion → processing → serving) at a high level before diving deep.

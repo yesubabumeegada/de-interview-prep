@@ -10,6 +10,12 @@ tags: [hadoop, hbase, wide-column, nosql, row-key, regions]
 
 # HBase Fundamentals
 
+
+## 🎯 Analogy
+
+Think of HBase like a sparse, sorted map stored across many machines: rows are sorted by key, columns are grouped into families, and you can have millions of columns per row — perfect for time-series IoT data or wide user profiles.
+
+---
 ## What is HBase?
 
 Apache HBase is a distributed, scalable, NoSQL database built on top of HDFS. It provides random, real-time read/write access to large datasets, filling the gap that HDFS (batch-only) leaves for online workloads.
@@ -237,6 +243,41 @@ try (Connection connection = ConnectionFactory.createConnection(conf);
 | Analytics | Poor (scan-heavy) | Good (indexes, query planner) |
 | Best for | High-volume key lookups | Relational, transactional |
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install happybase
+import happybase
+
+conn = happybase.Connection("localhost")
+conn.open()
+
+# Create a table with column families
+conn.create_table("user_events", {"events": {}, "profile": {}})
+table = conn.table("user_events")
+
+# Put (write) a row
+table.put(b"user42", {
+    b"events:login": b"2024-01-15T10:00:00",
+    b"events:page_view": b"3",
+    b"profile:region": b"US",
+})
+
+# Get a row by key
+row = table.row(b"user42")
+print(row[b"profile:region"].decode())
+
+# Scan a range of rows
+for key, data in table.scan(row_start=b"user4", row_stop=b"user5"):
+    print(key.decode(), {k.decode(): v.decode() for k, v in data.items()})
+
+conn.close()
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Row key design is the most critical HBase design question. Always ask: "What are the access patterns?" If the answer is "get by user_id" → use user_id as row key. If "get all events for user in time range" → use userId_reversedTimestamp as compound key. The row key must match the primary access pattern.

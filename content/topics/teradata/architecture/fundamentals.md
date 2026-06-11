@@ -10,6 +10,12 @@ tags: [teradata, architecture, mpp, amps, parsing-engine, bynet]
 
 # Teradata Architecture — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Teradata like a city designed entirely for parallel processing: each AMP (Access Module Processor) is a self-contained neighborhood with its own CPU, memory, and disk. Rows are distributed across all AMPs by the Primary Index — every AMP processes its rows in parallel.
+
+---
 ## What Is Teradata?
 
 Teradata is a **massively parallel processing (MPP) relational database** designed for large-scale analytical workloads. Unlike traditional SMP (Symmetric Multi-Processing) databases where all CPUs share a single memory pool, Teradata uses a **shared-nothing architecture** where each processing unit has its own CPU, memory, and disk.
@@ -141,6 +147,34 @@ A **clique** is a subset of nodes that share a common disk array (in SAN-based d
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Check the Teradata system architecture
+SELECT * FROM DBC.AMPUsage ORDER BY AMPNumber;
+
+-- Check how rows are distributed across AMPs (skew indicator)
+SELECT
+    HASHAMP(HASHBUCKET(HASHROW(customer_id))) AS amp_num,
+    COUNT(*) AS row_count
+FROM orders
+GROUP BY 1
+ORDER BY 1;
+
+-- Perfect distribution: all AMPs have equal row count
+-- Skew: one AMP has many more rows (bad for performance)
+
+-- Check current workload
+SELECT RequestMode, COUNT(*) FROM DBC.SessionInfo GROUP BY 1;
+
+-- System resource usage
+SELECT * FROM DBC.ResUsage ORDER BY TheDate DESC, TheTime DESC LIMIT 10;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What makes Teradata different from other databases?" — "Teradata uses a shared-nothing MPP architecture where each AMP independently owns its data slice, enabling near-linear scalability. The Primary Index determines which AMP stores each row via row hashing."

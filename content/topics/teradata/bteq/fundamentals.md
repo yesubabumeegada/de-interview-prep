@@ -10,6 +10,12 @@ tags: [teradata, bteq, scripting, batch, etl, logon]
 
 # BTEQ — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of BTEQ (Basic Teradata Query) like a command-line SQL client with scripting superpowers: you can write conditional logic, loop over result sets, and chain SQL statements — the standard tool for Teradata batch ETL scripts.
+
+---
 ## What Is BTEQ?
 
 **BTEQ (Basic Teradata Query)** is Teradata's interactive and batch SQL scripting tool. It is the oldest and most universal Teradata client utility, pre-dating all modern tools. BTEQ can:
@@ -159,6 +165,38 @@ echo "BTEQ exit code: $?"
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+#!/usr/bin/env bteq
+-- bteq_load_orders.btq
+
+.LOGON my-teradata/etl_user,${TD_PASSWORD}
+.SET ERROROUT STDERR
+.SET MAXERROR 1
+
+-- Run a SQL transformation
+INSERT INTO silver.orders_cleaned
+SELECT order_id, CAST(amount AS DECIMAL(12,2)), UPPER(region), CAST(order_date AS DATE FORMAT 'YYYY-MM-DD')
+FROM raw.orders_staging
+WHERE amount > 0;
+
+-- Check row count
+SELECT 'Rows loaded: ' || CAST(COUNT(*) AS VARCHAR(20)) FROM silver.orders_cleaned;
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE
+
+.LOGOFF
+.QUIT 0
+
+# Run it:
+# bteq < bteq_load_orders.btq 2>&1 | tee bteq_$(date +%Y%m%d).log
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is BTEQ?" — "BTEQ is Teradata's command-line batch scripting tool for executing SQL and data operations. It supports conditional logic with ERRORCODE checking, file import/export, and can be automated as shell scripts. It's the most universal Teradata client — available wherever Teradata client libraries are installed."

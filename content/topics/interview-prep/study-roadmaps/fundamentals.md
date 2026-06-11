@@ -16,6 +16,12 @@ This is a **12-week, interview-ready study path** for landing your first Data En
 
 ---
 
+
+## 🎯 Analogy
+
+Think of a DE interview study roadmap like a training plan for a marathon: you don't run 26 miles on day one. Start with fundamentals (SQL, Python), add distributed systems (Spark, Kafka), then system design, and do mock interviews in the final week.
+
+---
 ## The Big Picture
 
 ```mermaid
@@ -208,3 +214,49 @@ When all boxes are checked, move to the application phase — and start the **in
 - Ready-now interview prep: **real-world.md** in this subtopic (1-week and 1-day cram plans)
 - Self-test: **scenarios.md** in this subtopic — the Junior checkpoint
 - After landing the job: start **intermediate.md**, the mid-level track
+
+## ▶️ Try It Yourself
+
+```python
+# 8-week study roadmap for senior DE interviews
+roadmap = {
+    "Week 1-2: SQL + Python fundamentals": [
+        "Window functions (ROW_NUMBER, RANK, LAG, LEAD, SUM OVER)",
+        "CTEs, recursive CTEs, subquery optimization",
+        "Python: generators, decorators, context managers",
+        "pandas: groupby, merge, pivot",
+    ],
+    "Week 3-4: Distributed Systems": [
+        "Spark: partitioning, shuffles, joins (broadcast vs sort-merge)",
+        "Kafka: producer/consumer, partitions, consumer groups, exactly-once",
+        "Airflow: DAG design, XCom, sensors, pools",
+        "dbt: models, tests, incremental, macros",
+    ],
+    "Week 5-6: Data Warehousing + Cloud": [
+        "Star schema, SCD Type 1/2, Data Vault basics",
+        "Snowflake: virtual warehouses, time travel, Snowpipe",
+        "Cloud: S3, Glue, Kinesis, EMR (or GCP/Azure equivalents)",
+        "Data lakehouse: Delta Lake, Iceberg, medallion architecture",
+    ],
+    "Week 7: System Design": [
+        "Design a real-time fraud detection pipeline",
+        "Design a data warehouse from scratch (1M events/day)",
+        "Trade-off frameworks: batch vs streaming, cost vs latency",
+    ],
+    "Week 8: Mock Interviews": [
+        "2 mock SQL interviews (LeetCode medium/hard)",
+        "2 mock system design interviews",
+        "1 behavioral mock with peer feedback",
+    ],
+}
+
+for week, topics in roadmap.items():
+    print(f"
+{week}:")
+    for t in topics:
+        print(f"  ✓ {t}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---

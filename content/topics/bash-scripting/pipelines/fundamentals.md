@@ -10,6 +10,12 @@ tags: [bash, pipelines, pipes, stdin, stdout, streaming, composition]
 
 # Bash Pipelines — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of bash pipelines like an assembly line: each worker (command) takes parts from the conveyor (stdin), does one job, and passes results along. No warehouse (temp files) needed — data flows continuously.
+
+---
 ## What Are Bash Pipelines?
 
 A pipeline connects the **output of one command to the input of the next** using the pipe operator (`|`). Data flows left-to-right through a chain of commands — each transforming the data in some way.
@@ -229,6 +235,32 @@ tail -n +2 huge.csv | grep "US" | cut -d',' -f1,3 | sort -u | wc -l
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Pipeline: count rows excluding header
+tail -n +2 data.csv | wc -l
+
+# Pipeline: top 10 values in column 3
+cut -d',' -f3 data.csv | sort | uniq -c | sort -rn | head -10
+
+# Pipeline: filter + transform + save (no temp files)
+cat orders.csv | grep "US" | awk -F',' '{print $1","$3}' > us_orders.csv
+
+# tee: split pipeline — send to file AND continue
+cat data.csv | tee /tmp/backup.csv | grep "EU" | wc -l
+
+# Process substitution: compare two streams without temp files
+diff <(sort file1.csv) <(sort file2.csv)
+
+# Parallel pipeline: download + process + upload without touching disk
+aws s3 cp s3://bucket/huge.csv - | python transform.py | aws s3 cp - s3://bucket/out.csv
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do bash pipelines handle large files?" — Streaming: data flows line-by-line through the pipe (not loaded into memory). All commands run in parallel. A pipeline processing 50 GB uses ~5 MB RAM (kernel pipe buffers only). This is why bash can process files that would crash Python/pandas with OOM.

@@ -10,6 +10,12 @@ tags: [bash, functions, reusable-code, scripting, modularity]
 
 # Shell Functions — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of shell functions like reusable macros: instead of copy-pasting the same 5-line S3 upload + log pattern in every script, you define it once as a function and call it everywhere.
+
+---
 ## What Are Shell Functions?
 
 Functions are **reusable blocks of code** within a bash script. They promote: DRY (Don't Repeat Yourself), readability, and testability. Think of them as mini-scripts within your script.
@@ -243,6 +249,49 @@ validate_csv "/data/landing/orders.csv" 8 1000
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+#!/bin/bash
+
+# Function with arguments and return value (via exit code)
+log() {
+    local level="$1"; shift
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $*" | tee -a /tmp/pipeline.log
+}
+
+check_file() {
+    local path="$1"
+    if [[ ! -f "$path" ]]; then
+        log ERROR "File not found: $path"
+        return 1
+    fi
+    log INFO "File found: $path ($(wc -l < "$path") lines)"
+    return 0
+}
+
+upload_to_s3() {
+    local src="$1" dst="$2"
+    log INFO "Uploading $src -> $dst"
+    if aws s3 cp "$src" "$dst"; then
+        log INFO "Upload succeeded"
+    else
+        log ERROR "Upload failed"
+        return 1
+    fi
+}
+
+# Usage
+log INFO "Pipeline starting"
+check_file "/tmp/orders.csv" || exit 1
+upload_to_s3 "/tmp/orders.csv" "s3://my-bucket/raw/orders.csv" || exit 1
+log INFO "Pipeline complete" 
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you structure reusable bash code?" — Function libraries: put common functions (logging, retry, alerting, validation) in /opt/etl/lib/*.sh files. Source them at the top of each pipeline script. Same pattern as Python imports. Benefits: DRY, testable, consistent behavior across all scripts.

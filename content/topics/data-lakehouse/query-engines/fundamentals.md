@@ -10,6 +10,12 @@ tags: [trino, spark, flink, query-engines, lakehouse]
 
 # Query Engines — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of query engines as different engines for the same road (your object storage): Trino is the sports car (low-latency interactive), Spark is the freight truck (large-scale batch), and Flink is the electric vehicle (continuous streaming).
+
+---
 ## Why Multiple Query Engines?
 
 In a lakehouse, different workloads have different requirements. No single query engine excels at all of them.
@@ -127,6 +133,31 @@ When NOT to use Flink:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Trino: query Iceberg on S3 interactively (sub-second for small results)
+-- Connect: trino --server localhost:8080 --catalog iceberg
+
+SELECT region, SUM(amount) AS revenue
+FROM iceberg.silver.orders
+WHERE order_date >= DATE '2024-01-01'
+GROUP BY region
+ORDER BY revenue DESC;
+
+-- Trino time travel (Iceberg)
+SELECT * FROM iceberg.silver.orders FOR TIMESTAMP AS OF TIMESTAMP '2024-01-14 00:00:00';
+
+-- DuckDB: local lakehouse queries (amazing for dev/testing)
+-- pip install duckdb
+-- import duckdb
+-- duckdb.sql("SELECT region, SUM(amount) FROM read_parquet('data/orders/**/*.parquet') GROUP BY 1").show()
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why can't Spark replace Trino for interactive analytics?" — Spark has startup overhead (cluster initialization: 30 seconds to 2 minutes). For interactive analytics, Trino coordinators are always-on with worker pools pre-warmed. A 5-second Trino query would take 45 seconds on Spark (30 sec startup + 15 sec execution). Databricks SQL Serverless reduces this with pre-warmed clusters, but Trino remains the benchmark for interactive latency in open-source setups.

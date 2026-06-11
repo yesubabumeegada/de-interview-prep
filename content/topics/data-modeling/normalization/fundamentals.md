@@ -10,6 +10,12 @@ tags: [normalization, 1NF, 2NF, 3NF, BCNF, database-design, data-engineering]
 
 # Normalization — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of normalization like keeping a single source of truth: instead of repeating 'customer name = Alice' in every order row, you store Alice once in a customers table and reference her by ID — updates happen in one place, not thousands.
+
+---
 ## What is Normalization?
 
 Normalization is the process of organizing database tables to **reduce data redundancy** and **eliminate update anomalies**. It follows a series of "normal forms" (rules) that progressively eliminate different types of redundancy.
@@ -213,6 +219,43 @@ CREATE TABLE student_professors (
 | Write-heavy workloads | Normalize (reduce update anomalies) |
 | Read-heavy analytics | Denormalize (fewer JOINs) |
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- 1NF: atomic values, no repeating groups
+-- Bad (violates 1NF): product_ids = '101,102,103'
+-- Good: one product per row
+
+-- 2NF: no partial dependency on composite key
+-- Table: (order_id, product_id) → customer_name violates 2NF
+-- customer_name depends only on order_id, not the full composite key
+
+-- 3NF: no transitive dependency
+-- Bad: orders(order_id, customer_id, customer_city)
+-- customer_city depends on customer_id, not order_id → move to customers table
+
+-- Normalized schema (3NF)
+CREATE TABLE customers (id INT PRIMARY KEY, name VARCHAR, city VARCHAR);
+CREATE TABLE products  (id INT PRIMARY KEY, name VARCHAR, price DECIMAL);
+CREATE TABLE orders    (id INT PRIMARY KEY, customer_id INT REFERENCES customers(id), order_date DATE);
+CREATE TABLE order_items (
+    order_id   INT REFERENCES orders(id),
+    product_id INT REFERENCES products(id),
+    quantity   INT,
+    PRIMARY KEY (order_id, product_id)
+);
+
+-- Denormalized for analytics (star schema): join cost paid once at model build time
+CREATE TABLE fact_order_items AS
+SELECT oi.*, o.order_date, c.city, p.name product_name, p.price
+FROM order_items oi JOIN orders o USING(order_id)
+JOIN customers c ON c.id = o.customer_id JOIN products p ON p.id = oi.product_id;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Explain normalization forms" — Use the mnemonic: "The key (1NF), the whole key (2NF), and nothing but the key (3NF), so help me Codd." 1NF=atomic values. 2NF=no partial deps on composite key. 3NF=no transitive deps through non-key columns.

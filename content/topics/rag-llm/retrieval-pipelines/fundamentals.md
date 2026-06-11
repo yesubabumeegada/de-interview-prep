@@ -10,6 +10,12 @@ tags: [rag, llm, retrieval, pipelines, search, augmented-generation]
 
 # Retrieval Pipelines — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of a RAG retrieval pipeline like a research assistant: the user asks a question, the assistant searches a curated document library (vector database), pulls the most relevant excerpts, and hands them to an LLM which synthesizes a precise answer — grounded in your data, not just training weights.
+
+---
 ## What Is RAG (Retrieval-Augmented Generation)?
 
 RAG is a pattern that **grounds LLM responses in factual, retrieved information** instead of relying solely on the model's training data. It combines a search system (retrieval) with a language model (generation).
@@ -297,6 +303,43 @@ print(answer)
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install chromadb sentence-transformers anthropic
+import chromadb
+from sentence_transformers import SentenceTransformer
+
+# 1. Embed and store documents
+model = SentenceTransformer("all-MiniLM-L6-v2")
+client = chromadb.Client()
+collection = client.create_collection("docs")
+
+docs = [
+    "Airflow uses DAGs to define task dependencies and scheduling.",
+    "Delta Lake provides ACID transactions on top of object storage.",
+    "dbt transforms raw data into analytics-ready models using SQL.",
+]
+embeddings = model.encode(docs).tolist()
+collection.add(documents=docs, embeddings=embeddings, ids=[f"doc{i}" for i in range(len(docs))])
+
+# 2. Query: embed user question and find nearest docs
+question = "How do I schedule data pipelines?"
+q_emb = model.encode([question]).tolist()
+results = collection.query(query_embeddings=q_emb, n_results=2)
+context = "
+".join(results["documents"][0])
+
+print("Retrieved context:")
+print(context)
+print("
+Prompt = context + question -> send to Claude/GPT for answer")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Explain RAG in simple terms" — "RAG is like an open-book exam. Instead of asking the LLM to answer from memory (which can be wrong), we first search our documents for relevant information, then ask the LLM to answer based on what we found. The LLM is the writer, but the documents are the source of truth."

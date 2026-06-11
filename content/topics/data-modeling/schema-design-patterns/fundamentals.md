@@ -10,6 +10,12 @@ tags: [schema-design, medallion, data-lake, data-warehouse, patterns, architectu
 
 # Schema Design Patterns — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of schema design patterns like architectural blueprints: the star schema is a ranch house (flat, simple, fast), the snowflake is a multi-story (normalized, less redundancy), and Data Vault is a modular building system (raw history, highly flexible).
+
+---
 ## What Are Schema Design Patterns?
 
 Schema design patterns are **proven architectural approaches** for organizing data in warehouses and lakes. They define how tables relate to each other, how data flows between layers, and how to balance performance with flexibility.
@@ -198,6 +204,38 @@ graph TD
 | Over-normalization in gold | Too many joins for analysts | Denormalize for consumption |
 | No surrogate keys | Can't handle SCD, poor joins | Always add surrogate keys |
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- One-Big-Table (OBT): extreme denormalization for BI tools
+-- All attributes pre-joined: fast reads, high redundancy
+CREATE TABLE obt_orders AS
+SELECT
+    o.order_id, o.order_date,
+    c.customer_id, c.name customer_name, c.region,
+    p.product_id, p.name product_name, p.category,
+    oi.quantity, oi.unit_price, oi.quantity * oi.unit_price AS revenue
+FROM orders o
+JOIN customers c ON c.id = o.customer_id
+JOIN order_items oi ON oi.order_id = o.id
+JOIN products p ON p.id = oi.product_id;
+
+-- Wide table pattern: useful for ML feature stores
+-- All features in one row, sparse columns use NULL
+CREATE TABLE user_features (
+    user_id         BIGINT PRIMARY KEY,
+    total_orders_30d INT,
+    avg_order_value  DECIMAL,
+    last_login_days  INT,
+    preferred_region VARCHAR(50),
+    churn_score      FLOAT
+);
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What schema design pattern would you use?" — Start with medallion architecture (bronze/silver/gold) as the overall framework. Within the gold layer, use star schema for BI/reporting. This is the most common production pattern today. Mention that Data Vault can replace silver for enterprise environments needing full audit trails.

@@ -11,6 +11,12 @@ tags: [gcp, pub-sub, interview]
 
 Think of it like a magazine publisher with a mailroom in between. Writers (publishers) drop finished articles into the mailroom (a topic) and walk away — they don't know or care who reads them. Readers sign up for subscriptions, and the mailroom keeps a separate stack of copies for each subscription, re-delivering any copy until the reader confirms "got it." Publisher and readers never meet, never wait for each other, and either side can be offline without breaking the other. That's Pub/Sub: a fully managed, global messaging service that decouples senders from receivers.
 
+
+## 🎯 Analogy
+
+Think of Pub/Sub like a managed message bus for GCP: publishers push messages to topics, Pub/Sub stores them durably, and subscribers pull (or receive push) at their own pace — decoupled, at-least-once delivery.
+
+---
 ## Core Objects
 
 | Object | What it is |
@@ -179,3 +185,33 @@ Pub/Sub is many-to-many event distribution. For task queues with rate limiting a
 - Ack deadline governs redelivery; dead-letter topics catch poison messages.
 - Pull for pipelines, push for serverless endpoints.
 - Pub/Sub → Dataflow → BigQuery is the canonical GCP streaming front door.
+
+## ▶️ Try It Yourself
+
+```python
+from google.cloud import pubsub_v1
+import json
+
+# Publisher
+publisher = pubsub_v1.PublisherClient()
+topic_path = publisher.topic_path("my-project", "orders-topic")
+
+msg = json.dumps({"order_id": 1, "amount": 150.0}).encode()
+future = publisher.publish(topic_path, data=msg, region="US")
+print("Published message ID:", future.result())
+
+# Subscriber (synchronous pull)
+subscriber = pubsub_v1.SubscriberClient()
+sub_path = subscriber.subscription_path("my-project", "orders-subscription")
+
+with subscriber:
+    response = subscriber.pull(request={"subscription": sub_path, "max_messages": 10})
+    for msg in response.received_messages:
+        data = json.loads(msg.message.data.decode())
+        print("Received:", data)
+        subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [msg.ack_id]})
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

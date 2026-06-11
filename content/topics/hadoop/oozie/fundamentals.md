@@ -10,6 +10,12 @@ tags: [hadoop, oozie, workflow, scheduler, mapreduce, hive]
 
 # Oozie — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Oozie like an old-school Airflow for Hadoop: you define a workflow DAG in XML (action nodes for MapReduce/Hive/Pig, control nodes for fork/join/decision), submit it, and Oozie schedules and monitors execution.
+
+---
 ## What is Oozie?
 
 Apache Oozie is a workflow scheduler system for Hadoop jobs. It coordinates sequences of MapReduce, Hive, Pig, Spark, Shell, and other jobs into multi-step workflows that run on a schedule or based on data availability.
@@ -233,6 +239,42 @@ oozie job -oozie http://oozie-host:11000/oozie \
     └── etl-jobs.jar       # Custom JARs
 ```
 
+
+## ▶️ Try It Yourself
+
+```xml
+<!-- workflow.xml: a simple Oozie workflow -->
+<workflow-app name="orders-etl" xmlns="uri:oozie:workflow:0.5">
+  <start to="sqoop-import"/>
+
+  <action name="sqoop-import">
+    <sqoop xmlns="uri:oozie:sqoop-action:0.3">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <command>import --connect ${jdbcUrl} --table orders --target-dir /data/raw/orders --num-mappers 4</command>
+    </sqoop>
+    <ok to="hive-transform"/>
+    <error to="fail"/>
+  </action>
+
+  <action name="hive-transform">
+    <hive xmlns="uri:oozie:hive-action:0.5">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <script>transform_orders.hql</script>
+    </hive>
+    <ok to="end"/>
+    <error to="fail"/>
+  </action>
+
+  <kill name="fail"><message>Workflow failed: ${wf:errorMessage(wf:lastErrorNode())}</message></kill>
+  <end name="end"/>
+</workflow-app>
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Oozie workflow is a DAG (Directed Acyclic Graph), not a sequential script. Every action must have both `<ok>` and `<error>` transitions — forgetting `<error>` is a common mistake that causes jobs to hang.

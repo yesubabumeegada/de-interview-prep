@@ -10,6 +10,12 @@ tags: [bash, text-processing, grep, awk, sed, data-engineering]
 
 # Bash Text Processing — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of bash text processing tools like specialized scanners: grep is a keyword search, awk is a column-by-column analyzer, and sed is a find-and-replace pen — together they can transform any flat text file without Python.
+
+---
 ## Why Text Processing Matters for DE
 
 Data engineers work with: CSV/JSON files, log files, config files, API responses, and command output. Bash text processing tools (`grep`, `awk`, `sed`, `sort`, `uniq`) let you quickly inspect, transform, and validate data without writing Python scripts.
@@ -171,6 +177,37 @@ ls /data/landing/ | grep -oP '\d{4}-\d{2}-\d{2}' | sort | uniq -c
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# grep: filter lines matching a pattern
+grep "ERROR" pipeline.log | tail -20
+grep -v "DEBUG" pipeline.log   # Exclude DEBUG lines
+grep -c "SUCCESS" pipeline.log # Count matching lines
+
+# awk: process structured columns
+# Print column 2 and 4 from CSV:
+awk -F',' '{print $2, $4}' orders.csv
+
+# Sum column 3 (amount):
+awk -F',' 'NR>1 {sum+=$3} END {print "Total:", sum}' orders.csv
+
+# Filter rows where amount > 100:
+awk -F',' '$3 > 100 {print}' orders.csv
+
+# sed: find and replace
+sed 's/,/|/g' orders.csv          # Replace commas with pipes
+sed '/^#/d' config.txt             # Delete comment lines
+sed -n '10,20p' big_file.txt       # Print lines 10-20
+
+# Combine for complex transforms
+tail -n +2 orders.csv | awk -F',' '$3 > 100' | sort -t',' -k4 | head -20
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you quickly check a CSV file's structure?" — `wc -l` for row count, `head -1 | awk -F',' '{print NF}'` for column count, `head -5` to see sample data, `awk -F',' '{print NF}' | sort -u` to verify consistent column count across all rows.

@@ -10,6 +10,12 @@ tags: [git, github, pull-requests, code-review]
 
 # Pull Requests and Code Review — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of pull requests like a peer review for code: they create a checkpoint where a second engineer verifies correctness, checks for security issues, and confirms tests pass — before anything reaches the main branch (and production).
+
+---
 ## The Peer Review Analogy
 
 A pull request is like submitting a research paper for peer review before publication. You don't publish scientific findings without other experts checking your methods, logic, and conclusions. Code review is the same: a second set of eyes catches bugs you can't see (you're too close to your own code), ensures the approach is sound, shares knowledge across the team, and maintains code quality standards. The PR is the mechanism that makes peer review systematic and tracked.
@@ -142,3 +148,32 @@ gh pr checks
 # Squash and merge: one commit per feature (clean history)
 # Rebase and merge: linear history, no merge commit
 ```
+
+## ▶️ Try It Yourself
+
+```bash
+# Open a PR with the GitHub CLI
+gh pr create   --title "feat: add incremental load to orders pipeline"   --body "## Changes
+- Added watermark-based incremental loading
+- Added tests for edge cases (empty batch, late data)
+- Updated README with new env vars
+
+## Testing
+- Unit tests: pytest tests/ -v
+- dbt test: dbt test --select orders_pipeline+"   --assignee @me   --label "data-pipeline"
+
+# Review a PR
+gh pr review 42 --approve --body "LGTM — good test coverage"
+gh pr review 42 --request-changes --body "Please add test for null amounts"
+
+# Check PR status
+gh pr status
+gh pr view 42
+
+# Merge after approval
+gh pr merge 42 --squash --delete-branch
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---

@@ -10,6 +10,12 @@ tags: [aws, iam, security, roles, policies, permissions, least-privilege, cross-
 
 # AWS IAM — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of IAM like a building access card system: each identity (user, role, service) gets a card with specific room permissions. Least privilege means the Glue job's card only opens the S3 room — not the RDS room.
+
+---
 ## What Is AWS IAM?
 
 AWS Identity and Access Management (IAM) is the **permission system for all of AWS**. It controls who (identity) can do what (actions) on which resources (services/objects). Every API call in AWS is authenticated and authorized through IAM.
@@ -323,6 +329,42 @@ aws cloudtrail lookup-events \
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Create a role for a Glue ETL job
+aws iam create-role \
+  --role-name GlueETLRole \
+  --assume-role-policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Principal": {"Service": "glue.amazonaws.com"},
+      "Action": "sts:AssumeRole"
+    }]
+  }'
+
+# Attach a policy granting S3 read access to a specific bucket only
+aws iam put-role-policy \
+  --role-name GlueETLRole \
+  --policy-name S3ReadPolicy \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::my-data-bucket",
+        "arn:aws:s3:::my-data-bucket/*"
+      ]
+    }]
+  }'
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What IAM role does a Glue job need?" — "A Glue job needs an IAM role with: (1) S3 access — read from source buckets, write to target buckets. (2) Glue Catalog access — GetTable, CreateTable, BatchCreatePartition for metadata management. (3) CloudWatch Logs — write job logs. (4) Optional: Secrets Manager (for DB credentials), KMS (for encrypted data), VPC networking permissions. The trust policy allows `glue.amazonaws.com` to assume the role."

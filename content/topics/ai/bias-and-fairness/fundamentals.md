@@ -10,6 +10,12 @@ tags: [ai, bias, fairness, demographic-parity, equalized-odds, protected-attribu
 
 # Bias and Fairness — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of AI bias like a scale that's been miscalibrated: if training data over-represents certain groups, the model learns to favor them — not from malice but from the data it saw. Fairness metrics measure whether the scale reads correctly for every group.
+
+---
 ## Types of Bias in ML
 
 Bias in ML is not a single problem — it has multiple sources, each requiring different mitigations.
@@ -290,6 +296,44 @@ def plot_fairness_accuracy_tradeoff(thresholds, accuracy_by_threshold, fairness_
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pandas as pd
+import numpy as np
+from sklearn.metrics import accuracy_score
+
+# Simulated predictions with demographic info
+np.random.seed(42)
+n = 1000
+data = pd.DataFrame({
+    "group": np.random.choice(["A", "B"], n, p=[0.7, 0.3]),
+    "true_label": np.random.randint(0, 2, n),
+})
+
+# Simulate biased model: group B gets worse predictions
+data["pred"] = data["true_label"].copy()
+biased_idx = data[data["group"] == "B"].sample(frac=0.3).index
+data.loc[biased_idx, "pred"] = 1 - data.loc[biased_idx, "pred"]
+
+def fairness_report(df: pd.DataFrame) -> dict:
+    report = {}
+    for group in df["group"].unique():
+        g = df[df["group"] == group]
+        acc = accuracy_score(g["true_label"], g["pred"])
+        # Demographic parity: P(pred=1 | group=A) == P(pred=1 | group=B)
+        pos_rate = g["pred"].mean()
+        report[group] = {"accuracy": round(acc, 3), "positive_rate": round(pos_rate, 3)}
+    return report
+
+print(fairness_report(data))
+# Group B should have similar accuracy to Group A — gaps indicate bias
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between demographic parity and equalized odds?" — "Demographic parity requires equal positive prediction rates across groups — if 70% of Group A is approved, 70% of Group B should be too. Equalized odds additionally requires equal error rates (both TPR and FPR equal). Equalized odds is stricter because equal approval rates could mask very different error patterns — one group might have many false positives while another has many false negatives."

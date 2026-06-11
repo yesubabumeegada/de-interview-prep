@@ -10,6 +10,12 @@ tags: [rag, llm, langchain, llamaindex, orchestration, chains, agents]
 
 # Orchestration Frameworks — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of LLM orchestration frameworks like a director for a film crew: LangChain/LlamaIndex coordinate the embedding model, vector database, LLM, and memory — you describe the pipeline (retrieve -> augment -> generate), they handle the plumbing.
+
+---
 ## What Do Orchestration Frameworks Do?
 
 Orchestration frameworks connect LLMs with tools, data sources, and multi-step logic into coherent workflows. Instead of writing raw API calls, they provide abstractions for common RAG patterns.
@@ -255,6 +261,37 @@ chain.invoke({"question": "How does it handle skew?"})
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install llama-index anthropic
+from llama_index.core import VectorStoreIndex, Document
+from llama_index.core.settings import Settings
+from llama_index.llms.anthropic import Anthropic
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
+# Configure models
+Settings.llm = Anthropic(model="claude-haiku-4-5-20251001", max_tokens=500)
+Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+
+# Build index from documents
+docs = [
+    Document(text="Airflow DAGs define task dependencies and scheduling via Python code."),
+    Document(text="dbt transforms SQL models with testing and documentation built in."),
+    Document(text="Delta Lake provides ACID transactions and time travel on S3 storage."),
+]
+index = VectorStoreIndex.from_documents(docs)
+query_engine = index.as_query_engine()
+
+# Query — LlamaIndex handles: embed query -> retrieve -> augment -> generate
+response = query_engine.query("What tool handles SQL transformations with testing?")
+print(response)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When would you use LangChain vs LlamaIndex vs custom code?" — LangChain for agent workflows with multiple tools. LlamaIndex for document-heavy retrieval with advanced query engines. Custom code for simple RAG where the overhead of a framework isn't justified. Don't use a framework just because it exists — justify the added complexity.

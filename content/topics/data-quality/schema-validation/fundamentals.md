@@ -10,6 +10,12 @@ tags: [schema-validation, pandera, pydantic, avro, json-schema]
 
 # Schema Validation — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of schema validation like a customs check at an airport: every incoming dataset must show its passport (correct column names, data types, no unexpected nullable fields) before being allowed into the warehouse.
+
+---
 ## What Is Schema Validation?
 
 Schema validation verifies that data conforms to a predefined structural contract — correct column names, data types, nullability, and value constraints. It's the first line of defense in any data pipeline.
@@ -239,6 +245,53 @@ fastavro.schemaless_writer(buffer, parsed_schema, record)
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pydantic import BaseModel, validator
+from typing import Optional
+import pandas as pd
+
+# Define expected schema with Pydantic
+class OrderRow(BaseModel):
+    order_id: int
+    amount: float
+    region: str
+    order_date: str
+
+    @validator("amount")
+    def amount_positive(cls, v):
+        if v <= 0:
+            raise ValueError("amount must be positive")
+        return v
+
+    @validator("region")
+    def region_valid(cls, v):
+        if v not in ("US", "EU", "APAC", "OTHER"):
+            raise ValueError(f"Unknown region: {v}")
+        return v
+
+def validate_dataframe(df: pd.DataFrame) -> dict:
+    errors = []
+    for i, row in df.iterrows():
+        try:
+            OrderRow(**row.to_dict())
+        except Exception as e:
+            errors.append({"row": i, "error": str(e)})
+    return {"total": len(df), "valid": len(df) - len(errors), "errors": errors}
+
+df = pd.DataFrame([
+    {"order_id": 1, "amount": 100.0, "region": "US", "order_date": "2024-01-15"},
+    {"order_id": 2, "amount": -50.0, "region": "EU", "order_date": "2024-01-15"},  # bad
+    {"order_id": 3, "amount": 200.0, "region": "MARS", "order_date": "2024-01-15"}, # bad
+])
+print(validate_dataframe(df))
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between schema validation and DQ checks?" — Schema validation checks structure (types, names, nullability). DQ checks verify business rules (amount > 0, status in accepted set). Schema validation should run first — bad structure prevents business rule checks from working.

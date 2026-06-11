@@ -10,6 +10,12 @@ tags: [nifi, clustering, high-availability, scalability, zookeeper, data-enginee
 
 # NiFi Clustering — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of NiFi clustering like a parallel toll plaza: instead of one booth processing all traffic, you add multiple booths. ZooKeeper is the traffic coordinator (cluster state), each NiFi node processes FlowFiles independently, and the primary node handles scheduled source processors.
+
+---
 ## What is NiFi Clustering?
 
 NiFi clustering allows multiple NiFi instances (nodes) to work together as a **single logical system**. Data flows are designed once and run across all nodes, providing horizontal scalability and high availability.
@@ -213,6 +219,35 @@ graph LR
     style OFFLOADING fill:#fff9c4
 ```
 
+
+## ▶️ Try It Yourself
+
+```bash
+# NiFi cluster configuration (nifi.properties)
+# nifi.cluster.is.node=true
+# nifi.cluster.node.address=nifi-node-1.internal
+# nifi.cluster.node.protocol.port=11443
+# nifi.zookeeper.connect.string=zk1:2181,zk2:2181,zk3:2181
+# nifi.cluster.flow.election.max.wait.time=5 mins
+
+# Cluster management via NiFi API:
+# GET /nifi-api/cluster  -> cluster summary (nodes, status)
+# GET /nifi-api/cluster/nodes  -> individual node status
+
+# Check cluster status
+curl http://nifi-load-balancer:8080/nifi-api/cluster | python3 -m json.tool
+
+# Primary vs non-primary nodes:
+# Primary: runs processors with "Primary Node" execution (scheduled sources, e.g. ListS3)
+# All nodes: run processors with "All Nodes" execution (transforms, outputs)
+
+# Site-to-Site: transfer FlowFiles between NiFi clusters
+# RemoteProcessGroup processor -> configure with remote NiFi URL  
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a NiFi cluster?" — Multiple NiFi instances working as one logical system. ZooKeeper coordinates. One node is Cluster Coordinator (manages membership), one is Primary Node (runs single-instance processors). All nodes process data in parallel. Design flows once — they run identically on all nodes.

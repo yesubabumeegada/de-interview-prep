@@ -10,6 +10,12 @@ tags: [azure, databricks, spark, delta-lake, unity-catalog, notebooks]
 
 # Azure Databricks — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Azure Databricks like Spark as a managed cloud service inside Azure: your notebooks, jobs, and Delta Lake tables live in one workspace, integrated with Azure AD for auth, ADLS for storage, and ADF for orchestration.
+
+---
 ## What Is Azure Databricks?
 
 Azure Databricks is a **managed Apache Spark platform** built on Azure, jointly developed by Microsoft and Databricks. It provides a collaborative workspace with notebooks, automated cluster management, Delta Lake, MLflow, and Unity Catalog — all in one managed service.
@@ -156,6 +162,42 @@ Access control:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Submit a Databricks job via REST API
+import requests
+import os
+
+DATABRICKS_HOST = os.environ["DATABRICKS_HOST"]  # https://adb-xxx.azuredatabricks.net
+TOKEN = os.environ["DATABRICKS_TOKEN"]
+
+headers = {"Authorization": f"Bearer {TOKEN}"}
+
+# Run a notebook as a job
+resp = requests.post(
+    f"{DATABRICKS_HOST}/api/2.1/jobs/run-now",
+    headers=headers,
+    json={
+        "job_id": 12345,
+        "notebook_params": {"process_date": "2024-01-15"},
+    },
+)
+print("Run ID:", resp.json()["run_id"])
+
+# Check run status
+run_id = resp.json()["run_id"]
+status = requests.get(
+    f"{DATABRICKS_HOST}/api/2.1/jobs/runs/get?run_id={run_id}",
+    headers=headers,
+).json()
+print("State:", status["state"]["life_cycle_state"])
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When would you use an All-Purpose cluster vs a Job cluster?" — All-Purpose cluster: development and interactive exploration where you need persistent notebook state and cluster between runs. Job cluster: production ETL and scheduled jobs — creates a fresh cluster for each run (isolated, reproducible), uses cheaper Job DBU pricing (~50% less than All-Purpose), auto-terminates after the job. Rule: never run production jobs on All-Purpose clusters (expensive, no isolation). All-Purpose for dev/test, Job clusters for production.

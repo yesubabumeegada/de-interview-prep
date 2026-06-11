@@ -10,6 +10,12 @@ tags: [sla, monitoring, freshness, latency, availability]
 
 # SLA Monitoring — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of SLA monitoring like a train schedule board: each pipeline has a committed arrival time, and a red light appears if the train (data) hasn't arrived by the deadline — enabling on-call teams to investigate before analysts notice stale dashboards.
+
+---
 ## What Is a Data SLA?
 
 A Data Service Level Agreement (SLA) is a formal commitment that data will meet quality, availability, and timeliness standards. Breaking an SLA has business consequences: wrong decisions, trust erosion, contractual penalties.
@@ -207,6 +213,48 @@ ORDER BY lag_hours DESC;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class PipelineSLA:
+    pipeline_name: str
+    expected_completion: datetime
+    tolerance_minutes: int = 30
+
+def check_slas(slas: list[PipelineSLA], actual_completions: dict) -> list[dict]:
+    breaches = []
+    now = datetime.now()
+    for sla in slas:
+        deadline = sla.expected_completion + timedelta(minutes=sla.tolerance_minutes)
+        completed_at = actual_completions.get(sla.pipeline_name)
+        if completed_at is None and now > deadline:
+            breaches.append({
+                "pipeline": sla.pipeline_name,
+                "status": "MISSING",
+                "overdue_minutes": int((now - deadline).total_seconds() / 60),
+            })
+        elif completed_at and completed_at > deadline:
+            breaches.append({
+                "pipeline": sla.pipeline_name,
+                "status": "LATE",
+                "overdue_minutes": int((completed_at - deadline).total_seconds() / 60),
+            })
+    return breaches
+
+slas = [PipelineSLA("orders_daily", datetime(2024, 1, 16, 6, 0))]
+actual = {"orders_daily": datetime(2024, 1, 16, 7, 45)}  # 1h45m late
+print(check_slas(slas, actual))
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between SLA, SLO, and SLI?" — SLI is the metric (data age). SLO is your internal target (data < 55 min old). SLA is the external commitment (data < 1 hour old). Set SLOs stricter than SLAs so you catch problems before they breach the customer SLA.

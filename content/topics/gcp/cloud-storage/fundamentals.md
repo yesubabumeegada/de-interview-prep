@@ -11,6 +11,12 @@ tags: [gcp, cloud-storage, interview]
 
 Think of it like a self-storage facility with infinite units. You rent space by what you actually store, every box gets a unique label (no two boxes in the same unit can share one), and the facility offers cheaper back rooms for boxes you rarely open — but fetching from those back rooms costs a retrieval fee. You can also hand a friend a time-limited visitor pass to pick up one specific box without giving them your keys. That's Cloud Storage (GCS): durable object storage with tiered pricing by access frequency, and fine-grained, expiring access via signed URLs.
 
+
+## 🎯 Analogy
+
+Think of GCS (Google Cloud Storage) like S3 for GCP: buckets store objects, storage classes control cost vs retrieval speed (Standard → Nearline → Coldline → Archive), and uniform bucket-level access simplifies IAM.
+
+---
 ## Objects, Buckets, and the Flat Namespace
 
 - A **bucket** is a globally-unique-named container, created in a location with a default storage class.
@@ -193,3 +199,33 @@ A V4 signed URL with a short expiration — capability-based access, no account 
 - Four storage classes trade storage price against retrieval fees and minimum durations — same latency.
 - Lifecycle rules automate transitions and deletion; signed URLs grant temporary scoped access.
 - GCS is the landing zone, lake, and interchange format hub of every GCP data platform.
+
+## ▶️ Try It Yourself
+
+```python
+from google.cloud import storage
+
+client = storage.Client()
+bucket = client.bucket("my-data-lake")
+
+# Upload a file
+blob = bucket.blob("raw/orders/2024/01/orders_20240115.parquet")
+blob.upload_from_filename("/tmp/orders_20240115.parquet")
+print("Uploaded to GCS")
+
+# List objects with a prefix
+for b in client.list_blobs("my-data-lake", prefix="raw/orders/2024/"):
+    print(b.name, b.size)
+
+# Download
+blob.download_to_filename("/tmp/downloaded_orders.parquet")
+
+# Generate signed URL (1-hour expiry)
+import datetime
+url = blob.generate_signed_url(expiration=datetime.timedelta(hours=1))
+print(url)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

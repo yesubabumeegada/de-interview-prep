@@ -10,6 +10,12 @@ tags: [access-control, rbac, iam, snowflake, data-security]
 
 # Access Control & RBAC — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of access control like a building key card system: each identity gets a card (role), doors are labeled (tables, columns, rows), and the access control system checks the card before opening any door — least privilege means the fewest doors possible.
+
+---
 ## What Is Data Access Control?
 
 Access control determines who can read, write, or modify data assets. In data engineering, this covers: databases, data warehouses, S3 buckets, Kafka topics, and dashboards.
@@ -165,6 +171,38 @@ def audit_table_access(engine, table_name: str) -> list[dict]:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Role-based access control (RBAC) in Snowflake
+-- Create roles for different access levels
+CREATE ROLE data_consumer;   -- Read-only analyst
+CREATE ROLE data_engineer;   -- Read + write to staging
+CREATE ROLE data_admin;      -- Full access
+
+-- Grant hierarchy: consumer < engineer < admin
+GRANT ROLE data_consumer TO ROLE data_engineer;
+GRANT ROLE data_engineer TO ROLE data_admin;
+
+-- Grant column-level access (mask PII for consumers)
+CREATE MASKING POLICY email_mask AS (val STRING) RETURNS STRING ->
+    CASE
+        WHEN CURRENT_ROLE() IN ('data_admin') THEN val
+        ELSE '***@***.***'  -- Masked for non-admins
+    END;
+
+ALTER TABLE customers MODIFY COLUMN email SET MASKING POLICY email_mask;
+
+-- Grant SELECT on gold schema to consumer role
+GRANT USAGE ON DATABASE prod TO ROLE data_consumer;
+GRANT USAGE ON SCHEMA prod.gold TO ROLE data_consumer;
+GRANT SELECT ON ALL TABLES IN SCHEMA prod.gold TO ROLE data_consumer;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is RBAC?" — Role-Based Access Control assigns permissions to roles, not individual users. Users are assigned roles. Easier to manage at scale: when a new analyst joins, assign them the analyst role rather than granting table-by-table. When they leave, revoke the role.

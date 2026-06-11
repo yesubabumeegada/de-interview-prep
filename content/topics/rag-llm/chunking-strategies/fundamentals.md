@@ -10,6 +10,12 @@ tags: [rag, chunking, text-splitting, embeddings, vector-store, retrieval, conte
 
 # Chunking Strategies — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of chunking like cutting a book into index cards: too big and the LLM context gets crowded with irrelevant details; too small and you lose the surrounding context that gives meaning. The right chunk size depends on your document structure and query type.
+
+---
 ## Why Chunking Matters
 
 Chunking is the process of breaking large documents into smaller pieces (chunks) before embedding them and storing them in a vector database. It's the **most impactful decision** in a RAG pipeline — get it wrong and your retrieval quality collapses regardless of how good your LLM is.
@@ -271,6 +277,45 @@ print(f"Average chunk size: {sum(len(c) for c in chunks) / len(chunks):.0f} char
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from typing import Generator
+
+def fixed_size_chunks(text: str, size: int = 500, overlap: int = 50) -> Generator[str, None, None]:
+    start = 0
+    while start < len(text):
+        chunk = text[start:start + size]
+        yield chunk
+        start += size - overlap  # Overlap preserves context at boundaries
+
+def sentence_chunks(text: str, max_sentences: int = 5) -> Generator[str, None, None]:
+    import re
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    for i in range(0, len(sentences), max_sentences):
+        yield " ".join(sentences[i:i + max_sentences])
+
+def recursive_split(text: str, max_size: int = 500, separators=None) -> list[str]:
+    separators = separators or ["
+
+", "
+", ". ", " "]
+    if len(text) <= max_size:
+        return [text]
+    for sep in separators:
+        if sep in text:
+            halves = text.split(sep, 1)
+            return recursive_split(halves[0], max_size, separators) +                    recursive_split(halves[1], max_size, separators)
+    return [text[:max_size], text[max_size:]]
+
+sample = "Delta Lake adds ACID to S3. It uses transaction logs. Spark reads Delta natively."
+print(list(fixed_size_chunks(sample, size=50, overlap=10)))
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why do we need chunking?" — "LLMs have context limits, but more importantly, chunking controls retrieval precision. A vector search returns the most similar chunks — if chunks are too large, you retrieve irrelevant noise alongside the answer. If too small, you lose context. It's like database indexing: the granularity of your index determines query performance."

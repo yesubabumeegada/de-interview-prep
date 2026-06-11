@@ -10,6 +10,12 @@ tags: [python, logging, observability, debugging, handlers]
 
 # Python Logging — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Python logging like a structured journal: DEBUG is your scratch notes, INFO is your daily summary, WARNING is a yellow sticky note, ERROR is a red alert, and CRITICAL is a fire alarm — each has a different audience and retention policy.
+
+---
 ## Why Logging (Not Print)
 
 ```python
@@ -324,6 +330,45 @@ except Exception as e:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import logging
+import json
+
+# Structured JSON logging (better for log aggregators like CloudWatch/Datadog)
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        return json.dumps({
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "ts": self.formatTime(record),
+        })
+
+logger = logging.getLogger("etl.pipeline")
+handler = logging.StreamHandler()
+handler.setFormatter(JsonFormatter())
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+def process_batch(rows: list) -> dict:
+    logger.info("Starting batch processing", extra={"batch_size": len(rows)})
+    try:
+        result = {"processed": len(rows), "errors": 0}
+        logger.info("Batch complete: %d rows", len(rows))
+        return result
+    except Exception as e:
+        logger.error("Batch failed: %s", e, exc_info=True)
+        raise
+
+process_batch([1, 2, 3])
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why use logging instead of print?" — "Print goes to stdout only, has no levels, no filtering, and no configurable destinations. The logging module supports severity levels, multiple outputs (file, console, network), timestamps, module context, and can be configured without code changes. In production pipelines, you need log rotation, centralized aggregation, and the ability to increase verbosity for debugging — print gives you none of that."

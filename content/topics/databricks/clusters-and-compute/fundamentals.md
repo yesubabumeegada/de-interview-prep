@@ -10,6 +10,12 @@ tags: [databricks, clusters, compute, spark, autoscaling, instance-types]
 
 # Clusters and Compute — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Databricks clusters like rental cars: all-purpose clusters are always on (expensive but convenient), job clusters are rented for a single trip then returned (cost-efficient), and SQL warehouses are shared taxis for SQL workloads.
+
+---
 ## What Is a Databricks Cluster?
 
 A cluster is a set of compute resources (VMs) that execute your Spark code. It consists of a **driver** (coordinates work) and **workers** (process data in parallel).
@@ -256,6 +262,35 @@ POOL_CONFIG = {
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Create a job cluster via Databricks CLI
+databricks clusters create --json '{
+  "cluster_name": "etl-job-cluster",
+  "spark_version": "14.3.x-scala2.12",
+  "node_type_id": "i3.xlarge",
+  "autoscale": {"min_workers": 2, "max_workers": 8},
+  "auto_termination_minutes": 30,
+  "spark_conf": {
+    "spark.databricks.delta.optimizeWrite.enabled": "true"
+  }
+}'
+
+# List clusters
+databricks clusters list
+
+# Resize an existing cluster
+databricks clusters resize --cluster-id abc-123 --num-workers 4
+
+# Terminate idle cluster
+databricks clusters delete --cluster-id abc-123
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you choose an instance type?" — Start with i3.xlarge (balanced, has local SSD for shuffle). Monitor Spark UI: if you see disk spill → stay with i3 (or upgrade to i3.2xlarge). If GC is high → switch to r5 (more memory). If CPU is the bottleneck → switch to c5 (more compute per dollar).

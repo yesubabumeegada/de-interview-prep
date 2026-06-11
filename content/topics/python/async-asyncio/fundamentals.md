@@ -14,6 +14,12 @@ Most data engineers learn async programming when they hit a wall: an API ingesti
 
 ---
 
+
+## 🎯 Analogy
+
+Think of async/await like a waiter who handles multiple tables instead of standing at one table waiting for food: while one coroutine waits for a network call (I/O), the event loop runs another coroutine — concurrency without threads.
+
+---
 ## Sync vs Async: What's the Difference?
 
 ### Synchronous Execution
@@ -289,3 +295,36 @@ with open(f"metrics_{today}.json", "w") as f:
 4. **`asyncio.run(main())`** is the entry point from synchronous code.
 5. **CPU-bound work** (pandas transformations, JSON parsing of huge files) won't benefit from asyncio — use `multiprocessing` for that.
 6. **aiohttp** is the async HTTP client to use instead of `requests`.
+
+## ▶️ Try It Yourself
+
+```python
+import asyncio
+import time
+
+async def fetch_table(table: str, delay: float) -> dict:
+    print(f"Fetching {table}...")
+    await asyncio.sleep(delay)  # Simulate I/O wait (network/DB)
+    print(f"Got {table}")
+    return {"table": table, "rows": 1000}
+
+async def main():
+    start = time.perf_counter()
+    # Sequential: takes 0.1 + 0.2 + 0.3 = 0.6s
+    # results = [await fetch_table(t, d) for t, d in [("orders",0.1),("customers",0.2),("products",0.3)]]
+
+    # Concurrent with gather: takes max(0.1, 0.2, 0.3) = 0.3s
+    results = await asyncio.gather(
+        fetch_table("orders",    0.1),
+        fetch_table("customers", 0.2),
+        fetch_table("products",  0.3),
+    )
+    elapsed = time.perf_counter() - start
+    print(f"Fetched {len(results)} tables in {elapsed:.2f}s (concurrent!)")
+
+asyncio.run(main())
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---

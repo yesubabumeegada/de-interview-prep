@@ -10,6 +10,12 @@ tags: [oracle, sql-tuning, execution-plan, indexes, explain-plan]
 
 # SQL Tuning — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Oracle SQL tuning like diagnosing a slow car: first check the engine (EXPLAIN PLAN), then see if the right gear (index) is being used, then tune the carburetor (optimizer statistics) — always measure before changing anything.
+
+---
 ## What Is SQL Tuning?
 
 SQL tuning is the process of improving query performance by reducing resource consumption (CPU, I/O, memory) and elapsed time. Oracle's Cost-Based Optimizer (CBO) generates execution plans — tuning guides the optimizer to make better choices.
@@ -168,6 +174,36 @@ SET AUTOTRACE OFF
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- View execution plan before tuning
+EXPLAIN PLAN FOR
+SELECT c.name, SUM(o.amount)
+FROM orders o JOIN customers c ON o.customer_id = c.id
+WHERE o.order_date >= DATE '2024-01-01'
+GROUP BY c.name;
+
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+-- Check expensive full table scans in AWR
+SELECT sql_id, executions, elapsed_time/1e6 elapsed_sec, sql_text
+FROM v$sql
+ORDER BY elapsed_time DESC
+FETCH FIRST 10 ROWS ONLY;
+
+-- Add a hint to force index use (test only — prefer fixing stats)
+SELECT /*+ INDEX(o orders_date_idx) */
+    region, SUM(amount)
+FROM orders o
+WHERE order_date >= DATE '2024-01-01'
+GROUP BY region;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you tune a slow query?" — Start with EXPLAIN PLAN or DBMS_XPLAN to see the current plan. Look for: full scans on large tables, bad cardinality estimates, wrong join order, missing indexes. Gather fresh stats first — most bad plans come from stale statistics.

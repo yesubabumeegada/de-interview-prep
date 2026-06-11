@@ -10,6 +10,12 @@ tags: [system-design, scalability, partitioning, sharding, horizontal-scaling]
 
 # Scalability & Partitioning — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of scalability like planning a water supply system: vertical scaling is upgrading to a bigger pipe (more CPU/RAM on one server), horizontal scaling is adding parallel pipes (more servers), and partitioning is splitting the water grid by district.
+
+---
 ## Vertical vs Horizontal Scaling
 
 ```
@@ -116,6 +122,42 @@ spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Horizontal scaling decision: partition by a high-cardinality key
+# Example: shard Kafka by region so each consumer handles one region
+
+from kafka import KafkaProducer, KafkaConsumer
+import json, hashlib
+
+REGIONS = ["US", "EU", "APAC", "OTHER"]
+PARTITION_COUNT = len(REGIONS)
+
+def region_to_partition(region: str) -> int:
+    return REGIONS.index(region) if region in REGIONS else 0
+
+producer = KafkaProducer(
+    bootstrap_servers=["localhost:9092"],
+    value_serializer=lambda v: json.dumps(v).encode(),
+)
+
+orders = [{"id": 1, "region": "US", "amount": 100},
+          {"id": 2, "region": "EU", "amount": 200}]
+
+for order in orders:
+    partition = region_to_partition(order["region"])
+    producer.send("orders", value=order, partition=partition)
+    print(f"Order {order['id']} → partition {partition} ({order['region']})")
+
+producer.flush()
+# Each consumer in a consumer group handles one partition (parallel at region level)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between partitioning and sharding?" — Partitioning = splitting a table into smaller pieces within one database/system (logical separation). Sharding = distributing data across multiple independent databases/servers (physical separation). Partitioning is transparent (optimizer handles routing); sharding requires application-level routing logic. Partitioning for query optimization; sharding for write scalability beyond single-server limits.

@@ -10,6 +10,12 @@ tags: [delta-lake, iceberg, hudi, table-formats, comparison]
 
 # Table Format Comparison — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Delta, Iceberg, and Hudi like competing operating systems for your data lake: all three provide ACID and time travel on top of object storage, but they differ in their metadata approach, ecosystem integrations, and performance characteristics.
+
+---
 ## The Three Open Table Formats
 
 All three table formats solve the same core problem: adding ACID transactions, schema evolution, and time-travel to plain Parquet files on object storage. They differ in design philosophy, ecosystem, and strengths.
@@ -106,6 +112,38 @@ Key differences:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Quick comparison — run against same data with different formats
+
+# Delta Lake (Databricks native, best Spark integration)
+# spark.read.format("delta").load("s3://bucket/delta/orders/")
+
+# Apache Iceberg (best for multi-engine: Spark + Trino + Flink)
+# spark.read.format("iceberg").load("catalog.silver.orders")
+
+# Apache Hudi (best for CDC/streaming upserts)
+# spark.read.format("hudi").load("s3://bucket/hudi/orders/")
+
+# All three support:
+# - ACID transactions
+# - Time travel / versioning
+# - Schema evolution
+# - Partition evolution
+
+# Key differences:
+# Delta:   Databricks-optimized, best tooling, proprietary log format
+# Iceberg: Open standard (ANSI), best multi-engine support, REST catalog
+# Hudi:    Best for high-frequency upserts, built-in indexing for CDC
+
+echo "Choose based on: primary engine (Delta), multi-engine (Iceberg), CDC (Hudi)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "All three formats do the same thing — why does it matter which one you pick?" — The functional overlap is real, but the ecosystem fit is critical. Delta is deeply integrated with Databricks; choosing it means assuming Spark/Databricks as your compute. Iceberg is the open standard — Trino, Flink, Spark, Athena, BigQuery, DuckDB all support it. Hudi is optimized for CDC-heavy workloads with its incremental query model. The "right" choice depends on your existing stack more than the feature list.

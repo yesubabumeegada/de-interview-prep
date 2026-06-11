@@ -10,6 +10,12 @@ tags: [oracle, rac, cluster, cache-fusion, interconnect, high-availability]
 
 # RAC — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Oracle RAC like a multi-headed server: multiple database instances run on different machines but share the same storage (SAN). If one node fails, the others keep serving — active-active high availability with shared-everything architecture.
+
+---
 ## What Is Oracle RAC?
 
 Oracle Real Application Clusters (RAC) allows multiple database instances to run on different servers while sharing a single database on shared storage. Each instance has its own SGA (memory) and processes, but all instances access the same physical data files.
@@ -170,6 +176,35 @@ FROM v$instance;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- RAC: check instance status across all nodes
+SELECT inst_id, instance_name, status, host_name
+FROM gv$instance
+ORDER BY inst_id;
+
+-- Check interconnect traffic (cache fusion — data sharing between nodes)
+SELECT inst_id, name, value
+FROM gv$sysstat
+WHERE name IN ('gc cr blocks received', 'gc current blocks received')
+ORDER BY inst_id, name;
+
+-- Service management: route app traffic to specific nodes
+-- DBCA creates services; use srvctl to manage
+-- srvctl add service -db mydb -service app_svc -preferred inst1 -available inst2
+-- srvctl start service -db mydb -service app_svc
+
+-- Check current load per instance
+SELECT inst_id, COUNT(*) active_sessions
+FROM gv$session WHERE status = 'ACTIVE' AND type = 'USER'
+GROUP BY inst_id;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Cache Fusion and why is it important for RAC?" — Cache Fusion allows RAC nodes to share data blocks from their buffer caches directly over the private interconnect, without going to disk. When Node 2 needs a block that Node 1 already has in memory, Cache Fusion ships the block in microseconds. This makes RAC's distributed memory almost as efficient as a single-instance buffer cache, and far faster than re-reading from shared storage.

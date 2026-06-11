@@ -10,6 +10,12 @@ tags: [azure, azure-sql, managed-instance, relational, oltp, sql-server]
 
 # Azure SQL & Managed Instance — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Azure SQL like SQL Server managed by Microsoft: automatic backups, patching, high availability, and scaling — you just connect with your SQL client and run queries without being a DBA.
+
+---
 ## Azure SQL Family Overview
 
 ```
@@ -146,6 +152,34 @@ Important SQL DB limits for data engineering:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pyodbc
+import os
+
+# Connect to Azure SQL
+conn = pyodbc.connect(
+    f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+    f"SERVER={os.environ['AZURE_SQL_SERVER']}.database.windows.net;"
+    f"DATABASE={os.environ['AZURE_SQL_DB']};"
+    f"Authentication=ActiveDirectoryServicePrincipal;"
+    f"UID={os.environ['AZURE_CLIENT_ID']};"
+    f"PWD={os.environ['AZURE_CLIENT_SECRET']};"
+    f"Encrypt=yes;TrustServerCertificate=no;"
+)
+
+cursor = conn.cursor()
+cursor.execute("SELECT TOP 5 order_id, amount FROM dbo.orders ORDER BY order_date DESC")
+for row in cursor.fetchall():
+    print(row.order_id, row.amount)
+conn.close()
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between Azure SQL Database and Azure SQL Managed Instance?" — SQL Database is a fully managed, cloud-native relational database optimized for new applications. It lacks some SQL Server features: no SQL Agent (scheduled jobs), no cross-database queries, limited CLR. SQL Managed Instance has ~99% SQL Server compatibility — runs SQL Agent, cross-database queries, linked servers, CLR, Service Broker, SSAS. Choose SQL Database for new cloud-native apps. Choose Managed Instance for lift-and-shift migrations where your app relies on SQL Server-specific features that SQL Database doesn't support.

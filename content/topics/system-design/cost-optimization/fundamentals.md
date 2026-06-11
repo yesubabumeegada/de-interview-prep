@@ -10,6 +10,12 @@ tags: [system-design, cost-optimization, cloud-costs, storage, compute]
 
 # Cost Optimization — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data platform cost optimization like utility bills: compute is your electricity (use auto-suspend, right-size, spot instances), storage is your water (compress, tier cold data to cheap storage), and data transfer is your phone bill (minimize cross-region and egress).
+
+---
 ## The Main Cloud Cost Drivers in DE
 
 | Cost Category | What Drives It | Optimization Levers |
@@ -148,6 +154,44 @@ ALTER TABLE staging_table SET DATA_RETENTION_TIME_IN_DAYS = 1;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Cost optimization checklist as code
+def audit_costs(config: dict) -> list:
+    recommendations = []
+
+    # 1. Warehouse auto-suspend
+    if config.get("warehouse_auto_suspend_seconds", 9999) > 300:
+        recommendations.append("Set warehouse AUTO_SUSPEND <= 300s to avoid idle billing")
+
+    # 2. Partition pruning enabled?
+    if not config.get("partition_pruning", False):
+        recommendations.append("Enable partition pruning — reading full tables wastes compute $")
+
+    # 3. Data compression
+    if config.get("storage_format") not in ("parquet", "orc", "delta"):
+        recommendations.append("Use columnar format (Parquet/ORC) — 3-10x storage reduction")
+
+    # 4. Cold data tiering
+    if config.get("cold_data_storage_class") == "standard":
+        recommendations.append("Move data >90 days to S3 Glacier or similar — 80% cheaper")
+
+    # 5. Spot/preemptible instances for batch
+    if not config.get("use_spot_instances", False):
+        recommendations.append("Use Spot/Preemptible instances for batch ETL — 60-80% savings")
+
+    return recommendations
+
+config = {"warehouse_auto_suspend_seconds": 3600, "storage_format": "csv"}
+for rec in audit_costs(config):
+    print(f"⚠️  {rec}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you reduce Parquet file storage costs?" — Three levers: (1) Compression: switch from snappy to zstd — same read speed, 20-30% better compression ratio. (2) Column pruning: store only columns you actually use (remove raw source columns you don't need after transformation). (3) Lifecycle policies: move files older than 30 days to S3 Infrequent Access, older than 90 days to Glacier. For a 10TB data lake: these three together can reduce storage costs by 80%.

@@ -10,6 +10,12 @@ tags: [aws, secrets-manager, credentials, security, rotation, pipelines]
 
 # AWS Secrets Manager — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Secrets Manager like a bank vault for credentials: instead of hardcoding passwords in code or config files, your pipeline calls the vault at runtime and gets the secret — rotated automatically, never in plaintext in source code.
+
+---
 ## What Is AWS Secrets Manager?
 
 AWS Secrets Manager is a service that **securely stores, retrieves, and automatically rotates** credentials (database passwords, API keys, tokens) used by your applications and data pipelines.
@@ -220,6 +226,30 @@ Benefits:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import boto3
+import json
+
+def get_secret(secret_name: str, region: str = "us-east-1") -> dict:
+    client = boto3.client("secretsmanager", region_name=region)
+    resp = client.get_secret_value(SecretId=secret_name)
+    return json.loads(resp["SecretString"])
+
+# Usage: no passwords in code
+creds = get_secret("prod/postgres/orders-db")
+conn_string = f"postgresql://{creds['username']}:{creds['password']}@{creds['host']}:{creds['port']}/{creds['dbname']}"
+print("Connected using rotated credentials from Secrets Manager")
+
+# Auto-rotation: Secrets Manager can rotate the password every N days
+# and update the secret value — your code always gets the latest without changes
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you manage credentials in data pipelines?" — "Secrets Manager for all database passwords and API keys. Never hardcode credentials in code or environment variables. Pipelines call `get_secret_value()` at runtime. For Airflow: configure Secrets Manager as the backend — connections auto-resolve by name. For Glue: retrieve in the job script. Rotation enabled for all database credentials (30-day cycle)."

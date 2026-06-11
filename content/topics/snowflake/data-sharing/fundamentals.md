@@ -10,6 +10,12 @@ tags: [snowflake, data-sharing, secure-share, marketplace, cross-account]
 
 # Snowflake Data Sharing — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Snowflake Data Sharing like sharing a live Google Doc: the provider shares a database (no data copy, no ETL), the consumer queries it in real time from their own Snowflake account — zero data movement, always fresh.
+
+---
 ## What Is Snowflake Data Sharing?
 
 Data Sharing lets you **share live data with other Snowflake accounts** without copying, moving, or transferring data. Consumers query your data directly — always seeing the latest version.
@@ -220,6 +226,32 @@ The Marketplace is a **public catalog** where providers list datasets for any Sn
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- PROVIDER account: create a share
+CREATE SHARE partner_share;
+GRANT USAGE ON DATABASE gold TO SHARE partner_share;
+GRANT USAGE ON SCHEMA gold.public TO SHARE partner_share;
+GRANT SELECT ON TABLE gold.public.revenue_summary TO SHARE partner_share;
+
+-- Add the consumer account to the share
+ALTER SHARE partner_share ADD ACCOUNTS = acct_consumer;
+
+-- CONSUMER account: create a database from the share
+CREATE DATABASE partner_data FROM SHARE provider_account.partner_share;
+
+-- Consumer queries as if the data were local (no copy!)
+SELECT * FROM partner_data.public.revenue_summary;
+
+-- Marketplace listing (for broader sharing)
+-- Can be listed on Snowflake Marketplace for self-service subscription
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Snowflake Data Sharing?" — Share live data between Snowflake accounts without copying. Provider owns storage, consumer queries directly (read-only). Consumer pays only compute; zero storage cost for shared data. Data is always current (no sync lag). Uses metadata pointers, not data duplication.

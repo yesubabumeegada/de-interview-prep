@@ -10,6 +10,12 @@ tags: [aws, sns, sqs, messaging, pub-sub, queue, decoupling, dead-letter-queue, 
 
 # AWS SNS & SQS — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of SNS as a megaphone (one message, many listeners) and SQS as a private mailbox (one message, one receiver). SNS fan-out + SQS gives you reliable async messaging: SNS broadcasts, each SQS subscriber processes at its own pace.
+
+---
 ## What Are SNS and SQS?
 
 **Amazon SNS (Simple Notification Service)** is a **pub/sub messaging service** that pushes messages to multiple subscribers simultaneously. One message, many receivers.
@@ -322,6 +328,37 @@ sqs.send_message(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import boto3
+import json
+
+sns = boto3.client("sns", region_name="us-east-1")
+sqs = boto3.client("sqs", region_name="us-east-1")
+
+# Publish to SNS topic (all subscribers receive it)
+sns.publish(
+    TopicArn="arn:aws:sns:us-east-1:123:order-events",
+    Message=json.dumps({"order_id": "ord-001", "event": "placed"}),
+    Subject="OrderPlaced",
+)
+
+# Receive from SQS queue (safe: message stays until explicitly deleted)
+queue_url = "https://sqs.us-east-1.amazonaws.com/123/orders-queue"
+resp = sqs.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=10, WaitTimeSeconds=5)
+
+for msg in resp.get("Messages", []):
+    body = json.loads(msg["Body"])
+    print("Processing:", body)
+    # Delete after successful processing (prevents re-delivery)
+    sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=msg["ReceiptHandle"])
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between SNS and SQS?" — "SNS is pub/sub (push, fan-out) — one message goes to many subscribers simultaneously, fire-and-forget. SQS is a queue (pull, one-to-one) — messages persist until a consumer processes and deletes them. They're often used together: SNS fans out to multiple SQS queues, giving each consumer its own reliable buffer."

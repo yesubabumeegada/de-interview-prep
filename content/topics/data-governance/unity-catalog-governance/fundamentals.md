@@ -10,6 +10,12 @@ tags: [unity-catalog, databricks, governance, delta-lake, rbac]
 
 # Unity Catalog Governance — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Unity Catalog governance like a single control panel for the entire Databricks fleet: one place to define who can see which tables, mask which columns, filter which rows — and it applies uniformly whether the query comes from a notebook, a SQL warehouse, or a BI tool.
+
+---
 ## What Is Unity Catalog?
 
 Unity Catalog (UC) is Databricks' unified data governance solution. It provides centralized access control, lineage, and auditing across all Databricks workspaces and data assets (tables, views, functions, models).
@@ -167,6 +173,43 @@ ORDER BY access_count DESC;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Unity Catalog: three-level namespace governance
+USE CATALOG prod;
+
+-- Column masking: hide PII from non-privileged roles
+CREATE OR REPLACE FUNCTION mask_email(email STRING)
+RETURNS STRING
+RETURN CASE
+    WHEN is_account_admin() THEN email
+    WHEN is_member('pii-approved') THEN email
+    ELSE CONCAT(LEFT(email, 2), '***@***.com')
+END;
+
+ALTER TABLE gold.customers
+ALTER COLUMN email SET MASK mask_email;
+
+-- Row filter: analysts only see their region's data
+CREATE OR REPLACE FUNCTION region_filter(region STRING)
+RETURNS BOOLEAN
+RETURN is_account_admin() OR region = current_user_region();
+
+ALTER TABLE gold.orders SET ROW FILTER region_filter ON (region);
+
+-- Audit: who accessed sensitive tables in the last 7 days
+SELECT user_name, action_name, request_params['table_name'] AS table_name, event_time
+FROM system.access.audit
+WHERE event_time >= CURRENT_TIMESTAMP - INTERVAL 7 DAYS
+  AND table_name IN ('customers', 'orders')
+ORDER BY event_time DESC;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Unity Catalog?" — Databricks' unified governance layer: single place to define access control, lineage, and auditing across all workspaces. Key innovation: three-level namespace (catalog.schema.table) and fine-grained controls (column masking, row filters) applied transparently at query time.

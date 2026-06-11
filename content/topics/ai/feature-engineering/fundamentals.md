@@ -10,6 +10,12 @@ tags: [ai, feature-engineering, encoding, scaling, imputation, feature-selection
 
 # Feature Engineering — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of feature engineering like translating raw sensor readings into useful gauges: raw timestamps become 'day of week' and 'hour of day', raw transaction counts become 'purchases in last 30 days' — transforming data into signals the model can actually learn from.
+
+---
 ## What Is Feature Engineering?
 
 Feature engineering is the process of transforming raw data into representations that ML models can learn from effectively. It is often described as "the art of ML" — the same algorithm can perform vastly differently depending on how features are constructed.
@@ -366,6 +372,43 @@ shap.summary_plot(shap_values, X_test, plot_type="bar")
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pandas as pd
+import numpy as np
+from datetime import datetime
+
+# Raw data
+orders = pd.DataFrame({
+    "customer_id": [1, 1, 1, 2, 2],
+    "amount": [100, 200, 50, 300, 150],
+    "order_date": pd.to_datetime(["2024-01-01","2024-01-10","2024-01-20","2024-01-05","2024-01-15"]),
+})
+
+# Feature engineering: aggregate to customer level
+snapshot_date = pd.Timestamp("2024-01-25")
+
+features = orders.groupby("customer_id").agg(
+    order_count=("amount", "count"),
+    total_spend=("amount", "sum"),
+    avg_order=("amount", "mean"),
+    max_order=("amount", "max"),
+    days_since_last=("order_date", lambda x: (snapshot_date - x.max()).days),
+    days_since_first=("order_date", lambda x: (snapshot_date - x.min()).days),
+).reset_index()
+
+# Derived features
+features["spend_per_day"] = features["total_spend"] / features["days_since_first"].clip(1)
+features["order_frequency"] = features["order_count"] / features["days_since_first"].clip(1) * 30
+
+print(features.T)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When would you choose target encoding over one-hot encoding?" — "Target encoding is preferable for high-cardinality categorical features (>50 unique values) where OHE would create an impractical number of sparse columns. Examples: zip code, product ID, user agent. The tradeoff is target encoding can cause leakage if not done with k-fold cross-fitting — you must never use the target of the row being encoded."

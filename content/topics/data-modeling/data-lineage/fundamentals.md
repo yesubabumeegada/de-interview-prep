@@ -10,6 +10,12 @@ tags: [data-lineage, data-governance, metadata, traceability, data-engineering]
 
 # Data Lineage — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data lineage in modeling like a family tree for your tables: the revenue dashboard traces back to gold.revenue → silver.orders_cleaned → bronze.orders_raw → source.postgres_orders. When a source field changes, lineage tells you exactly which dashboards break.
+
+---
 ## What is Data Lineage?
 
 Data lineage is the **complete record of where data comes from, how it moves, and how it transforms** through a data system. It answers three fundamental questions:
@@ -204,6 +210,37 @@ WHERE query_start_time > DATEADD('day', -7, CURRENT_TIMESTAMP);
 -- Visible in the Unity Catalog UI: table → "Lineage" tab
 ```
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- dbt lineage: documented through ref() and source() calls
+-- models/silver/stg_orders.sql
+-- SELECT * FROM {{ source('raw_postgres', 'orders') }}
+-- WHERE amount > 0
+
+-- models/gold/orders_daily.sql
+-- SELECT DATE(order_date) AS day, SUM(amount) AS revenue
+-- FROM {{ ref('stg_orders') }}
+-- GROUP BY 1
+
+-- dbt generates full lineage graph: source → stg_orders → orders_daily → dashboard
+
+-- OpenLineage: emit lineage programmatically
+-- from openlineage.client import OpenLineageClient
+-- client.emit(RunEvent(
+--     inputs=[InputDataset(namespace="snowflake", name="raw.orders")],
+--     outputs=[OutputDataset(namespace="snowflake", name="silver.stg_orders")],
+-- ))
+
+-- Check lineage in DataHub
+-- https://datahubproject.io/docs/lineage/lineage-feature-guide/
+SELECT 'Lineage: track every table reference through source() and ref() in dbt' AS tip;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is data lineage?" — The end-to-end tracking of data from source to consumption — where it came from, what transformations happened, and where it goes. It enables impact analysis (what breaks if I change X), root cause analysis (why is this number wrong), and regulatory compliance (prove data provenance).

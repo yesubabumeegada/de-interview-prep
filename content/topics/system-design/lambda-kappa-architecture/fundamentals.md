@@ -10,6 +10,12 @@ tags: [system-design, lambda-architecture, kappa-architecture, batch, streaming]
 
 # Lambda & Kappa Architecture — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Lambda architecture like having two parallel assembly lines: the batch line (Spark) produces accurate monthly reports overnight, the speed line (Kafka Streams/Flink) produces approximate real-time results. Kappa architecture collapses them into one: use streaming for everything.
+
+---
 ## The Problem: Batch Accuracy vs Streaming Speed
 
 Analytics systems face a fundamental tension:
@@ -128,6 +134,36 @@ Reprocessing steps:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Lambda architecture: two paths for same data
+# Batch layer (high accuracy, high latency — runs daily)
+def batch_layer(date_str: str) -> dict:
+    print(f"[BATCH] Recomputing {date_str} from raw — 100% accurate")
+    # spark.read.parquet(f"s3://raw/{date_str}").groupBy("region").sum("amount")
+    return {"date": date_str, "revenue": 1_050_000.0, "source": "batch"}
+
+# Speed layer (approximate, low latency — updates per minute)
+def speed_layer(event: dict) -> dict:
+    print(f"[SPEED] Incrementally updating from event {event['id']}")
+    # kafka consumer → in-memory aggregation → serving layer
+    return {"region": event["region"], "revenue_delta": event["amount"], "source": "speed"}
+
+# Serving layer: merge batch results with speed layer deltas
+def serving_layer(batch: dict, speed_deltas: list) -> dict:
+    total = batch["revenue"] + sum(d["revenue_delta"] for d in speed_deltas)
+    return {"revenue": total, "as_of": "near-real-time"}
+
+batch = batch_layer("2024-01-15")
+speed = [speed_layer({"id": 1, "region": "US", "amount": 500})]
+print(serving_layer(batch, speed))
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What problem does Lambda Architecture solve?" — The tension between low-latency and accurate results. The speed layer gives fast answers using recent data; the batch layer gives accurate answers for historical data. The serving layer merges both so users always see current + accurate data. The tradeoff: you must maintain two separate codebases (batch + streaming) that must produce identical results — a significant operational burden.

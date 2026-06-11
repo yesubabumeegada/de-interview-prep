@@ -10,6 +10,12 @@ tags: [aws, lambda, serverless, event-driven, functions, triggers]
 
 # AWS Lambda — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Lambda like a vending machine: you put in a trigger (S3 upload, API call, EventBridge event), it runs your function, and shuts down — no server to manage, no idle cost. Great for event-driven lightweight transforms.
+
+---
 ## What Is AWS Lambda?
 
 AWS Lambda is a **serverless compute service** that runs your code in response to events — without provisioning or managing servers. You upload code, define a trigger, and Lambda handles everything else.
@@ -290,6 +296,44 @@ flowchart TD
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# lambda_function.py — triggered by S3 object creation
+import json
+import boto3
+import csv
+import io
+
+s3 = boto3.client("s3")
+
+def lambda_handler(event, context):
+    # Get the uploaded file details
+    bucket = event["Records"][0]["s3"]["bucket"]["name"]
+    key = event["Records"][0]["s3"]["object"]["key"]
+
+    # Read the CSV
+    obj = s3.get_object(Bucket=bucket, Key=key)
+    content = obj["Body"].read().decode("utf-8")
+    reader = csv.DictReader(io.StringIO(content))
+
+    rows = list(reader)
+    print(f"Processing {len(rows)} rows from s3://{bucket}/{key}")
+
+    # Write summary to another bucket
+    summary = {"source": key, "row_count": len(rows)}
+    s3.put_object(
+        Bucket=bucket,
+        Key=key.replace("raw/", "summary/") + ".json",
+        Body=json.dumps(summary),
+    )
+    return {"statusCode": 200, "body": json.dumps(summary)}
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "When would you use Lambda in a data pipeline?" — "As the orchestration/trigger layer: S3 event triggers Lambda → validates file → triggers Glue/Step Functions for heavy ETL. Also for lightweight real-time processing from Kinesis/SQS (per-record alerting, routing). NOT for heavy data transformation (use Glue/EMR for that — Lambda's 15-min limit and 10 GB memory are too restrictive)."

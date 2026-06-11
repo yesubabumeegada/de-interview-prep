@@ -10,6 +10,12 @@ tags: [azure, cosmos-db, nosql, multi-model, global-distribution, ru]
 
 # Cosmos DB — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Cosmos DB like a globally distributed key-value + document store: you write in one region and it replicates to 5 more within milliseconds. Choose your consistency level (strong vs eventual) based on how much staleness you can tolerate.
+
+---
 ## What Is Azure Cosmos DB?
 
 Azure Cosmos DB is a **fully managed, globally distributed NoSQL database** built for low-latency, high-throughput applications. It provides single-digit millisecond reads and writes at any scale, in any Azure region.
@@ -143,6 +149,42 @@ Interview rule of thumb:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from azure.cosmos import CosmosClient, PartitionKey
+import os
+
+client = CosmosClient(
+    url=os.environ["COSMOS_ENDPOINT"],
+    credential=os.environ["COSMOS_KEY"],
+)
+
+db = client.get_database_client("analytics")
+container = db.get_container_client("orders")
+
+# Upsert a document
+container.upsert_item({
+    "id": "ord-001",
+    "partitionKey": "US",     # Must match container's partition key path
+    "customer_id": 42,
+    "amount": 150.0,
+    "status": "completed",
+})
+
+# Point read (fastest — uses partition key, O(1))
+item = container.read_item(item="ord-001", partition_key="US")
+print(item["amount"])
+
+# Query (cross-partition if no partition key in WHERE)
+for item in container.query_items("SELECT * FROM c WHERE c.status = 'completed'", enable_cross_partition_query=True):
+    print(item["id"])
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What happens if you choose a bad partition key in Cosmos DB?" — You get hot partitions: one or a few logical partitions receive most of the traffic. Cosmos DB has a 10,000 RU/s limit per physical partition. If you partition by `country` and 80% of traffic is from the US, the US partition gets throttled (429 Too Many Requests) while other partitions sit idle. The provisioned RU/s cannot help — the bottleneck is per-partition. Fix: re-create the container with a better partition key (no in-place change is possible). This is why partition key design must be right from the start.

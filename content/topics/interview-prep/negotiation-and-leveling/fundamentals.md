@@ -11,6 +11,12 @@ tags: [interview-prep, negotiation, leveling, compensation, career]
 
 **Think of it like this:** compensation is a price set in a market where one side (the employer) negotiates offers every week, and the other side (you) does it once every few years. The fundamentals below don't make you a shark — they just remove the information asymmetry, which is where most of the money is lost.
 
+
+## 🎯 Analogy
+
+Think of salary negotiation like selling a car: the first number anchored sets the range. Come with market data (Levels.fyi, Glassdoor, blind), know your BATNA (next best offer), and negotiate total comp — base, bonus, equity, and growth trajectory.
+
+---
 ## Leveling: The Grid Behind Every Offer
 
 Companies slot every engineer into a **level**, and the level — more than negotiation skill — determines the compensation band.
@@ -97,3 +103,41 @@ At junior level, **learning environment compounds faster than starting salary**:
 - Decompose offers: base, bonus reality, equity (valued honestly), one-times, and the invisible items.
 - Don't give the first number; give a researched range if forced; never bluff.
 - One warm, firm, evidence-based ask — then evaluate the whole package, weighting learning heavily at this stage.
+
+## ▶️ Try It Yourself
+
+```python
+# Leveling guide: DE titles and expectations
+levels = {
+    "Junior DE (L3-L4, 0-2 yrs)": {
+        "SQL": "Basic queries, joins, aggregations",
+        "Python": "ETL scripts with guidance",
+        "Systems": "Runs existing pipelines, fixes simple bugs",
+        "Scope": "Task-level, supervised",
+        "Base_range": "$90k-$130k",
+    },
+    "Mid-level DE (L4-L5, 2-5 yrs)": {
+        "SQL": "Window functions, optimization, query plans",
+        "Python": "OOP, testing, packaging",
+        "Systems": "Designs and owns pipelines independently",
+        "Scope": "Feature-level, minimal supervision",
+        "Base_range": "$130k-$170k",
+    },
+    "Senior DE (L5-L6, 5+ yrs)": {
+        "SQL": "Performance tuning, warehouse architecture",
+        "Python": "Advanced: generators, async, profiling",
+        "Systems": "Architects data platforms, mentors juniors",
+        "Scope": "Team-level impact, cross-functional influence",
+        "Base_range": "$170k-$240k+",
+    },
+}
+
+# Negotiation script
+print("Negotiation: 'Based on my research and experience, I'm targeting $X-$Y.'")
+print("Counter: 'Is there flexibility on equity / signing bonus?'")
+print("NEVER accept on the spot: 'I'd like to review the full offer package.'")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---

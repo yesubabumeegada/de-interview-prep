@@ -10,6 +10,12 @@ tags: [nifi, flowfiles, data-flow, attributes, content, data-engineering]
 
 # Apache NiFi FlowFiles — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of NiFi FlowFiles like envelopes on a conveyor belt: each envelope has content (the data payload) and attributes (metadata labels — filename, source, timestamp). Processors read, modify, and route envelopes without needing to understand everything about them.
+
+---
 ## What is Apache NiFi?
 
 Apache NiFi is a **data integration and dataflow automation platform** designed to move data between systems reliably at scale. It provides a web-based UI for designing, monitoring, and managing data pipelines visually.
@@ -186,6 +192,36 @@ Connection settings:
 - **Expiration**: Auto-drop FlowFiles older than X time
 - **Prioritization**: FIFO, newest first, oldest first, priority attribute
 
+
+## ▶️ Try It Yourself
+
+```python
+# NiFi uses a visual dataflow model — programmatic interaction is via REST API
+import requests
+
+NIFI_BASE = "http://localhost:8080/nifi-api"
+
+# Get all process groups
+resp = requests.get(f"{NIFI_BASE}/process-groups/root")
+root_id = resp.json()["component"]["id"]
+print("Root Process Group ID:", root_id)
+
+# Start all processors in a process group
+requests.put(
+    f"{NIFI_BASE}/flow/process-groups/{root_id}",
+    json={"id": root_id, "state": "RUNNING"},
+)
+
+# Check queue (connection) depths — are FlowFiles backing up?
+connections = requests.get(f"{NIFI_BASE}/process-groups/{root_id}/connections")
+for conn in connections.json().get("connections", []):
+    status = conn["status"]["aggregateSnapshot"]
+    print(f"Connection {conn['id'][:8]}: {status['queuedCount']} queued")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is a FlowFile?" — The fundamental data unit in NiFi. It has two parts: content (the actual data bytes stored in the Content Repository) and attributes (key-value metadata like filename, size, uuid). FlowFiles flow through processors connected by queues (connections).

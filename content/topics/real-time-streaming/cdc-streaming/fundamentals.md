@@ -10,6 +10,12 @@ tags: [cdc, debezium, kafka, change-data-capture, mysql, postgres, binlog]
 
 # CDC Streaming (Debezium) — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of CDC streaming like a live audit log feed: instead of polling the database every hour, Debezium tails the transaction log (binlog/WAL) and publishes every INSERT, UPDATE, DELETE to Kafka as it happens — millisecond propagation.
+
+---
 ## What Is CDC?
 
 CDC (Change Data Capture) is a pattern for capturing every INSERT, UPDATE, and DELETE from a database and streaming them as events.
@@ -249,6 +255,35 @@ while True:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Deploy Debezium MySQL connector via Kafka Connect REST API
+curl -X POST http://localhost:8083/connectors   -H "Content-Type: application/json"   -d '{
+    "name": "mysql-orders-cdc",
+    "config": {
+      "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+      "database.hostname": "mysql-host",
+      "database.port": "3306",
+      "database.user": "debezium",
+      "database.password": "secret",
+      "database.server.id": "1",
+      "database.server.name": "mydb",
+      "table.include.list": "orders_db.orders",
+      "database.history.kafka.bootstrap.servers": "localhost:9092",
+      "database.history.kafka.topic": "mydb.schema-changes"
+    }
+  }'
+
+# CDC events arrive on topic: mydb.orders_db.orders
+# Each event: {"op": "c"/"u"/"d", "before": {...}, "after": {...}}
+kafka-console-consumer.sh --bootstrap-server localhost:9092   --topic mydb.orders_db.orders --from-beginning | head -5
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why is log-based CDC better than query-based CDC (polling `WHERE updated_at > ?`)?" — Query-based CDC has several limitations: (a) Hard deletes are invisible — a deleted row doesn't show up in `SELECT WHERE updated_at > ?`; (b) DB load — full table scans or index scans on large tables; (c) Missed updates — if a row is updated twice between polls, only the latest state is captured (intermediate states lost); (d) Requires an `updated_at` column in every table. Log-based CDC reads the transaction log (already written for DB recovery), capturing every change with before/after state, including hard deletes. Overhead on the DB: minimal (replication client reads the log sequentially).

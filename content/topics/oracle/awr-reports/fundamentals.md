@@ -10,6 +10,12 @@ tags: [oracle, awr, performance, snapshots, ash, statspack]
 
 # AWR Reports — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of AWR (Automatic Workload Repository) like a flight data recorder for Oracle: it snapshots performance metrics every hour (by default), and AWR reports compare two snapshots to pinpoint what caused a slowdown — top SQL, wait events, I/O stats.
+
+---
 ## What Is AWR?
 
 The Automatic Workload Repository (AWR) automatically collects and stores performance statistics for the Oracle database. It takes snapshots of V$ views every 60 minutes (configurable), stores them in `SYSAUX`, and provides historical performance data for analysis.
@@ -160,6 +166,38 @@ SELECT * FROM TABLE(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Generate an AWR report for a time window
+-- Step 1: Find snapshot IDs for your time window
+SELECT snap_id, TO_CHAR(begin_interval_time, 'YYYY-MM-DD HH24:MI') snap_time
+FROM dba_hist_snapshot
+WHERE begin_interval_time BETWEEN SYSDATE - 2 AND SYSDATE
+ORDER BY snap_id;
+
+-- Step 2: Generate HTML AWR report (snap_id 100 → 101)
+SELECT output FROM TABLE(
+    DBMS_WORKLOAD_REPOSITORY.AWR_REPORT_HTML(
+        l_dbid     => (SELECT dbid FROM v$database),
+        l_inst_num => 1,
+        l_bid      => 100,    -- Begin snap_id
+        l_eid      => 101     -- End snap_id
+    )
+);
+
+-- Quick: top 10 SQL by elapsed time in AWR
+SELECT sql_id, executions, ROUND(elapsed_time_total/1e6) elapsed_s, sql_text
+FROM dba_hist_sqlstat JOIN dba_hist_sqltext USING (sql_id)
+WHERE snap_id BETWEEN 100 AND 101
+ORDER BY elapsed_time_total DESC
+FETCH FIRST 10 ROWS ONLY;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is an AWR report and how do you use it for performance tuning?" — AWR captures hourly snapshots of all key performance metrics: wait events, top SQL, system statistics, memory usage. To use it: select a time range covering the performance issue (two snap_ids), generate the report, read Top 5 Timed Events first (tells you WHERE time is spent), then Top SQL (tells you WHAT caused it), then system statistics (confirms CPU, I/O, memory). It's the starting point for any proactive performance analysis.

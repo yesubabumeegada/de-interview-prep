@@ -14,6 +14,12 @@ tags: [interview-prep, project-walkthrough, storytelling, career]
 
 ---
 
+
+## 🎯 Analogy
+
+Think of the project walkthrough like presenting your most impressive engineering project to a panel: they want to understand your thinking (why did you choose Spark over pandas?), your impact (what did it cost before vs after?), and your honest assessment of tradeoffs.
+
+---
 ## The Six-Part Structure
 
 Tell every project in this order. It mirrors how engineers evaluate systems, so it makes you sound like one.
@@ -135,3 +141,34 @@ For each project you might discuss, write down before interview week:
 - [ ] Answers to the obvious follow-ups: why this database? why batch? what breaks first at 10× volume?
 
 Continue to **intermediate.md** for whiteboard technique and handling "why didn't you use X?" challenges.
+
+## ▶️ Try It Yourself
+
+```python
+# Project walkthrough structure
+project_template = {
+    "1. Context (30 sec)": "Business problem, team size, your role, timeline",
+    "2. Problem (1 min)": "What was broken/missing? What were the pain points? (Quantify)",
+    "3. Solution Design (2 min)": "What you built, technology choices, architecture",
+    "4. Tradeoffs You Made (1 min)": "What you chose NOT to do and why",
+    "5. Results (30 sec)": "Impact metrics: latency, cost, reliability, adoption",
+    "6. What You'd Do Differently (30 sec)": "Shows growth mindset and self-awareness",
+}
+
+# Example: real-time order tracking pipeline
+example = {
+    "Context": "Lead DE at 50-person fintech, Q1 2023, 2-person team",
+    "Problem": "Batch orders pipeline had 8-hour lag; customer support blind during day",
+    "Solution": "Kafka -> Flink -> Redis -> REST API; ~2 min end-to-end latency",
+    "Tradeoffs": "Chose Flink over Spark Streaming for lower latency; accepted ops complexity",
+    "Results": "Lag: 8h -> 2min. Support ticket volume -35%. Cost +$800/month",
+    "Different": "Would add proper schema registry from day one instead of retrofitting",
+}
+
+for key, value in example.items():
+    print(f"{key}: {value}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---

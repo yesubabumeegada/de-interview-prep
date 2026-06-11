@@ -9,6 +9,12 @@ tags: [gcp, cloud-composer, interview]
 
 # Cloud Composer / Airflow — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Cloud Composer like MWAA for GCP: it's managed Airflow running on GKE, integrated with GCP services (BigQuery, Dataflow, Dataproc) so your DAGs can trigger any GCP job with built-in operators.
+
+---
 ## Plain-English Analogy
 
 Think of it like hiring a professional kitchen manager for a restaurant. Apache Airflow is the recipe book and the scheduling whiteboard — it says "start the soup at 9, plate the salad at 11, and never serve dessert before the main course." But someone still has to keep the kitchen running: hire chefs, fix broken ovens, restock supplies. **Cloud Composer is Google running the kitchen for you.** You just hand over recipes (DAGs), and Google maintains the staff (workers), the whiteboard (scheduler), and the building (GKE cluster) underneath.
@@ -214,3 +220,43 @@ You pay for:
 ## What to Say in the Interview
 
 > "Cloud Composer is managed Apache Airflow on GCP. It runs on GKE under the hood, you deploy DAGs by syncing Python files to a GCS bucket, and it gives you native operators for BigQuery, Dataflow, and Dataproc. I'd choose it over cron for dependency management, retries, backfills, and observability — and over self-managed Airflow when the team would rather pay a few hundred dollars a month than operate Kubernetes, upgrades, and the metadata database themselves."
+
+## ▶️ Try It Yourself
+
+```python
+from airflow import DAG
+from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
+from airflow.providers.google.cloud.operators.dataproc import DataprocSubmitJobOperator
+from datetime import datetime
+
+with DAG("gcp_etl", start_date=datetime(2024,1,1), schedule="@daily", catchup=False) as dag:
+
+    run_spark = DataprocSubmitJobOperator(
+        task_id="run_spark_job",
+        job={
+            "reference": {"project_id": "my-project"},
+            "placement": {"cluster_name": "orders-cluster"},
+            "pyspark_job": {"main_python_file_uri": "gs://my-bucket/scripts/transform.py"},
+        },
+        region="us-central1",
+        project_id="my-project",
+    )
+
+    load_bq = BigQueryInsertJobOperator(
+        task_id="load_to_bq",
+        configuration={
+            "load": {
+                "sourceUris": ["gs://my-bucket/silver/orders/*.parquet"],
+                "destinationTable": {"projectId": "my-project", "datasetId": "gold", "tableId": "orders"},
+                "sourceFormat": "PARQUET",
+                "writeDisposition": "WRITE_TRUNCATE",
+            }
+        },
+    )
+
+    run_spark >> load_bq
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

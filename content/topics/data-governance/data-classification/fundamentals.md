@@ -10,6 +10,12 @@ tags: [data-classification, sensitivity, tagging, data-security, taxonomy]
 
 # Data Classification — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data classification like a security clearance system: every column gets a label (Public, Internal, Confidential, Restricted/PII), and downstream access controls, masking, and retention policies automatically enforce based on the label.
+
+---
 ## What Is Data Classification?
 
 Data classification is the process of categorizing data by sensitivity, regulatory requirements, and business value. It determines how data should be stored, accessed, and protected.
@@ -171,6 +177,45 @@ models:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import re
+from dataclasses import dataclass
+
+# Automated PII classifier (simplified)
+PII_PATTERNS = {
+    "email":   re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}"),
+    "phone":   re.compile(r"\d{3}[-.]?\d{3}[-.]?\d{4}"),
+    "ssn":     re.compile(r"\d{3}-\d{2}-\d{4}"),
+    "credit_card": re.compile(r"\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}"),
+}
+
+COLUMN_NAME_HINTS = {
+    "Restricted": ["ssn", "social_security", "credit_card", "password", "secret"],
+    "Confidential": ["email", "phone", "address", "dob", "birth"],
+    "Internal": ["name", "salary", "department"],
+}
+
+def classify_column(col_name: str, sample_values: list) -> str:
+    col_lower = col_name.lower()
+    for level, hints in COLUMN_NAME_HINTS.items():
+        if any(h in col_lower for h in hints):
+            return level
+    sample_str = " ".join(str(v) for v in sample_values)
+    for label, pattern in PII_PATTERNS.items():
+        if pattern.search(sample_str):
+            return "Restricted"
+    return "Public"
+
+print(classify_column("customer_email", ["alice@example.com"]))   # Confidential
+print(classify_column("revenue", [100, 200, 300]))                # Public
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "Why does data classification matter?" — Classification drives all downstream controls. A 'restricted' label triggers: encryption, masking, access approval workflow, audit logging, shorter retention. Without classification, you can't consistently apply the right controls or know what GDPR scope applies.

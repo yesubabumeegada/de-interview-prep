@@ -10,6 +10,12 @@ tags: [streaming, stateful, state, flink, spark, redis, rocksdb, keyed-state]
 
 # Stateful Processing — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of stateful stream processing like a cashier who remembers your loyalty points across visits: the state (your balance) persists between events. Flink's RocksDB backend is the ledger that survives restarts via checkpoints.
+
+---
 ## What Is Stateful Processing?
 
 ```
@@ -226,6 +232,40 @@ State cleanup:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.datastream.state import ValueStateDescriptor
+from pyflink.datastream.functions import KeyedProcessFunction
+from pyflink.common.typeinfo import Types
+
+class RunningTotalFunction(KeyedProcessFunction):
+    def __init__(self):
+        self.running_total = None
+
+    def open(self, runtime_context):
+        descriptor = ValueStateDescriptor("running_total", Types.FLOAT())
+        self.running_total = runtime_context.get_state(descriptor)
+
+    def process_element(self, value, ctx):
+        current = self.running_total.value() or 0.0
+        new_total = current + value[1]
+        self.running_total.update(new_total)
+        yield (value[0], new_total)  # (region, running_total)
+
+env = StreamExecutionEnvironment.get_execution_environment()
+data = env.from_collection([("US",100.0),("EU",200.0),("US",50.0)],
+                            Types.ROW([Types.STRING(), Types.FLOAT()]))
+result = data.key_by(lambda r: r[0]).process(RunningTotalFunction())
+result.print()
+env.execute("stateful_demo")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between stateful and stateless processing in streaming?" — Stateless: each event is processed independently without reference to previous events (filter, map, parse). Results depend only on current input. Stateful: processing depends on accumulated history across events (running totals, session tracking, fraud detection). State must be persisted to survive failures. Stateful operators are more complex (state management, fault tolerance) but enable richer analytics. Most real-world streaming jobs have a mix: stateless transformation layer followed by stateful aggregation layer.

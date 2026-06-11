@@ -10,6 +10,12 @@ tags: [pii, gdpr, ccpa, compliance, data-privacy]
 
 # PII & Compliance — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of PII compliance like running a hospital: you know exactly who has access to patient records (access control), can find every file that contains a patient's data (lineage), and can delete it all on request (erasure) — data is medicine: powerful and tightly regulated.
+
+---
 ## What Is PII?
 
 Personally Identifiable Information (PII) is any data that can identify a specific individual, directly or indirectly.
@@ -188,6 +194,47 @@ def handle_dsar(engine, subject_email: str) -> dict:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# GDPR right-to-erasure: find and delete all data for a subject
+def find_subject_data(subject_email: str, conn) -> dict:
+    tables_to_check = ["customers", "orders", "events", "marketing_consents"]
+    found = {}
+    for table in tables_to_check:
+        # Check if table has email column (simplified)
+        try:
+            count = conn.execute(
+                f"SELECT COUNT(*) FROM {table} WHERE email = ?", (subject_email,)
+            ).fetchone()[0]
+            if count > 0:
+                found[table] = count
+        except Exception:
+            pass
+    return found
+
+def erase_subject(subject_email: str, conn) -> dict:
+    results = {}
+    # Soft delete: anonymize rather than hard delete for audit integrity
+    for table, pk_col, email_col in [
+        ("customers", "id", "email"),
+        ("orders",    "id", "customer_email"),
+    ]:
+        conn.execute(
+            f"UPDATE {table} SET {email_col} = 'anonymized@deleted.invalid' WHERE {email_col} = ?",
+            (subject_email,)
+        )
+        results[table] = "anonymized"
+    conn.commit()
+    return results
+
+print("GDPR erasure: find all copies first, then anonymize or delete each one")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is PII and give examples?" — Any data that can identify an individual. Direct: email, SSN, phone, name. Quasi-identifiers: ZIP+birthdate+gender combo. Sensitive: medical records, financial accounts. Derived: clickstream that uniquely identifies behavior pattern.

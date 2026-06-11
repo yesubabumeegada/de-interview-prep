@@ -10,6 +10,12 @@ tags: [ai, model-monitoring, data-drift, concept-drift, psi, kl-divergence]
 
 # Model Monitoring — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of model monitoring like a car's dashboard: accuracy is your fuel gauge (drops when data drifts), latency is your speedometer (spikes under load), and data drift detection is the engine light (warns before accuracy falls off a cliff).
+
+---
 ## Why Models Degrade in Production
 
 A model trained on historical data may become less accurate over time as the real world changes. This phenomenon is called **model decay** or **model staleness**.
@@ -377,6 +383,41 @@ def check_thresholds(metrics: dict) -> list:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+def detect_drift(reference: pd.Series, current: pd.Series,
+                 p_threshold: float = 0.05) -> dict:
+    stat, p_value = stats.ks_2samp(reference, current)
+    mean_shift = current.mean() - reference.mean()
+    return {
+        "feature": reference.name,
+        "ks_statistic": round(float(stat), 4),
+        "p_value": round(float(p_value), 4),
+        "drift_detected": p_value < p_threshold,
+        "mean_shift": round(float(mean_shift), 4),
+    }
+
+# Simulate reference distribution (training data)
+np.random.seed(42)
+ref = pd.Series(np.random.normal(100, 20, 5000), name="avg_order_value")
+
+# Current production data (slight drift)
+current_normal = pd.Series(np.random.normal(100, 20, 1000), name="avg_order_value")
+current_drifted = pd.Series(np.random.normal(130, 25, 1000), name="avg_order_value")  # Mean shifted
+
+print("No drift:", detect_drift(ref, current_normal))
+print("Drift:", detect_drift(ref, current_drifted))
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the difference between data drift and concept drift?" — "Data drift (covariate shift) is when the input feature distribution changes — e.g., your customer base gets younger. The model is still correct in principle, but it may now be extrapolating outside its training distribution. Concept drift is when the relationship between features and labels changes — e.g., 'bitcoin' in an email used to strongly predict spam; now it's commonly used in legitimate business emails. Data drift is detectable without labels (compare feature distributions). Concept drift requires ground truth labels to detect."

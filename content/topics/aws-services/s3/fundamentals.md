@@ -10,6 +10,12 @@ tags: [aws, s3, object-storage, cloud, data-lake, buckets]
 
 # AWS S3 — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of S3 like an infinite postal warehouse: buckets are warehouses, objects are packages, and prefixes are aisle labels. Unlike a filesystem, every object needs its full address — there are no real folders, just naming conventions.
+
+---
 ## What Is Amazon S3?
 
 Amazon S3 (Simple Storage Service) is an **object storage service** — think of it as an infinitely scalable file system in the cloud. It stores any type of data (files, images, logs, Parquet, JSON) as "objects" in "buckets."
@@ -239,6 +245,37 @@ s3.put_object(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import boto3
+
+s3 = boto3.client("s3", region_name="us-east-1")
+
+# Upload a file
+s3.upload_file("data.csv", "my-bucket", "raw/2024/data.csv")
+
+# List objects with a prefix (simulates folder listing)
+resp = s3.list_objects_v2(Bucket="my-bucket", Prefix="raw/2024/")
+for obj in resp.get("Contents", []):
+    print(obj["Key"], obj["Size"])
+
+# Download a file
+s3.download_file("my-bucket", "raw/2024/data.csv", "/tmp/data.csv")
+
+# Generate a presigned URL (expires in 1 hour)
+url = s3.generate_presigned_url(
+    "get_object",
+    Params={"Bucket": "my-bucket", "Key": "raw/2024/data.csv"},
+    ExpiresIn=3600,
+)
+print(url)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you organize a data lake on S3?" — "Three zones: raw/ (source data as-is), curated/ (cleaned, typed, deduplicated), and analytics/ (aggregated, ready for BI). Each zone uses Hive-style partitioning by date for query performance. File format is Parquet for analytics tables (columnar, compressed)."

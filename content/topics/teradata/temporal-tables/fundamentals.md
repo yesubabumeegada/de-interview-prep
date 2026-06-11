@@ -10,6 +10,12 @@ tags: [teradata, temporal-tables, ansi-temporal, valid-time, transaction-time, p
 
 # Temporal Tables — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of temporal tables like a historical ledger: every row knows when it was valid (valid time) and when it was recorded (transaction time). You can query 'what did the record say on 2023-06-01' and 'what did we know about it on 2024-01-01' — point-in-time accuracy without manual SCD logic.
+
+---
 ## What Are Temporal Tables?
 
 **Temporal tables** automatically track how data changes over time. Instead of overwriting old values, temporal tables preserve the history — you can query what the data looked like at any point in the past.
@@ -176,6 +182,36 @@ WHERE customer_id = 1001;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Create a bitemporal table (valid time + transaction time)
+CREATE TABLE customer_contracts (
+    contract_id   INTEGER,
+    customer_id   INTEGER,
+    plan_type     VARCHAR(50),
+    amount        DECIMAL(12,2),
+    -- Valid time: when the contract is actually in effect
+    contract_period PERIOD(DATE) NOT NULL AS VALIDTIME,
+    -- Transaction time: when we recorded it (system-managed)
+    sys_period      PERIOD(TIMESTAMP(6) WITH TIME ZONE) NOT NULL AS TRANSACTIONTIME
+)
+WITH SYSTEM VERSIONING
+PRIMARY INDEX (customer_id);
+
+-- Insert a contract valid from 2024-01-01 to 2024-12-31
+VALIDTIME PERIOD '(2024-01-01, 2024-12-31)'
+INSERT INTO customer_contracts VALUES (1, 42, 'PREMIUM', 500.0);
+
+-- Point-in-time query: what plan did customer 42 have on 2024-06-15?
+VALIDTIME AS OF DATE '2024-06-15'
+SELECT * FROM customer_contracts WHERE customer_id = 42;
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What are temporal tables in Teradata?" — "Temporal tables automatically maintain historical versions of rows over time. Valid-time tables track when facts were true in the real world (application-controlled). Transaction-time tables track when the database recorded changes (system-controlled). Bitemporal tables combine both, providing full audit capability."

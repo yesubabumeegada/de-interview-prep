@@ -10,6 +10,12 @@ tags: [storage, compression, parquet, partitioning, small-files]
 
 # Storage Optimization — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of storage optimization like house cleaning for your data lake: small files are like scattered papers (thousands of tiny files slow down readers), OPTIMIZE/COMPACTION bundles them into neat stacks, and VACUUM cleans up the old papers (deleted file versions).
+
+---
 ## Why Storage Optimization Matters
 
 In a lakehouse, poor storage layout directly impacts: query performance (more files = more S3 GETs = slower), cost (S3 request charges + storage size), and compute cost (more data to scan = more CPU/memory on Spark/Trino).
@@ -116,6 +122,33 @@ Anti-patterns:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```sql
+-- Delta Lake: OPTIMIZE compacts small files, ZORDER co-locates related data
+OPTIMIZE silver.orders ZORDER BY (region, order_date);
+
+-- VACUUM: delete old file versions older than retention period (default 7 days)
+VACUUM silver.orders RETAIN 168 HOURS;  -- 7 days
+
+-- Iceberg: equivalent operations
+-- CALL catalog.system.rewrite_data_files('silver.orders');
+-- CALL catalog.system.expire_snapshots('silver.orders', TIMESTAMP '2024-01-01 00:00:00.000');
+
+-- Check small files problem before optimizing
+SELECT input_file_name(), COUNT(*) FROM silver.orders GROUP BY 1 LIMIT 20;
+
+-- Auto-optimization (Databricks / Delta 3.0+)
+ALTER TABLE silver.orders SET TBLPROPERTIES (
+    'delta.autoOptimize.optimizeWrite' = 'true',
+    'delta.autoOptimize.autoCompact' = 'true'
+);
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the ideal file size for Parquet files in S3?" — 128MB to 1GB is the common recommendation. Below 64MB: the overhead of S3 metadata operations, file open calls, and Spark task scheduling dominates — query is I/O bound on file overhead rather than data. Above 1GB: reading a small range of data (single day's records) from a massive file wastes bytes. 128MB is the Delta Lake default and a good baseline. Adjust: 512MB–1GB for read-heavy, rarely-updated Gold tables.

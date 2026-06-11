@@ -10,6 +10,12 @@ tags: [data-lineage, openlineage, datahub, marquez, impact-analysis]
 
 # Data Lineage — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of data lineage like a supply chain trace for your data: if a product is recalled (bad data discovered), you can trace exactly which farms (sources), factories (transforms), and stores (outputs) it passed through — and recall only the affected batches.
+
+---
 ## What Is Data Lineage?
 
 Data lineage tracks the origin of data, how it moves and transforms across systems, and where it is consumed. It answers: "Where did this data come from and what does it affect?"
@@ -199,6 +205,46 @@ print(tracker.get_downstream("bronze.orders_raw"))
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from openlineage.client import OpenLineageClient
+from openlineage.client.run import RunEvent, RunState, Run, Job
+from openlineage.client.facet import SchemaDatasetFacet, SchemaField
+from openlineage.client.dataset import Dataset, InputDataset, OutputDataset
+import uuid
+
+client = OpenLineageClient.from_environment()
+
+run_id = str(uuid.uuid4())
+job = Job(namespace="etl-pipelines", name="transform_orders")
+
+# Emit START event
+client.emit(RunEvent(
+    eventType=RunState.START,
+    eventTime="2024-01-15T10:00:00Z",
+    run=Run(runId=run_id),
+    job=job,
+    inputs=[InputDataset(namespace="snowflake", name="raw.orders")],
+    outputs=[OutputDataset(namespace="snowflake", name="silver.orders_cleaned")],
+))
+
+# ... run the actual job ...
+
+# Emit COMPLETE event
+client.emit(RunEvent(
+    eventType=RunState.COMPLETE,
+    eventTime="2024-01-15T10:05:00Z",
+    run=Run(runId=run_id),
+    job=job,
+))
+print("Lineage event emitted to Marquez/DataHub via OpenLineage")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is data lineage and why does it matter?" — Lineage tracks the data's journey: source → transformations → destination. Matters for: debugging (trace bad data to source), impact analysis (what breaks if I change X), compliance (prove PII flow for GDPR audits), and safe deprecation (is anyone using this table?).

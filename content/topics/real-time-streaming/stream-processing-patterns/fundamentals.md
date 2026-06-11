@@ -10,6 +10,12 @@ tags: [streaming, patterns, lambda-architecture, kappa-architecture, fan-out, en
 
 # Stream Processing Patterns — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of stream processing patterns like recipes for common real-time problems: filtering is sieving, enrichment is marinating (adding context from a lookup), aggregation is reducing a sauce, and joining two streams is combining two ingredients at the right moment.
+
+---
 ## Core Streaming Patterns Overview
 
 ```
@@ -235,6 +241,37 @@ DataStream<EnrichedClick> enriched = AsyncDataStream.unorderedWait(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, broadcast
+
+spark = SparkSession.builder.master("local[*]").appName("patterns").getOrCreate()
+
+# Pattern 1: Filter (drop events that don't match criteria)
+# stream.filter(col("amount") > 0)
+
+# Pattern 2: Enrich (join stream with static lookup table)
+regions = spark.createDataFrame([("US","North America"),("EU","Europe")], ["code","name"])
+
+# In streaming: broadcast the small lookup table
+# enriched = stream.join(broadcast(regions), stream.region_code == regions.code)
+
+# Pattern 3: Deduplication (exactly-once with watermark)
+# deduped = stream.withWatermark("ts", "10 minutes").dropDuplicates(["order_id"])
+
+# Pattern 4: Stream-stream join (orders + payments within 30 min window)
+# joined = orders.join(payments,
+#   expr("order_id = payment_order_id AND payments.ts BETWEEN orders.ts AND orders.ts + INTERVAL 30 MINUTES"))
+
+print("Core patterns: filter → enrich → aggregate → deduplicate → join")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is the fundamental difference between Lambda and Kappa architecture?" — Lambda uses two separate processing paths: a batch layer for accuracy and a speed (streaming) layer for low latency. The serving layer merges both. This means the same business logic must be implemented twice, creating operational complexity. Kappa eliminates the batch path: all processing is streaming, and historical reprocessing is done by replaying the event log from the beginning through the same streaming job. Kappa is simpler but requires long event retention (Kafka with weeks/months of retention, or cloud object storage) and idempotent sinks (for safe replay).

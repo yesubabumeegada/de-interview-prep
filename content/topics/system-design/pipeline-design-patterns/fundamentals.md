@@ -10,6 +10,12 @@ tags: [system-design, pipeline, etl, batch, streaming, idempotency]
 
 # Pipeline Design Patterns — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of pipeline design patterns like plumbing blueprints: the fan-out pattern splits one source into many consumers (copy to multiple sinks), the funnel consolidates many sources into one landing zone, and the medallion (Bronze→Silver→Gold) is the refinery pattern.
+
+---
 ## What Is a Data Pipeline?
 
 A data pipeline is a sequence of processing steps that move, transform, and load data from sources to destinations. Every pipeline answers three questions:
@@ -109,6 +115,37 @@ Aggregated / Gold Layer:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Medallion pipeline pattern
+from datetime import date
+
+def bronze_ingest(source: str, run_date: date) -> dict:
+    print(f"[BRONZE] Raw copy from {source} — no transforms, exact replica")
+    return {"rows": 50000, "path": f"s3://datalake/bronze/{source}/{run_date}/"}
+
+def silver_clean(bronze: dict) -> dict:
+    print(f"[SILVER] Cleaning {bronze['rows']} rows — dedup, type cast, null drop")
+    return {"rows": 48000, "path": bronze["path"].replace("bronze", "silver")}
+
+def gold_aggregate(silver: dict) -> dict:
+    print(f"[GOLD] Aggregating {silver['rows']} rows → business metric tables")
+    return {"rows": 365, "path": silver["path"].replace("silver", "gold")}
+
+# Idempotent pipeline: run_date ensures partition overwrite is safe to retry
+run_date = date(2024, 1, 15)
+bronze = bronze_ingest("postgres_orders", run_date)
+silver = silver_clean(bronze)
+gold = gold_aggregate(silver)
+
+print(f"Pipeline complete: {gold['rows']} gold rows at {gold['path']}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "How do you make a pipeline idempotent?" — Use MERGE/upsert instead of INSERT. For partitioned tables, use partition overwrite (only rewrite the partitions being processed). For append-only streaming, use deduplication with a unique event ID. Test by running the pipeline twice for the same date and verifying the row count doesn't change.

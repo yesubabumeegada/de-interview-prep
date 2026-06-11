@@ -10,6 +10,12 @@ tags: [hadoop, zookeeper, distributed-coordination, znodes, ensemble, quorum]
 
 # ZooKeeper — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of ZooKeeper like a referee in a distributed game: it coordinates who is the leader (leader election), stores shared configuration (distributed config store), and detects when players drop out (failure detection) — reliable even when nodes fail.
+
+---
 ## What ZooKeeper Solves
 
 Distributed systems face fundamental coordination challenges:
@@ -199,6 +205,38 @@ echo stat | nc zk-host 2181  # Shows connections, mode, etc.
 echo mntr | nc zk-host 2181  # Detailed metrics
 ```
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install kazoo
+from kazoo.client import KazooClient
+
+zk = KazooClient(hosts="localhost:2181")
+zk.start()
+
+# Create a persistent node (config store)
+zk.ensure_path("/config")
+zk.set("/config/db_host", b"postgres.internal")
+
+# Read config
+data, stat = zk.get("/config/db_host")
+print("DB Host:", data.decode())
+
+# Ephemeral node: disappears when client disconnects (used for service discovery)
+zk.create("/services/worker-1", b"10.0.0.1:8080", ephemeral=True)
+
+# Watch for changes (callback when node changes)
+@zk.DataWatch("/config/db_host")
+def watch_config(data, stat):
+    print("Config changed:", data.decode() if data else "deleted")
+
+zk.stop()
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** ZooKeeper's fundamental guarantee is **linearizability for writes** and **sequential consistency for reads**. Writes go through the leader; reads can be served by any server (possibly slightly stale). If you need the latest data, use `sync()` before reading.

@@ -14,6 +14,12 @@ Behavioral rounds feel "soft" but are scored as rigorously as coding rounds — 
 
 ---
 
+
+## 🎯 Analogy
+
+Think of behavioral questions like casting calls: interviewers are checking if you'll handle production incidents calmly, collaborate without ego, and communicate clearly under pressure. STAR (Situation, Task, Action, Result) is the script format they expect.
+
+---
 ## STAR, Tuned for Data Engineers
 
 ```mermaid
@@ -145,3 +151,39 @@ Minimum bank for a junior loop: **5 stories** — one failure, one conflict, one
 - Have a friend ask two random follow-ups per story — follow-up survival is the real test.
 
 For stronger frameworks, level-calibrated stories, and bar-raiser dynamics, continue to **intermediate.md** and **senior-deep-dive.md**.
+
+## ▶️ Try It Yourself
+
+```python
+# STAR method template for behavioral answers
+star_template = {
+    "Situation": "Set the context: company, team size, timeframe, stakes",
+    "Task": "Your specific role and responsibility in that situation",
+    "Action": "Exactly what YOU did — use 'I', not 'we'. Specific steps.",
+    "Result": "Quantified outcome: 'reduced pipeline failures by 40%', 'saved $50k/month'",
+}
+
+# Common behavioral questions + what they're really testing
+questions = {
+    "Tell me about a time a pipeline failed in production": {
+        "testing": "incident response, calmness under pressure, root cause analysis",
+        "key_points": ["How fast you detected it", "Communication to stakeholders", "Fix + prevention"],
+    },
+    "Describe a conflict with a teammate": {
+        "testing": "collaboration, communication, professionalism",
+        "key_points": ["Led with curiosity not accusation", "Focused on the problem not the person", "Resolution"],
+    },
+    "Tell me about a time you improved a system": {
+        "testing": "initiative, impact, technical depth",
+        "key_points": ["Quantify the improvement", "Your specific contribution", "What you learned"],
+    },
+}
+
+for q, meta in questions.items():
+    print(f"Q: {q}")
+    print(f"  Testing: {meta['testing']}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---

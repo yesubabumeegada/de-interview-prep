@@ -10,6 +10,12 @@ tags: [nifi, provenance, data-lineage, audit, troubleshooting, data-engineering]
 
 # NiFi Provenance — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of NiFi provenance like a flight data recorder for your data: every FlowFile's journey is recorded — when it was created, modified, routed, cloned, and dropped. You can replay any FlowFile from any point in its history.
+
+---
 ## What is Data Provenance?
 
 Data provenance in NiFi is a **complete audit trail** of every FlowFile's journey through the system. It records every event (create, modify, route, send, drop) with full context — enabling you to trace any piece of data from source to destination.
@@ -197,6 +203,42 @@ graph TD
     style SEND2 fill:#e1f5fe
 ```
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Query provenance via NiFi REST API
+
+# Submit a provenance query (find all events for a specific file)
+curl -X POST http://localhost:8080/nifi-api/provenance   -H "Content-Type: application/json"   -d '{
+    "provenance": {
+      "request": {
+        "searchTerms": {
+          "filename": {"value": "orders_20240115.csv"},
+          "eventType": {"value": "SEND"}
+        },
+        "maxResults": 100,
+        "startDate": "01/15/2024 00:00:00 EST",
+        "endDate": "01/16/2024 00:00:00 EST"
+      }
+    }
+  }'
+
+# Provenance event types:
+# CREATE: FlowFile first created
+# FETCH: Content fetched from source
+# SEND: FlowFile sent to destination
+# RECEIVE: FlowFile received from source
+# ROUTE: FlowFile routed to a relationship
+# DROP: FlowFile dropped (end of life)
+# REPLAY: FlowFile replayed from provenance repository
+
+echo "Use provenance to debug where a FlowFile went wrong in the pipeline"  
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is NiFi provenance?" — A complete audit trail of every FlowFile operation. Every create, modify, route, send, and drop event is recorded with timestamps, processor info, and attribute snapshots. Enables: debugging (trace failures), compliance (prove data handling), replay (re-send failed FlowFiles), and data lineage (source-to-destination tracing).

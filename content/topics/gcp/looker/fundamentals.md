@@ -13,6 +13,12 @@ tags: [gcp, looker, lookml, bi, interview]
 
 That "shared formula sheet" idea is the **semantic layer**, and it's why Looker matters in data engineering interviews even if you never build a dashboard: DEs increasingly own the semantic layer.
 
+
+## 🎯 Analogy
+
+Think of Looker like a BI tool with a semantic layer: instead of analysts writing raw SQL, they query LookML (a YAML-like model defining metrics, dimensions, and joins), and Looker generates optimized SQL — one definition, consistent results everywhere.
+
+---
 ## Two Products, One Brand
 
 | | **Looker** | **Looker Studio** (ex Data Studio) |
@@ -145,3 +151,40 @@ Notice the measure-built-from-measures pattern — Looker resolves the dependenc
 - One definition of every metric, reused by every dashboard — that's the core selling point.
 - Looker Studio is a different, free product for lightweight reporting — know the difference crisply.
 - DEs meet Looker through performance, cost, and the tables that feed the model.
+
+## ▶️ Try It Yourself
+
+```bash
+# LookML model example (orders.model.lkml)
+# connection: "bigquery_prod"
+# include: "/views/*.view"
+#
+# explore: orders {
+#   join: customers {
+#     type: left_outer
+#     sql_on: ${orders.customer_id} = ${customers.id} ;;
+#     relationship: many_to_one
+#   }
+# }
+
+# LookML view (orders.view.lkml)
+# view: orders {
+#   sql_table_name: `my-project.gold.orders` ;;
+#   measure: total_revenue {
+#     type: sum
+#     sql: ${TABLE}.amount ;;
+#     value_format_name: usd
+#   }
+#   dimension: region {
+#     type: string
+#     sql: ${TABLE}.region ;;
+#   }
+# }
+
+# Looker API: trigger a Look or Dashboard refresh
+looker-sdk looks run 42 --format json
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

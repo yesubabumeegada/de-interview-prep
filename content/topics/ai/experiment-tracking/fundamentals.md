@@ -10,6 +10,12 @@ tags: [ai, experiment-tracking, mlflow, params, metrics, artifacts]
 
 # Experiment Tracking — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of experiment tracking like a lab notebook for ML: you record which hyperparameters you tried, which dataset version you used, and what accuracy you got — so you can reproduce the best result and explain why it won.
+
+---
 ## Why Track Experiments?
 
 Without experiment tracking, you face these problems:
@@ -311,6 +317,47 @@ mlflow.set_tags({
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import mlflow
+import mlflow.sklearn
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, f1_score
+
+mlflow.set_experiment("churn-prediction")
+
+X, y = make_classification(n_samples=1000, n_features=10, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+for n_estimators in [50, 100, 200]:
+    with mlflow.start_run(run_name=f"rf-n{n_estimators}"):
+        # Log parameters
+        mlflow.log_params({"n_estimators": n_estimators, "max_depth": None})
+
+        # Train
+        model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
+        model.fit(X_train, y_train)
+        preds = model.predict(X_test)
+
+        # Log metrics
+        mlflow.log_metrics({
+            "accuracy": accuracy_score(y_test, preds),
+            "f1": f1_score(y_test, preds),
+        })
+
+        # Log model artifact
+        mlflow.sklearn.log_model(model, "model")
+
+print("View experiments: mlflow ui  ->  http://localhost:5000")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the minimum you should track in every ML experiment?" — "At minimum: all hyperparameters (so you can reproduce), evaluation metrics on the test set (so you can compare), the data version/path used (so you can retrace), and the git commit hash (so you can reproduce the exact code). Without these four, you can't reproduce a past run or explain why one experiment was better than another."

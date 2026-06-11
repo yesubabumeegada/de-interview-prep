@@ -11,6 +11,12 @@ tags: [gcp, dataflow, interview]
 
 Think of it like a conveyor-belt factory you design on paper. You sketch the assembly line — "items arrive here, this station cleans them, this one groups them into boxes of ten, this one ships them" — without ever deciding how many workers the factory employs. Then you hand the blueprint to a factory operator (Dataflow) who hires workers, speeds the belts up when boxes pile up, lets workers go when it's quiet, and keeps the line running 24/7. **Apache Beam is the blueprint language; Dataflow is the factory operator.**
 
+
+## 🎯 Analogy
+
+Think of Dataflow like a serverless Apache Beam runner: you write a Beam pipeline (transforms, windows, sinks), submit it, and Dataflow auto-scales workers, handles stragglers, and shuts down when done — no cluster to manage.
+
+---
 ## The Two Names
 
 - **Apache Beam** — an open-source *programming model* (SDKs in Java, Python, Go) for defining data pipelines. One model for both batch and streaming.
@@ -189,3 +195,32 @@ The pipeline's estimate of event-time completeness — "all data up to time T ha
 - Dataflow adds autoscaling, rebalancing, exactly-once, templates.
 
 If you can draw Pub/Sub → Dataflow → BigQuery, define PCollection/ParDo/window/watermark, and explain event time vs processing time, you've cleared the junior bar.
+
+## ▶️ Try It Yourself
+
+```python
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions
+
+options = PipelineOptions(
+    runner="DataflowRunner",
+    project="my-project",
+    region="us-central1",
+    temp_location="gs://my-bucket/tmp",
+    staging_location="gs://my-bucket/staging",
+)
+
+with beam.Pipeline(options=options) as p:
+    (
+        p
+        | "ReadFromGCS" >> beam.io.ReadFromText("gs://my-bucket/raw/orders/*.csv")
+        | "ParseCSV" >> beam.Map(lambda line: dict(zip(["id","amount","region"], line.split(","))))
+        | "FilterUS" >> beam.Filter(lambda r: r["region"] == "US")
+        | "WriteToGCS" >> beam.io.WriteToText("gs://my-bucket/silver/us_orders")
+    )
+print("Dataflow job submitted")
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

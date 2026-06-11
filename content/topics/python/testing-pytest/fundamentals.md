@@ -10,6 +10,12 @@ tags: [python, testing, pytest, assertions, fixtures, parametrize, test-organiza
 
 # Python Testing with pytest — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of pytest like a quality inspector on an assembly line: each test function verifies one behavior, fixtures are pre-assembled test components (database connections, sample data), and parametrize lets you run the same check with 10 different inputs automatically.
+
+---
 ## Why Testing Matters in Data Engineering
 
 Data pipelines transform millions of records. A subtle bug — wrong date parsing, dropped nulls, incorrect join logic — can corrupt downstream analytics without any visible error. Tests are your safety net against silent data corruption.
@@ -307,6 +313,50 @@ flowchart TD
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import pytest
+
+# Function under test
+def transform_orders(orders: list[dict]) -> list[dict]:
+    return [
+        {**o, "amount_eur": round(o["amount"] * 0.92, 2)}
+        for o in orders if o["amount"] > 0
+    ]
+
+# Fixture: reusable test data
+@pytest.fixture
+def sample_orders():
+    return [
+        {"id": 1, "amount": 100.0},
+        {"id": 2, "amount": -50.0},  # Should be filtered
+        {"id": 3, "amount": 200.0},
+    ]
+
+# Basic test
+def test_filters_negative(sample_orders):
+    result = transform_orders(sample_orders)
+    assert len(result) == 2
+    assert all(o["amount"] > 0 for o in result)
+
+# Parametrized test: run same assertion with multiple inputs
+@pytest.mark.parametrize("amount,expected_eur", [
+    (100.0, 92.0),
+    (50.0, 46.0),
+    (1000.0, 920.0),
+])
+def test_conversion_rate(amount, expected_eur):
+    result = transform_orders([{"id": 1, "amount": amount}])
+    assert result[0]["amount_eur"] == expected_eur
+
+# Run: pytest test_transform.py -v
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** In DE interviews, mention that you test transforms independently from I/O. "I separate pure transformation logic from side effects (reading files, writing to DBs). The transforms get fast unit tests with parametrize. The I/O gets integration tests with fixtures that set up temp files or mock connections."

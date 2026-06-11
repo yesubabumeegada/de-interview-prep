@@ -10,6 +10,12 @@ tags: [flink, streaming, real-time, datastream-api, event-time, watermarks]
 
 # Apache Flink — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Flink like a conveyor belt with smart workers: each worker processes events as they arrive (true streaming, not micro-batch), remembers state across events (stateful operators), and the belt never needs to stop for clock ticks.
+
+---
 ## What Is Apache Flink?
 
 Apache Flink is a **stateful stream processing framework** designed for high-throughput, low-latency, exactly-once event processing at scale.
@@ -201,6 +207,39 @@ stream.sinkTo(sink);
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install apache-flink
+from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.common.typeinfo import Types
+
+env = StreamExecutionEnvironment.get_execution_environment()
+env.set_parallelism(2)
+
+# Source: simple collection (use Kafka in production)
+data_stream = env.from_collection(
+    collection=[
+        ("US", 100.0), ("EU", 200.0), ("US", 150.0),
+        ("EU", 300.0), ("US", 250.0),
+    ],
+    type_info=Types.ROW([Types.STRING(), Types.FLOAT()])
+)
+
+# Map: compute tax
+taxed = data_stream.map(
+    lambda row: (row[0], round(row[1] * 1.1, 2)),
+    output_type=Types.ROW([Types.STRING(), Types.FLOAT()])
+)
+
+taxed.print()
+env.execute("flink_demo")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between Flink and Spark Streaming?" — Flink is a true streaming engine: it processes one record at a time, has native event-time support, and achieves exactly-once with lightweight checkpointing. Spark Structured Streaming uses micro-batching (small batches every 100ms–seconds), which adds latency. For sub-second latency requirements or complex event-time windowing with late data, Flink is the better choice. For teams already on the Spark ecosystem, Spark Streaming offers integration with Delta Lake, MLlib, and the broader Spark ecosystem.

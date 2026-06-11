@@ -11,6 +11,12 @@ tags: [gcp, bigquery, interview]
 
 Think of it like a massive public library with thousands of librarians on standby. You don't buy shelves, you don't hire staff, and you don't worry about how the books are stored. You simply walk up to the counter, hand over a question ("find every book mentioning dragons published after 1990"), and an army of librarians fans out across the building, each scanning a different aisle in parallel, then merges their findings into one answer. You pay only for the pages they had to scan — not for the building. That's BigQuery: a serverless data warehouse where storage and compute are separate, and queries are massively parallelized for you.
 
+
+## 🎯 Analogy
+
+Think of BigQuery like a serverless data warehouse that charges per query: you load data into tables, run SQL, and pay for the bytes scanned — no cluster to provision, no indexes to manage, just fast analytical SQL at any scale.
+
+---
 ## What Is BigQuery?
 
 BigQuery is Google Cloud's fully managed, serverless data warehouse. Key properties:
@@ -244,3 +250,33 @@ flowchart LR
 - Batch loads are free; streaming costs money — choose deliberately.
 
 If you can explain bytes-scanned billing, partition pruning, and why storage/compute separation matters, you have covered the junior BigQuery bar.
+
+## ▶️ Try It Yourself
+
+```python
+from google.cloud import bigquery
+
+client = bigquery.Client(project="my-project")
+
+# Load data from GCS into BigQuery
+job_config = bigquery.LoadJobConfig(
+    source_format=bigquery.SourceFormat.PARQUET,
+    write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+)
+load_job = client.load_table_from_uri(
+    "gs://my-bucket/orders/2024/*.parquet",
+    "my-project.gold.orders",
+    job_config=job_config,
+)
+load_job.result()  # Wait for completion
+print(f"Loaded {client.get_table('my-project.gold.orders').num_rows} rows")
+
+# Query
+query = "SELECT region, SUM(amount) AS revenue FROM `my-project.gold.orders` GROUP BY region"
+for row in client.query(query):
+    print(row.region, row.revenue)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---

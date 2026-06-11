@@ -11,6 +11,12 @@ tags: [interview-prep, interview-process, career]
 
 **Think of it like this:** a DE interview loop is itself a pipeline — you're the data. Each stage filters on different criteria, each has its own SLA, and failures at one stage rarely mean you'd fail the others. Knowing the pipeline's stages, what each one *actually* tests, and where candidates typically get dropped lets you prepare deliberately instead of cramming everything for every round.
 
+
+## 🎯 Analogy
+
+Think of the DE interview process like a multi-round tournament: each round tests a different skill (SQL coding, system design, behavioral). Knowing the format in advance lets you prepare the right type of answer for each round.
+
+---
 ## The Standard DE Interview Loop
 
 ```mermaid
@@ -97,3 +103,46 @@ The DE-specific screen is typically **SQL-heavy with some Python**:
 - DE screens are SQL-first: window functions, dedup, NULL handling are the recurring trio.
 - Narrate your thinking; take hints; test with an example row. Etiquette is scored.
 - Timelines: 3–6 weeks typical; one polite follow-up per stage SLA breach is normal.
+
+## ▶️ Try It Yourself
+
+```python
+# Common DE interview process by stage
+interview_stages = {
+    "1. Recruiter Screen (30 min)": {
+        "format": "Phone/Zoom",
+        "topics": ["Background walkthrough", "Why this role?", "Salary expectations"],
+        "prep": "Know your resume stories, research the company",
+    },
+    "2. Technical Screen (45-60 min)": {
+        "format": "Shared code editor (CoderPad, HackerRank)",
+        "topics": ["SQL: window functions, CTEs, complex joins", "Python: data manipulation"],
+        "prep": "Practice 20+ SQL medium problems on LeetCode/StrataScratch",
+    },
+    "3. Take-home Assignment (3-5 hours)": {
+        "format": "GitHub submission",
+        "topics": ["End-to-end pipeline", "Data quality checks", "Documentation"],
+        "prep": "Have a template repo with tests, logging, README structure",
+    },
+    "4. System Design (45-60 min)": {
+        "format": "Whiteboard or virtual diagram tool",
+        "topics": ["Design a pipeline from requirements", "Scale, fault tolerance, cost"],
+        "prep": "Practice: real-time event pipeline, data warehouse design",
+    },
+    "5. Behavioral (30-45 min)": {
+        "format": "Video interview",
+        "topics": ["STAR stories", "Leadership", "Conflict resolution"],
+        "prep": "Prepare 5 strong STAR stories covering: failure, success, conflict, influence",
+    },
+}
+
+for stage, details in interview_stages.items():
+    print(f"
+{stage}")
+    print(f"  Format: {details['format']}")
+    print(f"  Prep:   {details['prep']}")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---

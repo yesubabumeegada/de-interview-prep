@@ -10,6 +10,12 @@ tags: [python, design-patterns, factory, singleton, strategy, observer]
 
 # Python Design Patterns — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of design patterns like standard recipes in cooking: the Singleton is a shared pot everyone uses, the Factory is a meal-prep service that creates the right dish based on your order, and the Strategy is choosing cooking method (grill vs bake) at runtime.
+
+---
 ## What Are Design Patterns?
 
 Design patterns are **reusable solutions to common software design problems**. They aren't code you copy-paste — they're blueprints for structuring your classes and functions to solve recurring challenges.
@@ -257,6 +263,50 @@ config = (
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Strategy pattern: swap algorithm at runtime
+from abc import ABC, abstractmethod
+
+class CompressionStrategy(ABC):
+    @abstractmethod
+    def compress(self, data: bytes) -> bytes: pass
+
+class GzipStrategy(CompressionStrategy):
+    def compress(self, data: bytes) -> bytes:
+        import gzip
+        return gzip.compress(data)
+
+class NoopStrategy(CompressionStrategy):
+    def compress(self, data: bytes) -> bytes:
+        return data  # No compression (dev/test)
+
+class FileWriter:
+    def __init__(self, strategy: CompressionStrategy = None):
+        self.strategy = strategy or NoopStrategy()
+
+    def write(self, path: str, data: bytes):
+        compressed = self.strategy.compress(data)
+        print(f"Writing {len(data)}B -> {len(compressed)}B to {path}")
+
+# Swap strategy without changing the writer
+writer = FileWriter(GzipStrategy())
+writer.write("/tmp/orders.gz", b"order_id,amount
+1,100
+2,200
+" * 100)
+
+writer.strategy = NoopStrategy()  # Switch at runtime
+writer.write("/tmp/orders.csv", b"order_id,amount
+1,100
+")
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** When asked "which pattern would you use?", always start by identifying the problem: "I need to create different objects based on type → Factory" or "I need swappable algorithms → Strategy." Show your reasoning, not just the pattern name.

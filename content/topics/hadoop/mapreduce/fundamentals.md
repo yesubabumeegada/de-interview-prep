@@ -10,6 +10,12 @@ tags: [hadoop, mapreduce, map, reduce, shuffle, sort]
 
 # MapReduce Fundamentals
 
+
+## 🎯 Analogy
+
+Think of MapReduce like a library research project: Map is every student searching their assigned shelf (parallel), Shuffle is gathering all notes on the same topic to one desk, and Reduce is summarizing all notes per topic into a final report.
+
+---
 ## What is MapReduce?
 
 MapReduce is a programming model and framework for processing large datasets in parallel across a cluster. It abstracts away the complexity of distributed computing by breaking jobs into two phases:
@@ -289,6 +295,34 @@ mapred job -history job_1234_0001
 </property>
 ```
 
+
+## ▶️ Try It Yourself
+
+```python
+# MapReduce word count — classic example (run with mrjob)
+# pip install mrjob
+
+from mrjob.job import MRJob
+import re
+
+class MRWordCount(MRJob):
+    def mapper(self, _, line):
+        for word in re.findall(r'\w+', line.lower()):
+            yield word, 1
+
+    def reducer(self, word, counts):
+        yield word, sum(counts)
+
+if __name__ == '__main__':
+    MRWordCount.run()
+
+# Run locally: python wordcount.py input.txt
+# Run on Hadoop: python wordcount.py -r hadoop hdfs:///input/text/
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** Always clarify that the Combiner is NOT guaranteed to run — the framework may skip it (e.g., if map output fits in memory without spilling). Therefore, Combiner logic must be safe to run 0 or more times. Only use it for associative and commutative operations.

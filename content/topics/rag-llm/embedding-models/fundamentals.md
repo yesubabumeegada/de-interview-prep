@@ -10,6 +10,12 @@ tags: [rag, llm, embeddings, vectors, similarity-search, nlp]
 
 # Embedding Models — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of embedding models like universal translators for meaning: they convert any text (a question, a document paragraph) into a fixed-length vector of numbers. Similar meanings produce similar vectors — which is why semantic search works.
+
+---
 ## What Are Embeddings?
 
 Embeddings are **dense vector representations** of text (or images, audio, etc.) that capture semantic meaning in a numerical format. Similar texts produce similar vectors, enabling machines to understand "meaning" through math.
@@ -208,6 +214,39 @@ vector = model.encode("hello world")  # numpy array, instant
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# pip install sentence-transformers
+from sentence_transformers import SentenceTransformer
+import numpy as np
+
+model = SentenceTransformer("all-MiniLM-L6-v2")  # 384-dim, fast
+
+# Embed sentences
+sentences = [
+    "How does Spark handle large datasets?",
+    "PySpark processes big data using distributed computing",
+    "My cat knocked over the coffee mug",
+]
+embeddings = model.encode(sentences)
+print("Shape:", embeddings.shape)  # (3, 384)
+
+# Compute cosine similarity
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+# Similar topics should have high similarity
+sim_01 = cosine_similarity(embeddings[0], embeddings[1])
+sim_02 = cosine_similarity(embeddings[0], embeddings[2])
+print(f"Spark vs PySpark: {sim_01:.3f}")   # High (same topic)
+print(f"Spark vs cat: {sim_02:.3f}")       # Low (different topic)
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What embedding model would you choose?" — Consider: data volume (cost), latency requirements, privacy constraints (API vs local), language support, and dimensionality tradeoffs. Start with OpenAI small for prototyping, evaluate open-source for production if cost/privacy matters.

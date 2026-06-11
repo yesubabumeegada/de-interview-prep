@@ -10,6 +10,12 @@ tags: [azure, adf, etl, pipelines, data-integration]
 
 # Azure Data Factory — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Azure Data Factory like an orchestration hub for data movement: pipelines connect data stores (Blob, SQL, Cosmos DB, SAP), activities do the work (Copy, Databricks Notebook, Stored Procedure), and triggers schedule or event-start the whole thing.
+
+---
 ## What Is Azure Data Factory?
 
 Azure Data Factory (ADF) is Azure's **cloud-based ETL/ELT and data integration service**. It enables you to create data-driven workflows (pipelines) to orchestrate and automate data movement and data transformation.
@@ -153,6 +159,38 @@ Behind the scenes:
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+# Trigger an ADF pipeline via the REST API / Python SDK
+from azure.identity import DefaultAzureCredential
+from azure.mgmt.datafactory import DataFactoryManagementClient
+
+cred = DefaultAzureCredential()
+client = DataFactoryManagementClient(cred, subscription_id="sub-id")
+
+# Trigger a pipeline run
+run = client.pipelines.create_run(
+    resource_group_name="rg-data",
+    factory_name="my-adf",
+    pipeline_name="orders-etl-pipeline",
+    parameters={"processDate": "2024-01-15"},
+)
+print("Pipeline run ID:", run.run_id)
+
+# Check run status
+status = client.pipeline_runs.get(
+    resource_group_name="rg-data",
+    factory_name="my-adf",
+    run_id=run.run_id,
+)
+print("Status:", status.status)
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What's the difference between a Linked Service and a Dataset?" — Linked Service = the *connection* (credentials + endpoint). Dataset = the *shape* of the data within that connection (which table, which file, which schema). One Linked Service can back many Datasets. Think of Linked Service as the database connection string, and Dataset as a specific table within that database.

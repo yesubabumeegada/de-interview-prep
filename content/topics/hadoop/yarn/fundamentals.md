@@ -10,6 +10,12 @@ tags: [hadoop, yarn, resource-manager, node-manager, application-master]
 
 # YARN Fundamentals
 
+
+## 🎯 Analogy
+
+Think of YARN like an airport control tower for cluster resources: ResourceManager is the tower (global resource tracker), NodeManagers are individual gates (per-machine agents), and ApplicationMasters are pilots filing flight plans (resource requests) for their jobs.
+
+---
 ## What is YARN?
 
 YARN (Yet Another Resource Negotiator) is Hadoop's cluster resource management system, introduced in Hadoop 2.x. It separates resource management from job execution, allowing multiple processing frameworks (MapReduce, Spark, Flink, Tez) to share a single Hadoop cluster.
@@ -233,6 +239,28 @@ yarn queue -status root.production
 | Maturity for Hadoop | Best | Good | Growing |
 | Cloud native | No | Partial | Yes |
 
+
+## ▶️ Try It Yourself
+
+```bash
+# Submit a Spark job to YARN
+spark-submit   --master yarn   --deploy-mode cluster   --num-executors 10   --executor-memory 8g   --executor-cores 4   transform_orders.py
+
+# Check YARN application status
+yarn application -list
+yarn application -status application_1234567890_0001
+
+# Kill a stuck application
+yarn application -kill application_1234567890_0001
+
+# Check cluster resource usage
+yarn node -list
+yarn top
+```
+
+> **Run it:** Copy the snippet into a REPL or file — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** A key YARN interview question is "what happens when the ApplicationMaster fails?" — YARN restarts the AM in a new container. For MapReduce, the AM can recover completed tasks from HDFS; only in-progress tasks need to be rerun. For Spark, the AM restarts and the application starts from scratch (unless checkpointing is used).

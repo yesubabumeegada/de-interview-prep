@@ -10,6 +10,12 @@ tags: [aws, glue, etl, serverless, data-catalog, crawlers, pyspark]
 
 # AWS Glue — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of AWS Glue like a serverless kitchen for data: the Glue Catalog is the recipe book (schemas and table definitions), Glue ETL Jobs are the chefs (Spark-based transforms), and crawlers automatically taste new ingredients and add them to the recipe book.
+
+---
 ## What Is AWS Glue?
 
 AWS Glue is a **serverless ETL (Extract, Transform, Load) service** that combines three capabilities:
@@ -262,6 +268,38 @@ orders_dyf = glueContext.create_dynamic_frame.from_catalog(
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import boto3
+
+glue = boto3.client("glue", region_name="us-east-1")
+
+# Start a Glue ETL job
+response = glue.start_job_run(
+    JobName="orders-transform-job",
+    Arguments={
+        "--source_path": "s3://my-bucket/raw/orders/",
+        "--target_path": "s3://my-bucket/silver/orders/",
+        "--date": "2024-01-15",
+    }
+)
+print("Job run ID:", response["JobRunId"])
+
+# Check job status
+status = glue.get_job_run(JobName="orders-transform-job", RunId=response["JobRunId"])
+print("State:", status["JobRun"]["JobRunState"])
+
+# Get tables from the Glue Catalog
+tables = glue.get_tables(DatabaseName="raw_db")
+for t in tables["TableList"]:
+    print(t["Name"], t["StorageDescriptor"]["Location"])
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is AWS Glue?" — "A serverless ETL service with three parts: Data Catalog (central metadata store used by Athena/Redshift/EMR), Crawlers (auto-discover schemas from S3), and ETL Jobs (serverless PySpark for transformation). No cluster management — you specify DPUs and Glue handles the infrastructure."

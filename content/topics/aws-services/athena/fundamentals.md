@@ -10,6 +10,12 @@ tags: [aws, athena, serverless, sql, s3, query, presto, trino]
 
 # AWS Athena — Fundamentals
 
+
+## 🎯 Analogy
+
+Think of Athena like a query layer on top of your S3 data lake: you define a table schema pointing at S3 files (Parquet, CSV, JSON), and run SQL without moving any data — pay per query, not per cluster.
+
+---
 ## What Is Amazon Athena?
 
 Amazon Athena is a **serverless, interactive query service** that lets you analyze data directly in S3 using standard SQL. No infrastructure to manage, no data to load — just point at your S3 data and query.
@@ -188,6 +194,47 @@ WHERE order_date IS NOT NULL;
 
 ---
 
+
+## ▶️ Try It Yourself
+
+```python
+import boto3
+import time
+
+athena = boto3.client("athena", region_name="us-east-1")
+
+# Run a query on S3 data (no cluster needed)
+query = (
+    "SELECT region, SUM(amount) AS revenue "
+    "FROM orders_external "
+    "WHERE year = '2024' "
+    "GROUP BY region"
+)
+
+resp = athena.start_query_execution(
+    QueryString=query,
+    QueryExecutionContext={"Database": "datalake"},
+    ResultConfiguration={"OutputLocation": "s3://my-bucket/athena-results/"},
+)
+qid = resp["QueryExecutionId"]
+
+# Poll until complete
+while True:
+    status = athena.get_query_execution(QueryExecutionId=qid)["QueryExecution"]["Status"]["State"]
+    if status in ("SUCCEEDED", "FAILED", "CANCELLED"):
+        break
+    time.sleep(2)
+
+print("Status:", status)
+if status == "SUCCEEDED":
+    results = athena.get_query_results(QueryExecutionId=qid)
+    for row in results["ResultSet"]["Rows"][1:]:  # Skip header
+        print([c.get("VarCharValue") for c in row["Data"]])
+```
+
+> **Run it:** Copy the snippet into a REPL or file and run it — no external services needed for the basic example.
+
+---
 ## Interview Tips
 
 > **Tip 1:** "What is Athena?" — "A serverless query engine (based on Trino/Presto) that queries S3 data directly using SQL. No infrastructure management, pay-per-query ($5/TB scanned). Uses the Glue Data Catalog for schema management. Best for ad-hoc analytics and data exploration on a data lake."
