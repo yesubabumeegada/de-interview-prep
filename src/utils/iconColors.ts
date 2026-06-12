@@ -7,6 +7,7 @@ export const ICON_COLORS: Record<string, string> = {
   teradata: "#F37440",
   python: "#3776AB",
   pyspark: "#E25A1C",
+  spark: "#E25A1C",
   sql: "#4169E1",
   airflow: "#017CEE",
   bash: "#4EAA25",
