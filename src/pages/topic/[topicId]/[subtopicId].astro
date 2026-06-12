@@ -271,18 +271,25 @@ try {
    * 1. <pre class="mermaid"> from the remarkMermaid plugin
    * 2. Raw mermaid code blocks that passed through without the plugin
    */
-  import mermaid from 'mermaid';
   import DOMPurify from 'dompurify';
 
-  // Initialise mermaid immediately at module load time — before any
-  // MutationObserver or DOMContentLoaded callbacks can fire.
-  // renderAllDiagrams() re-initializes with the current theme; this first
-  // call ensures mermaid is never in an uninitialised state.
-  mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: 'loose' as const,
-    theme: 'base' as const,
-  });
+  // Mermaid is ~580KB minified — load it on demand, only when the page
+  // actually contains a diagram. The loader initializes mermaid right after
+  // import, so callers never see an uninitialised instance.
+  let mermaidPromise: Promise<typeof import('mermaid').default> | null = null;
+  function loadMermaid() {
+    if (!mermaidPromise) {
+      mermaidPromise = import('mermaid').then((m) => {
+        m.default.initialize({
+          startOnLoad: false,
+          securityLevel: 'loose' as const,
+          theme: 'base' as const,
+        });
+        return m.default;
+      });
+    }
+    return mermaidPromise;
+  }
 
   // SVG_ALLOW: DOMPurify config for mermaid-rendered SVGs.
   // mermaid with htmlLabels:true embeds HTML inside <foreignObject>, so we
@@ -887,6 +894,7 @@ try {
       //  • appends a hidden temp div to <body> for D3 layout
       //  • resolves with { svg: string }
       //  • cleans up the temp div itself
+      const mermaid = await loadMermaid();
       const { svg } = await mermaid.render(id, source);
 
       if (!svg) throw new Error('empty SVG');
@@ -925,8 +933,10 @@ try {
   }
 
   async function renderAllDiagrams() {
-    mermaid.initialize(getMermaidConfig());
     const pres = document.querySelectorAll<HTMLElement>('pre.mermaid');
+    if (pres.length === 0) return; // no diagrams — never fetch mermaid
+    const mermaid = await loadMermaid();
+    mermaid.initialize(getMermaidConfig());
     for (const pre of Array.from(pres)) {
       await renderOnePre(pre);
     }

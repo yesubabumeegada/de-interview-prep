@@ -155,8 +155,17 @@ const diagramId = `mermaid-${Math.random().toString(36).substring(2, 11)}`;
 </div>
 
 <script>
-  import mermaid from 'mermaid';
   import DOMPurify from 'dompurify';
+
+  // Mermaid is ~580KB minified — load it on demand, only on pages that
+  // actually contain a diagram, instead of bundling it into every page.
+  let mermaidPromise: Promise<typeof import('mermaid').default> | null = null;
+  function loadMermaid() {
+    if (!mermaidPromise) {
+      mermaidPromise = import('mermaid').then((m) => m.default);
+    }
+    return mermaidPromise;
+  }
 
   const SVG_ALLOW = {
     ADD_TAGS: ['svg','path','circle','rect','line','polyline','polygon','ellipse','text','tspan','g','defs','marker','clipPath','use','symbol','title','desc','foreignObject','image'],
@@ -193,9 +202,8 @@ const diagramId = `mermaid-${Math.random().toString(36).substring(2, 11)}`;
     };
   }
 
-  mermaid.initialize(getMermaidConfig());
-
   async function renderMermaidWithTimeout(id: string, source: string, timeout: number): Promise<string> {
+    const mermaid = await loadMermaid();
     mermaid.initialize(getMermaidConfig());
     return new Promise<string>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(`Timeout ${timeout}ms`)), timeout);

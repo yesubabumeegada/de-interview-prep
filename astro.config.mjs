@@ -129,8 +129,9 @@ export default defineConfig({
     build: {
       // Performance: Enable CSS code splitting for better caching
       cssCodeSplit: true,
-      // Performance: Set reasonable chunk size warning limit
-      chunkSizeWarningLimit: 500,
+      // Performance: chunk warning threshold sits above mermaid's lazy-loaded
+      // diagram chunks (~600 KB) — they're fetched on demand, never on page load
+      chunkSizeWarningLimit: 650,
       // Performance: Optimize asset handling
       assetsInlineLimit: 4096, // Inline assets smaller than 4KB as base64
       rollupOptions: {
