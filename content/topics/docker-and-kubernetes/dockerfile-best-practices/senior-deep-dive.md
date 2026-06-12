@@ -4,7 +4,7 @@ topic: docker-and-kubernetes
 subtopic: dockerfile-best-practices
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [docker, dockerfile, sbom, provenance, supply-chain, distroless]
 ---
 

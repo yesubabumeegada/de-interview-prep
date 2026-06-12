@@ -4,7 +4,6 @@ topic: teradata
 subtopic: query-optimization
 content_type: scenario_question
 difficulty_level: senior
-layer: scenarios
 tags: [teradata, query-optimization, scenarios, explain, product-join, statistics]
 ---
 

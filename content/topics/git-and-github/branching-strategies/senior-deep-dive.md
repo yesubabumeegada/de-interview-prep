@@ -4,7 +4,7 @@ topic: git-and-github
 subtopic: branching-strategies
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [git, branching, release-trains, forking, governance]
 ---
 

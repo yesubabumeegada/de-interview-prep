@@ -3,6 +3,7 @@ title: "Dataproc / Spark & Hadoop — Fundamentals"
 topic: gcp
 subtopic: dataproc
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [gcp, dataproc, interview]
 ---

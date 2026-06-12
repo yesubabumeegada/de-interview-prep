@@ -4,7 +4,6 @@ topic: teradata
 subtopic: statistics
 content_type: scenario_question
 difficulty_level: senior
-layer: scenarios
 tags: [teradata, statistics, scenarios, stale-stats, optimizer, helpstats]
 ---
 

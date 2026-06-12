@@ -2,7 +2,9 @@
 title: "Monorepo Patterns - Real World"
 topic: git-and-github
 subtopic: monorepo-patterns
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [git, github, monorepo-patterns, real-world]
 ---
 

@@ -2,7 +2,9 @@
 title: "Helm and Operators - Real World"
 topic: docker-and-kubernetes
 subtopic: helm-and-operators
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 
 
 tags: [docker, kubernetes, helm-and-operators]

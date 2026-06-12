@@ -4,7 +4,7 @@ topic: docker-and-kubernetes
 subtopic: docker-fundamentals
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [docker, containers, security, registry, supply-chain]
 ---
 

@@ -3,6 +3,7 @@ title: "Cloud Composer / Airflow — Fundamentals"
 topic: gcp
 subtopic: cloud-composer
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [gcp, cloud-composer, interview]
 ---

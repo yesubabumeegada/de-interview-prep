@@ -3,6 +3,7 @@ title: "Pub/Sub — Senior Deep Dive"
 topic: gcp
 subtopic: pub-sub
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [gcp, pub-sub, interview]
 ---

@@ -3,6 +3,7 @@ title: "Interview Coding Problems — Intermediate"
 topic: python
 subtopic: interview-coding-problems
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [python, coding-problems, interview]
 ---

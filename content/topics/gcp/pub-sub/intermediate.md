@@ -3,6 +3,7 @@ title: "Pub/Sub — Intermediate"
 topic: gcp
 subtopic: pub-sub
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [gcp, pub-sub, interview]
 ---

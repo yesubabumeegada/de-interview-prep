@@ -3,6 +3,7 @@ title: "Pub/Sub — Fundamentals"
 topic: gcp
 subtopic: pub-sub
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [gcp, pub-sub, interview]
 ---

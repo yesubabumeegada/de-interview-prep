@@ -3,6 +3,7 @@ title: "Dataproc / Spark & Hadoop — Intermediate"
 topic: gcp
 subtopic: dataproc
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [gcp, dataproc, interview]
 ---

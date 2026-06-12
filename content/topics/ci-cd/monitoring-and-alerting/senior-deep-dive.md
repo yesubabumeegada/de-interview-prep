@@ -4,7 +4,7 @@ topic: ci-cd
 subtopic: monitoring-and-alerting
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [ci-cd, monitoring,alerting,observability,prometheus]
 ---
 

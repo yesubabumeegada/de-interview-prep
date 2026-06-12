@@ -3,6 +3,7 @@ title: "Cloud Storage — Intermediate Concepts"
 topic: gcp
 subtopic: cloud-storage
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [gcp, cloud-storage, gcs, interview]
 ---

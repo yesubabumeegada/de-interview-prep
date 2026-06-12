@@ -3,6 +3,7 @@ title: "Bigtable — Fundamentals"
 topic: gcp
 subtopic: bigtable
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [gcp, bigtable, interview]
 ---

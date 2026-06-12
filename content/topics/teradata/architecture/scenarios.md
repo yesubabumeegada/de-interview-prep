@@ -4,7 +4,6 @@ topic: teradata
 subtopic: architecture
 content_type: scenario_question
 difficulty_level: senior
-layer: scenarios
 tags: [teradata, architecture, scenarios, mpp, amps, bynet, fallback]
 ---
 

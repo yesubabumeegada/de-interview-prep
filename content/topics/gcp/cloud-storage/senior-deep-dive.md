@@ -3,6 +3,7 @@ title: "Cloud Storage — Senior-Level Deep Dive"
 topic: gcp
 subtopic: cloud-storage
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [gcp, cloud-storage, gcs, architecture, cost-optimization, interview]
 ---

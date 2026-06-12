@@ -4,7 +4,7 @@ topic: git-and-github
 subtopic: git-hooks-and-automation
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [git, github, git-hooks-and-automation]
 ---
 

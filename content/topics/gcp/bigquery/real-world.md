@@ -3,6 +3,7 @@ title: "BigQuery — Real-World Case Studies"
 topic: gcp
 subtopic: bigquery
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [gcp, bigquery, interview]
 ---

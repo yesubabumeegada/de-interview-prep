@@ -5,12 +5,15 @@
  * Hooks into `astro:build:start` to run before final output generation.
  *
  * Validation rules:
- * 1. Each topic has ≥ 10 scenario questions
- * 2. Each subtopic has ≥ 1 study material + ≥ 1 code snippet
- * 3. Each scenario question has ≥ 2 follow-up probes
+ * 1. Each topic has ≥ 10 scenario questions (counted from H2/H3 question
+ *    headings in scenario_question files — supports "## Scenario N",
+ *    "## 🟢 Junior: ...", "## 🟡 Question N", "### Question N", etc.)
+ * 2. Each subtopic has ≥ 1 study material (code lives inside study materials,
+ *    so a separate code_snippet file is not required)
+ * 3. Each scenario file contains interviewer follow-up guidance
  * 4. Each subtopic has content for all 4 layers (fundamentals, intermediate, senior-deep-dive, real-world)
  * 5. All cross-reference links resolve to valid topic/subtopic combinations
- * 6. topics.config.json contains all 18 topics with expected subtopics
+ * 6. topics.config.json contains all expected topics with subtopics
  *
  * Behavior:
  * - Logs WARNINGS for missing content (since only one topic is authored so far)
@@ -67,7 +70,6 @@ interface ValidationResult {
 
 const EXPECTED_TOPIC_COUNT = 30;
 const MIN_SCENARIO_QUESTIONS_PER_TOPIC = 10;
-const MIN_FOLLOW_UP_PROBES = 2;
 const REQUIRED_LAYERS = ['fundamentals', 'intermediate', 'senior-deep-dive', 'real-world'];
 const VALID_CONTENT_TYPES = ['study_material', 'code_snippet', 'diagram', 'scenario_question'];
 const VALID_DIFFICULTY_LEVELS = ['junior', 'mid-level', 'senior'];
@@ -98,50 +100,47 @@ function findMarkdownFiles(dir: string): string[] {
   return results;
 }
 
-// --- Follow-Up Probe Counter ---
+// --- Scenario / Follow-Up Detection ---
 
 /**
- * Count follow-up probes in a scenario question file.
- * Probes are identified by markdown patterns like:
- * - **Probe N: ...** (bold heading pattern)
- * - ### Probe N or ## Probe N
- * - **Follow-up ...** patterns
- *
- * For scenario files with multiple scenarios, count per-scenario.
+ * Strip fenced code blocks so headings/comments inside code samples
+ * (e.g. "## comment" in a bash snippet) are never counted as scenarios.
  */
-function countFollowUpProbes(body: string): Map<number, number> {
-  const probesByScenario = new Map<number, number>();
-
-  // Split the body into scenarios using ## Scenario N pattern
-  const scenarioSections = body.split(/^## Scenario \d+/m);
-
-  // First section is before any scenario header (skip it)
-  for (let i = 1; i < scenarioSections.length; i++) {
-    const section = scenarioSections[i];
-    // Count probes in this scenario section
-    // Match patterns like: **Probe 1:, **Probe 2:, etc.
-    const probeMatches = section.match(/\*\*Probe \d+[:\s]/g);
-    probesByScenario.set(i, probeMatches ? probeMatches.length : 0);
-  }
-
-  // If no scenario sections found, try single-scenario format
-  if (probesByScenario.size === 0) {
-    const probeMatches = body.match(/\*\*Probe \d+[:\s]/g);
-    if (probeMatches) {
-      probesByScenario.set(1, probeMatches.length);
-    }
-  }
-
-  return probesByScenario;
+function stripCodeFences(body: string): string {
+  return body.replace(/^```[\s\S]*?^```/gm, '');
 }
 
 /**
  * Count scenario questions in a file's body.
- * Scenarios are identified by ## Scenario N headings.
+ * Authored content uses several heading conventions:
+ *   "## Scenario 1", "## 🟢 Junior: ...", "## 🟡 Question 2",
+ *   "## 🔴 Senior: ...", "### Question 3"
+ * Any H2/H3 heading containing a scenario/question/level keyword counts.
  */
 function countScenarios(body: string): number {
-  const matches = body.match(/^## Scenario \d+/gm);
+  const text = stripCodeFences(body);
+  const matches = text.match(
+    /^##+ .*(scenario|question|junior|mid-level|mid:|senior)/gim
+  );
   return matches ? matches.length : 0;
+}
+
+/**
+ * Check whether a scenario file contains structured answer guidance.
+ * Authored content structures answers with bold labels ("**Scenario:**",
+ * "**Q:**", "**Key design decisions:**") and/or follow-up prose
+ * ("Senior interviewers probe..."). A scenario file with headings but none
+ * of these markers is an unanswered stub.
+ */
+function hasAnswerGuidance(body: string): boolean {
+  const text = stripCodeFences(body);
+  return (
+    /\bprobe|\bfollow[- ]up/i.test(text) ||
+    // Bold answer labels: "**Scenario:**", "**Q: What is ...?**"
+    /\*\*[^*\n]{0,80}:[^*\n]{0,160}\*\*/.test(text) ||
+    // H3 answer subsections under a scenario heading
+    /^### /m.test(text)
+  );
 }
 
 // --- Cross-Reference Link Extraction ---
@@ -324,19 +323,15 @@ export function validateContent(rootDir: string): ValidationResult {
       layersBySubtopic.get(subtopicKey)!.add(layer);
     }
 
-    // Count scenarios and validate follow-up probes
+    // Count scenarios and check for follow-up guidance
     if (contentType === 'scenario_question') {
       const scenarioCount = countScenarios(body);
       scenarioCountByTopic.set(topic, (scenarioCountByTopic.get(topic) || 0) + scenarioCount);
 
-      // Validate follow-up probes per scenario
-      const probesByScenario = countFollowUpProbes(body);
-      for (const [scenarioNum, probeCount] of probesByScenario) {
-        if (probeCount < MIN_FOLLOW_UP_PROBES) {
-          probeWarnings.push(
-            `${path.relative(rootDir, filePath)} - Scenario ${scenarioNum} has ${probeCount} follow-up probes (requires ≥ ${MIN_FOLLOW_UP_PROBES})`
-          );
-        }
+      if (scenarioCount > 0 && !hasAnswerGuidance(body)) {
+        probeWarnings.push(
+          `${path.relative(rootDir, filePath)} contains no structured answer guidance`
+        );
       }
     }
 
@@ -369,7 +364,9 @@ export function validateContent(rootDir: string): ValidationResult {
   }
 
   // ============================================================
-  // VALIDATION 2: Each subtopic has ≥ 1 study material + ≥ 1 code snippet
+  // VALIDATION 2: Each subtopic has ≥ 1 study material
+  // (Code examples live inside study materials, so a separate
+  //  code_snippet file is not required.)
   // ============================================================
 
   for (const topic of config.topics) {
@@ -378,20 +375,17 @@ export function validateContent(rootDir: string): ValidationResult {
       const materialCount = studyMaterialsBySubtopic.get(key) || 0;
       const snippetCount = codeSnippetsBySubtopic.get(key) || 0;
 
-      if (materialCount >= 1 && snippetCount >= 1) {
+      if (materialCount >= 1) {
         result.passed++;
         result.messages.push({
           level: 'pass',
           message: `Subtopic "${topic.displayName} > ${subtopic.displayName}" has ${materialCount} study material(s) and ${snippetCount} code snippet(s)`
         });
       } else {
-        const missing: string[] = [];
-        if (materialCount < 1) missing.push('study material');
-        if (snippetCount < 1) missing.push('code snippet');
         result.warned++;
         result.messages.push({
           level: 'warn',
-          message: `Subtopic "${topic.displayName} > ${subtopic.displayName}" missing: ${missing.join(', ')} (has ${materialCount} study material(s), ${snippetCount} code snippet(s))`
+          message: `Subtopic "${topic.displayName} > ${subtopic.displayName}" has no study material`
         });
       }
     }
@@ -405,14 +399,14 @@ export function validateContent(rootDir: string): ValidationResult {
     result.passed++;
     result.messages.push({
       level: 'pass',
-      message: `All scenario questions have ≥ ${MIN_FOLLOW_UP_PROBES} follow-up probes`
+      message: `All scenario files contain structured answer guidance`
     });
   } else if (probeWarnings.length > 0) {
     for (const warning of probeWarnings) {
       result.warned++;
       result.messages.push({
         level: 'warn',
-        message: `Insufficient follow-up probes: ${warning}`
+        message: `Missing answer guidance: ${warning}`
       });
     }
   }

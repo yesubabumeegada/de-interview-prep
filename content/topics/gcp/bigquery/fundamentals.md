@@ -3,6 +3,7 @@ title: "BigQuery — Fundamentals"
 topic: gcp
 subtopic: bigquery
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [gcp, bigquery, interview]
 ---

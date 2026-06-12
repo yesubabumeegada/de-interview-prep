@@ -4,7 +4,6 @@ topic: teradata
 subtopic: workload-management
 content_type: scenario_question
 difficulty_level: senior
-layer: scenarios
 tags: [teradata, workload-management, scenarios, tasm, sla, dbql]
 ---
 

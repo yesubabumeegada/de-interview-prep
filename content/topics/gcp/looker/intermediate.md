@@ -3,6 +3,7 @@ title: "Looker & Looker Studio — Intermediate Concepts"
 topic: gcp
 subtopic: looker
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [gcp, looker, lookml, pdt, caching, interview]
 ---

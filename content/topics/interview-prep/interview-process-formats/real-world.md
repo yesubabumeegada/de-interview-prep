@@ -3,6 +3,7 @@ title: "Interview Process & Formats — Real-World Applications"
 topic: interview-prep
 subtopic: interview-process-formats
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [interview-prep, interview-process, case-study, career]
 ---

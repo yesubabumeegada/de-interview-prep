@@ -2,7 +2,9 @@
 title: "Dockerfile Best Practices - Real World"
 topic: docker-and-kubernetes
 subtopic: dockerfile-best-practices
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [docker, dockerfile, real-world, optimization, security]
 ---
 

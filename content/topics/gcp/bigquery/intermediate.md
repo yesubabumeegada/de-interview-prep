@@ -3,6 +3,7 @@ title: "BigQuery — Intermediate"
 topic: gcp
 subtopic: bigquery
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [gcp, bigquery, interview]
 ---

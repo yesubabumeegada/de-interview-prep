@@ -2,7 +2,9 @@
 title: "Deployment Strategies - Real World"
 topic: ci-cd
 subtopic: deployment-strategies
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [ci-cd, deployment,blue-green,canary,rollback, real-world]
 ---
 

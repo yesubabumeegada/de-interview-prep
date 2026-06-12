@@ -3,6 +3,7 @@ title: "Cloud Composer / Airflow — Intermediate"
 topic: gcp
 subtopic: cloud-composer
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [gcp, cloud-composer, interview]
 ---

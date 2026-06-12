@@ -3,6 +3,7 @@ title: "Interview Coding Problems — Real World"
 topic: python
 subtopic: interview-coding-problems
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [python, coding-problems, interview]
 ---

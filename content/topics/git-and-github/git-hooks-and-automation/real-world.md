@@ -2,7 +2,9 @@
 title: "Git Hooks and Automation - Real World"
 topic: git-and-github
 subtopic: git-hooks-and-automation
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [git, github, git-hooks-and-automation, real-world]
 ---
 

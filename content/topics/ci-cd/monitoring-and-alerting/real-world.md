@@ -2,7 +2,9 @@
 title: "Monitoring and Alerting - Real World"
 topic: ci-cd
 subtopic: monitoring-and-alerting
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [ci-cd, monitoring,alerting,observability,prometheus, real-world]
 ---
 

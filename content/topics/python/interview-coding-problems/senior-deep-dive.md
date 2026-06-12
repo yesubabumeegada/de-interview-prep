@@ -3,6 +3,7 @@ title: "Interview Coding Problems — Senior Deep Dive"
 topic: python
 subtopic: interview-coding-problems
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [python, coding-problems, interview]
 ---

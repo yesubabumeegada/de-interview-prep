@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { build as esbuildBuild } from 'esbuild';
 
 interface ManifestEntry {
   url: string;
@@ -77,9 +78,9 @@ const CACHEABLE_EXTENSIONS = new Set([
  * Files to exclude from precaching (the SW itself, source maps, etc.)
  */
 function shouldExclude(relativePath: string): boolean {
-  if (relativePath === '/sw.js') return true;
+  if (relativePath === 'sw.js') return true;
   if (relativePath.endsWith('.map')) return true;
-  if (relativePath.startsWith('/.')) return true;
+  if (relativePath.startsWith('.')) return true;
   return false;
 }
 
@@ -94,7 +95,10 @@ function buildManifest(outputDir: string): ManifestEntry[] {
     const ext = path.extname(filePath).toLowerCase();
     if (!CACHEABLE_EXTENSIONS.has(ext)) continue;
 
-    const relativePath = '/' + path.relative(outputDir, filePath).replace(/\\/g, '/');
+    // Relative URLs (no leading slash) so Workbox resolves them against the
+    // service worker's own scope — required when the site is served from a
+    // sub-path like GitHub Pages' /<repo>/.
+    const relativePath = path.relative(outputDir, filePath).replace(/\\/g, '/');
     if (shouldExclude(relativePath)) continue;
 
     manifest.push({
@@ -114,11 +118,10 @@ async function generateServiceWorkerBundle(
   manifest: ManifestEntry[],
   projectRoot: string
 ): Promise<string> {
-  const { build } = await import('esbuild');
   const swSourcePath = path.join(projectRoot, 'src', 'sw.ts');
   const manifestJson = JSON.stringify(manifest);
 
-  const result = await build({
+  const result = await esbuildBuild({
     entryPoints: [swSourcePath],
     bundle: true,
     format: 'iife',

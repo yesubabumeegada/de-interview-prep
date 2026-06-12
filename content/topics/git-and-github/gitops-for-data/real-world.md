@@ -2,7 +2,9 @@
 title: "GitOps for Data - Real World"
 topic: git-and-github
 subtopic: gitops-for-data
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [git, github, gitops-for-data, real-world]
 ---
 

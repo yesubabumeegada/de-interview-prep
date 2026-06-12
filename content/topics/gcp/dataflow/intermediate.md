@@ -3,6 +3,7 @@ title: "Dataflow / Apache Beam — Intermediate"
 topic: gcp
 subtopic: dataflow
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [gcp, dataflow, interview]
 ---

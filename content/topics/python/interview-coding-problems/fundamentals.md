@@ -3,6 +3,7 @@ title: "Interview Coding Problems — Fundamentals"
 topic: python
 subtopic: interview-coding-problems
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [python, coding-problems, interview]
 ---

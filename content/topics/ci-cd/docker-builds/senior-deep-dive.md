@@ -4,7 +4,7 @@ topic: ci-cd
 subtopic: docker-builds
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [ci-cd, docker, builds, sbom, attestation, supply-chain]
 ---
 

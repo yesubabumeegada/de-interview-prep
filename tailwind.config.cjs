@@ -1,8 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}',
-    './content/**/*.{md,mdx}',
+    // Only scan files that can contain markup. Build-time code (integrations,
+    // plugins, services) and markdown content hold regexes / code samples that
+    // Tailwind's extractor misreads as arbitrary-property classes.
+    './src/components/**/*.{astro,html,js,jsx,ts,tsx}',
+    './src/layouts/**/*.{astro,html,js,jsx,ts,tsx}',
+    './src/pages/**/*.{astro,html,js,jsx,ts,tsx}',
   ],
   darkMode: 'class',
   theme: {

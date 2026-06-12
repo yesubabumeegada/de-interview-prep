@@ -3,6 +3,7 @@ title: "Negotiation & Leveling — Real-World Applications"
 topic: interview-prep
 subtopic: negotiation-and-leveling
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [interview-prep, negotiation, leveling, case-study, career]
 ---

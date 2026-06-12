@@ -2,7 +2,9 @@
 title: "Branching Strategies - Real World"
 topic: git-and-github
 subtopic: branching-strategies
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [git, branching, real-world, data-engineering, gitflow]
 ---
 

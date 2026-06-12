@@ -4,7 +4,7 @@ topic: docker-and-kubernetes
 subtopic: kubernetes-for-data
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [docker, kubernetes, kubernetes-for-data]
 ---
 

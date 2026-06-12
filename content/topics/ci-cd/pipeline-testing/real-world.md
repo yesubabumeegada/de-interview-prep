@@ -2,7 +2,9 @@
 title: "Pipeline Testing - Real World"
 topic: ci-cd
 subtopic: pipeline-testing
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [ci-cd, testing, data-quality, real-world]
 ---
 

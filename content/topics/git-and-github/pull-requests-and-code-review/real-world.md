@@ -2,7 +2,9 @@
 title: "Pull Requests and Code Review - Real World"
 topic: git-and-github
 subtopic: pull-requests-and-code-review
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [git, github, code-review, real-world]
 ---
 

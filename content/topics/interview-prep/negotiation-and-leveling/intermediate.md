@@ -3,6 +3,7 @@ title: "Negotiation & Leveling — Intermediate Concepts"
 topic: interview-prep
 subtopic: negotiation-and-leveling
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [interview-prep, negotiation, leveling, compensation, career]
 ---

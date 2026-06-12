@@ -3,6 +3,7 @@ title: "Dataflow / Apache Beam — Senior Deep Dive"
 topic: gcp
 subtopic: dataflow
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [gcp, dataflow, interview]
 ---

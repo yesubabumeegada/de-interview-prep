@@ -4,7 +4,6 @@ topic: ai
 subtopic: machine-learning-pipelines
 content_type: scenario_question
 difficulty_level: junior
-layer: scenarios
 tags: [ai, machine-learning, pipelines, scenarios, debugging, scaling]
 ---
 

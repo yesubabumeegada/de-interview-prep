@@ -2,7 +2,9 @@
 title: "GitHub Actions - Real World"
 topic: ci-cd
 subtopic: github-actions
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [ci-cd, github-actions, real-world, dbt, automation]
 ---
 

@@ -3,6 +3,7 @@ title: "Dataflow / Apache Beam — Fundamentals"
 topic: gcp
 subtopic: dataflow
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [gcp, dataflow, interview]
 ---

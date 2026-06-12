@@ -4,7 +4,6 @@ topic: teradata
 subtopic: primary-index
 content_type: scenario_question
 difficulty_level: senior
-layer: scenarios
 tags: [teradata, primary-index, scenarios, skew, ppi, nupi, upi]
 ---
 

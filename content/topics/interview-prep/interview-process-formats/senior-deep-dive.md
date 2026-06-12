@@ -3,6 +3,7 @@ title: "Interview Process & Formats — Senior-Level Deep Dive"
 topic: interview-prep
 subtopic: interview-process-formats
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [interview-prep, interview-process, leveling, career]
 ---

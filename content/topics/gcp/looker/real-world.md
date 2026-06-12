@@ -3,6 +3,7 @@ title: "Looker & Looker Studio — Real-World Applications"
 topic: gcp
 subtopic: looker
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [gcp, looker, lookml, case-study, interview]
 ---

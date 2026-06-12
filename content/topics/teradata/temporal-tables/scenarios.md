@@ -4,7 +4,6 @@ topic: teradata
 subtopic: temporal-tables
 content_type: scenario_question
 difficulty_level: senior
-layer: scenarios
 tags: [teradata, temporal-tables, scenarios, bitemporal, scd, valid-time]
 ---
 

@@ -3,6 +3,7 @@ title: "Bigtable — Senior Deep Dive"
 topic: gcp
 subtopic: bigtable
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [gcp, bigtable, interview]
 ---

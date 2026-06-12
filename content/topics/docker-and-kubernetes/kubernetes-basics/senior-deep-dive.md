@@ -4,7 +4,7 @@ topic: docker-and-kubernetes
 subtopic: kubernetes-basics
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [kubernetes, k8s, multi-tenancy, observability, gitops]
 ---
 

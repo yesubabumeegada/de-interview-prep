@@ -3,6 +3,7 @@ title: "Looker & Looker Studio — Fundamentals"
 topic: gcp
 subtopic: looker
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [gcp, looker, lookml, bi, interview]
 ---

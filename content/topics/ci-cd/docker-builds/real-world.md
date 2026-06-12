@@ -2,7 +2,9 @@
 title: "Docker Builds - Real World"
 topic: ci-cd
 subtopic: docker-builds
-content_type: real_world_example
+content_type: study_material
+difficulty_level: senior
+layer: real-world
 tags: [ci-cd, docker, builds, real-world, ecr]
 ---
 

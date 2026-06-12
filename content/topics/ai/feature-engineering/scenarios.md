@@ -4,7 +4,6 @@ topic: ai
 subtopic: feature-engineering
 content_type: scenario_question
 difficulty_level: junior
-layer: scenarios
 tags: [ai, feature-engineering, scenarios, leakage, skew, feature-store]
 ---
 

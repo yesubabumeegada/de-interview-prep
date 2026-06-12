@@ -3,6 +3,7 @@ title: "Dataproc / Spark & Hadoop — Real-World Cases"
 topic: gcp
 subtopic: dataproc
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [gcp, dataproc, interview]
 ---

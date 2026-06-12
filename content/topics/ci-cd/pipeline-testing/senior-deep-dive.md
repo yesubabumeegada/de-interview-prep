@@ -4,7 +4,7 @@ topic: ci-cd
 subtopic: pipeline-testing
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [ci-cd, testing, contract-testing, chaos-engineering, test-strategy]
 ---
 

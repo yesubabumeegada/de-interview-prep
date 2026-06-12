@@ -3,6 +3,7 @@ title: "Interview Process & Formats — Fundamentals"
 topic: interview-prep
 subtopic: interview-process-formats
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [interview-prep, interview-process, career]
 ---

@@ -4,7 +4,6 @@ topic: sql
 subtopic: interview-coding-problems
 content_type: scenario_question
 difficulty_level: mid-level
-layer: scenarios
 tags: [sql, interview, scenarios, second-highest, streak, scd2, practice]
 ---
 

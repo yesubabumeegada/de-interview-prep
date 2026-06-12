@@ -3,6 +3,7 @@ title: "Negotiation & Leveling — Senior-Level Deep Dive"
 topic: interview-prep
 subtopic: negotiation-and-leveling
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [interview-prep, negotiation, leveling, staff, compensation, career]
 ---

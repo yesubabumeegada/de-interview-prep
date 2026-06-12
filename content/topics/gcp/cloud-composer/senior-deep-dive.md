@@ -3,6 +3,7 @@ title: "Cloud Composer / Airflow — Senior Deep Dive"
 topic: gcp
 subtopic: cloud-composer
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [gcp, cloud-composer, interview]
 ---

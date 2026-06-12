@@ -3,6 +3,7 @@ title: "Bigtable — Real-World Cases"
 topic: gcp
 subtopic: bigtable
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [gcp, bigtable, interview]
 ---

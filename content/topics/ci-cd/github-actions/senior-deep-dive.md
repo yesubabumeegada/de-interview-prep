@@ -4,7 +4,7 @@ topic: ci-cd
 subtopic: github-actions
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [ci-cd, github-actions, oidc, security, composite-actions]
 ---
 

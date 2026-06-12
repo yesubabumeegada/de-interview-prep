@@ -4,7 +4,6 @@ topic: ai
 subtopic: model-monitoring
 content_type: scenario_question
 difficulty_level: mid-level
-layer: scenarios
 tags: [ai, model-monitoring, drift, alerting, retraining, interview]
 ---
 

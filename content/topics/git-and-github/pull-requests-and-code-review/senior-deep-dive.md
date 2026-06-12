@@ -4,7 +4,7 @@ topic: git-and-github
 subtopic: pull-requests-and-code-review
 content_type: study_material
 difficulty_level: senior
-layer: senior_deep_dive
+layer: senior-deep-dive
 tags: [git, github, code-review, governance, automation]
 ---
 

@@ -3,6 +3,7 @@ title: "Cloud Storage — Fundamentals"
 topic: gcp
 subtopic: cloud-storage
 content_type: study_material
+layer: fundamentals
 difficulty_level: junior
 tags: [gcp, cloud-storage, interview]
 ---

@@ -3,6 +3,7 @@ title: "Cloud Storage — Real-World Applications"
 topic: gcp
 subtopic: cloud-storage
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [gcp, cloud-storage, gcs, case-study, interview]
 ---

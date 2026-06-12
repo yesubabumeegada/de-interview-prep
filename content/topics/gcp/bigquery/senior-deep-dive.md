@@ -3,6 +3,7 @@ title: "BigQuery — Senior Deep Dive"
 topic: gcp
 subtopic: bigquery
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [gcp, bigquery, interview]
 ---

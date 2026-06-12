@@ -4,7 +4,6 @@ topic: teradata
 subtopic: bteq
 content_type: scenario_question
 difficulty_level: senior
-layer: scenarios
 tags: [teradata, bteq, scenarios, etl, error-handling, scripting]
 ---
 

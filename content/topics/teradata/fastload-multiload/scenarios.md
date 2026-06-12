@@ -4,7 +4,6 @@ topic: teradata
 subtopic: fastload-multiload
 content_type: scenario_question
 difficulty_level: senior
-layer: scenarios
 tags: [teradata, fastload, multiload, tpt, scenarios, bulk-load]
 ---
 

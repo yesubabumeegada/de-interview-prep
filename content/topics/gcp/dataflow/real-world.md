@@ -3,6 +3,7 @@ title: "Dataflow / Apache Beam — Real-World Case Studies"
 topic: gcp
 subtopic: dataflow
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [gcp, dataflow, interview]
 ---

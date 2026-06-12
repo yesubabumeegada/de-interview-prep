@@ -3,6 +3,7 @@ title: "Cloud Composer / Airflow — Real-World Cases"
 topic: gcp
 subtopic: cloud-composer
 content_type: study_material
+layer: real-world
 difficulty_level: mid-level
 tags: [gcp, cloud-composer, interview]
 ---

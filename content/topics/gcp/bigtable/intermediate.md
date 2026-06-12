@@ -3,6 +3,7 @@ title: "Bigtable — Intermediate"
 topic: gcp
 subtopic: bigtable
 content_type: study_material
+layer: intermediate
 difficulty_level: mid-level
 tags: [gcp, bigtable, interview]
 ---

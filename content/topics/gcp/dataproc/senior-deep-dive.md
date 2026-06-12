@@ -3,6 +3,7 @@ title: "Dataproc / Spark & Hadoop — Senior Deep Dive"
 topic: gcp
 subtopic: dataproc
 content_type: study_material
+layer: senior-deep-dive
 difficulty_level: senior
 tags: [gcp, dataproc, interview]
 ---
