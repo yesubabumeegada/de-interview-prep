@@ -22,9 +22,21 @@ const arbCodeLines = (minLines: number, maxLines: number) =>
     { minLength: minLines, maxLength: maxLines }
   ).map((lines) => lines.join('\n'));
 
-/** Generates a non-empty string suitable for text content */
+/**
+ * Generates a non-empty string suitable for text content.
+ * Excludes strings that START with markdown block syntax — a "paragraph"
+ * whose text begins with a list marker ("* x", "1. x"), heading ("#"),
+ * blockquote (">"), or code indentation is parsed as that block type
+ * instead of a <p>, which is correct parser behavior, not content loss.
+ */
 const arbNonEmptyText = fc.string({ minLength: 3, maxLength: 200 }).filter(
-  (s) => s.trim().length >= 3
+  (s) =>
+    s.trim().length >= 3 &&
+    !/^\s*([*+-]|\d+[.)])(\s|$)/.test(s) && // list item
+    !/^\s*#{1,6}(\s|$)/.test(s) &&          // ATX heading
+    !/^\s*>/.test(s) &&                     // blockquote (no space needed)
+    !/^\s*([*\-_])(\s*\1){2,}\s*$/.test(s) && // thematic break (***, ---, ___)
+    !/^( {4}|\t)/.test(s)                   // indented code block
 );
 
 /**
@@ -288,9 +300,12 @@ describe('Feature: de-interview-prep-app, Property 4: Markdown rendering produce
             .replace(/\s+/g, ' ')
             .trim();
         const textContent = stripHtml(html);
-        // Normalize whitespace in both sides since HTML collapses multiple spaces
-        const normalize = (s: string) => s.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-        expect(textContent).toContain(normalize(data.h1));
+        // Compare with ALL whitespace removed: stripHtml replaces tags with
+        // spaces, and GFM can wrap generated text in elements mid-string
+        // (e.g. "+@.A" autolinks as <a href="mailto:+@.A">), which would
+        // otherwise inject a space inside the heading text.
+        const squash = (s: string) => s.replace(/\s+/g, '');
+        expect(squash(textContent)).toContain(squash(data.h1));
       }),
       { numRuns: 100 }
     );
