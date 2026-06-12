@@ -10,6 +10,9 @@ tags: [great-expectations, gx-cloud, integration, scale, architecture]
 
 # Great Expectations — Senior Deep Dive
 
+> **API note:** Examples in this file use the **legacy 0.x API** (validator methods, `context.sources`), still common in production codebases pinned to GX 0.18. GX 1.0 (Aug 2024) renamed `context.sources` to `context.data_sources` and replaced the interactive validator workflow with expectation classes + `ValidationDefinition` — see the fundamentals page for the mapping.
+
+
 ## GX at Scale: Architecture Patterns
 
 ### Pattern 1: Centralized GX Context with S3 Backend

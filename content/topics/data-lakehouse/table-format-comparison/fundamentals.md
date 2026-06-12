@@ -39,7 +39,7 @@ Apache Hudi:   Created by Uber (2016). Apache project. Timeline-based. Specializ
 | **Row-level updates** | COW + Deletion Vectors | COW (V1) / MOR (V2) | COW or MOR |
 | **Incremental reads** | CDF | Changelog views | Native (first-class) |
 | **Streaming** | Native (Spark) | Yes (Flink native) | Yes (Spark) |
-| **Multi-engine** | Spark (best); Trino via UniForm | Spark, Trino, Flink, Athena | Spark (best) |
+| **Multi-engine** | Spark (best); native Trino/Presto connectors; Iceberg engines via UniForm | Spark, Trino, Flink, Athena | Spark (best) |
 | **Catalog** | Unity Catalog (Databricks) | Glue, Hive, Nessie, Polaris | Hive, Glue |
 | **Compaction** | OPTIMIZE | rewrite_data_files | compaction (MOR) |
 | **Created by** | Databricks | Netflix | Uber |

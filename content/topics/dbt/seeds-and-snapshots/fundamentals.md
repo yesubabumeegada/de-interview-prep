@@ -115,6 +115,20 @@ dbt snapshot         # Run all snapshots
 dbt snapshot --select snap_customers
 ```
 
+> **dbt 1.9+ note:** Snapshots can now be defined in YAML instead of `{% snapshot %}` SQL blocks, and `target_schema` is deprecated in favor of `schema`:
+> ```yaml
+> # snapshots/snapshots.yml
+> snapshots:
+>   - name: snap_customers
+>     relation: source('raw', 'customers')
+>     config:
+>       schema: snapshots
+>       unique_key: customer_id
+>       strategy: timestamp
+>       updated_at: updated_at
+> ```
+> The SQL-block syntax shown above still works and remains common in existing projects — know both for interviews.
+
 ## Snapshot Metadata Columns
 
 dbt automatically adds 4 columns to snapshot tables:

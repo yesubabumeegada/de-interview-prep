@@ -55,54 +55,65 @@ gx init   # creates gx/ directory with config
 
 ---
 
-## Your First Expectation Suite
+## ⚠️ Two API Generations — Know Which One You're Using
+
+Great Expectations had a **breaking rewrite in GX 1.0 (August 2024)**:
+
+| | Legacy 0.x (≤0.18) | GX 1.x (current) |
+|---|---|---|
+| Add expectations | Interactively on a `validator` object: `validator.expect_column_values_to_not_be_null("id")` | As classes added to a suite: `suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="id"))` |
+| Run validation | `validator.validate()` / `SimpleCheckpoint` | `ValidationDefinition.run()` / `Checkpoint` |
+| Data sources | `context.sources.add_pandas(...)` | `context.data_sources.add_pandas(...)` |
+
+Many production codebases still run 0.18 — interviewers may use either style. The example below uses **GX 1.x**.
+
+## Your First Expectation Suite (GX 1.x)
 
 ```python
 import great_expectations as gx
+import pandas as pd
 
 # 1. Get context (project root)
 context = gx.get_context()
 
 # 2. Add a data source (Pandas in-memory)
-datasource = context.sources.add_pandas("orders_source")
+data_source = context.data_sources.add_pandas("orders_source")
 
 # 3. Add a data asset
-asset = datasource.add_dataframe_asset(name="orders")
+asset = data_source.add_dataframe_asset(name="orders")
 
 # 4. Add batch definition
 batch_def = asset.add_batch_definition_whole_dataframe("full_load")
 
-# 5. Create expectation suite
+# 5. Create expectation suite with expectations
 suite = context.suites.add(gx.ExpectationSuite(name="orders_suite"))
+suite.add_expectation(gx.expectations.ExpectColumnToExist(column="order_id"))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="order_id"))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeUnique(column="order_id"))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="customer_id"))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+    column="amount", min_value=0.01, max_value=100000))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeInSet(
+    column="status", value_set=["pending", "shipped", "delivered", "cancelled"]))
+suite.add_expectation(gx.expectations.ExpectTableRowCountToBeBetween(
+    min_value=1, max_value=10_000_000))
 
-# 6. Create a validator
-import pandas as pd
+# 6. Tie data + suite together in a validation definition
+validation_def = context.validation_definitions.add(
+    gx.ValidationDefinition(name="orders_validation", data=batch_def, suite=suite)
+)
+
+# 7. Run validation against a dataframe
 df = pd.read_parquet("orders.parquet")
-batch = batch_def.get_batch(batch_parameters={"dataframe": df})
-validator = context.get_validator(batch=batch, expectation_suite_name="orders_suite")
-
-# 7. Add expectations
-validator.expect_column_to_exist("order_id")
-validator.expect_column_values_to_not_be_null("order_id")
-validator.expect_column_values_to_be_unique("order_id")
-validator.expect_column_values_to_not_be_null("customer_id")
-validator.expect_column_values_to_be_between("amount", min_value=0.01, max_value=100000)
-validator.expect_column_values_to_be_in_set("status", ["pending", "shipped", "delivered", "cancelled"])
-validator.expect_table_row_count_to_be_between(min_value=1, max_value=10_000_000)
-
-# 8. Save suite
-validator.save_expectation_suite()
-
-# 9. Run validation
-results = validator.validate()
+results = validation_def.run(batch_parameters={"dataframe": df})
 print(f"Success: {results.success}")
-print(f"Passed: {results.statistics['successful_expectations']}")
-print(f"Failed: {results.statistics['unsuccessful_expectations']}")
 ```
 
 ---
 
 ## Common Expectations Reference
+
+> Shown in the compact legacy 0.x `validator.` style. In GX 1.x the same expectations exist as classes: `expect_column_values_to_not_be_null("email")` becomes `gx.expectations.ExpectColumnValuesToNotBeNull(column="email")` — mechanical rename, same parameters.
 
 ### Completeness
 ```python

@@ -83,7 +83,7 @@ Common causes:
   4. Failed partial writes leaving orphan files
 
 Fix options:
-  Delta: OPTIMIZE (compact to 128MB target)
+  Delta: OPTIMIZE (bin-packs toward ~1GB target by default)
   Iceberg: rewrite_data_files (compact + optional sort)
   Hudi: compaction (MOR: merge base + logs; COW: compact small files)
   Spark: df.coalesce(N) before writing, or repartition(N)
@@ -151,7 +151,7 @@ ALTER TABLE silver.orders SET TBLPROPERTIES (
 ---
 ## Interview Tips
 
-> **Tip 1:** "What's the ideal file size for Parquet files in S3?" — 128MB to 1GB is the common recommendation. Below 64MB: the overhead of S3 metadata operations, file open calls, and Spark task scheduling dominates — query is I/O bound on file overhead rather than data. Above 1GB: reading a small range of data (single day's records) from a massive file wastes bytes. 128MB is the Delta Lake default and a good baseline. Adjust: 512MB–1GB for read-heavy, rarely-updated Gold tables.
+> **Tip 1:** "What's the ideal file size for Parquet files in S3?" — 128MB to 1GB is the common recommendation. Below 64MB: the overhead of S3 metadata operations, file open calls, and Spark task scheduling dominates — query is I/O bound on file overhead rather than data. Above 1GB: reading a small range of data (single day's records) from a massive file wastes bytes. Note the two Delta defaults: optimized writes target ~128MB at write time, while OPTIMIZE bin-packs toward ~1GB. Adjust: 512MB–1GB for read-heavy, rarely-updated Gold tables.
 
 > **Tip 2:** "How does columnar storage (Parquet) save compute?" — In a row-based format (CSV), reading 2 columns from a 100-column table still reads all 100 columns from disk. In Parquet, each column is stored separately in column chunks. A query selecting 2 columns reads only those 2 column chunks — 2% of the data. For analytical queries that aggregate 1-3 columns across billions of rows, this 50-100× I/O reduction is the primary reason Parquet is standard.
 

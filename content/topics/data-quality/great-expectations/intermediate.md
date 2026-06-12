@@ -10,6 +10,8 @@ tags: [great-expectations, checkpoint, spark, profiling, custom-expectations]
 
 # Great Expectations — Intermediate
 
+> **API note:** Examples in this file use the **legacy 0.x API** (validator methods, `context.sources`), still common in production codebases pinned to GX 0.18. GX 1.0 (Aug 2024) renamed `context.sources` to `context.data_sources` and replaced the interactive validator workflow with expectation classes + `ValidationDefinition` — see the fundamentals page for the mapping.
+
 ## Profiling — Auto-Generate Expectations
 
 GX can profile your data and suggest expectations automatically:
