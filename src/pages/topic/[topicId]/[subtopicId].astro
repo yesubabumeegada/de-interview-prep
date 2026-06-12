@@ -748,6 +748,7 @@ try {
 
     document.body.style.overflow = 'hidden';
     document.body.appendChild(modal);
+    fixLabelContrast(svgWrap);
 
     function applyModalZoom() {
       zoom = clamp(zoom);
@@ -878,6 +879,33 @@ try {
    * -------------------------------------------------------------------- */
   let renderCounter = 0;
 
+  /**
+   * Many content diagrams hard-code light pastel node fills
+   * (e.g. "style IN fill:#e1f5fe"). Those fills override mermaid's theme,
+   * so in dark mode the theme's light label text lands on a light box and
+   * becomes unreadable. Fix: measure each node's actual fill luminance and
+   * force a contrasting label color. Must run on an element attached to the
+   * DOM (getComputedStyle needs it).
+   */
+  function fixLabelContrast(container: HTMLElement) {
+    container.querySelectorAll<SVGGElement>('g.node, g.cluster').forEach((node) => {
+      const shape = node.querySelector<SVGElement>('rect, polygon, circle, ellipse, path');
+      if (!shape) return;
+      const fill = getComputedStyle(shape).fill;
+      const m = fill.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (!m) return;
+      if (m[4] !== undefined && parseFloat(m[4]) < 0.5) return; // mostly transparent — page bg shows through
+      const lum = 0.2126 * +m[1] + 0.7152 * +m[2] + 0.0722 * +m[3];
+      const color = lum > 140 ? '#1e293b' : '#f1f5f9';
+      node.querySelectorAll<HTMLElement>('.nodeLabel, span, div, p').forEach((el) => {
+        el.style.setProperty('color', color, 'important');
+      });
+      node.querySelectorAll<SVGElement>('text, tspan').forEach((el) => {
+        el.style.setProperty('fill', color, 'important');
+      });
+    });
+  }
+
   async function renderOnePre(pre: HTMLElement) {
     if (pre.dataset.rendered === 'true') return;
 
@@ -908,10 +936,14 @@ try {
       }
 
       const card = buildDiagramCard(svg, idx);
+      // Keep the source on the card so the diagram can be re-rendered with
+      // the matching mermaid theme when the user switches light/dark mode.
+      card.dataset.mermaidSource = source;
 
       // Replace the closest .mermaid-render parent if present, else the pre
       const target = pre.closest<HTMLElement>('.mermaid-render') ?? pre;
       target.replaceWith(card);
+      fixLabelContrast(card);
     } catch (err) {
       pre.dataset.rendered = 'error';
       // Style the pre as a readable code block fallback
@@ -942,14 +974,53 @@ try {
     }
   }
 
-  function resetThemeAndRerender() {
-    document.querySelectorAll<HTMLElement>('.mermaid-rendered-svg').forEach(el => el.remove());
-    // Restore the original mermaid-render divs so they can be re-rendered
-    // (they're gone once replaced, so nothing further to do — new diagrams
-    // appearing via layer expand will pick up the new theme automatically)
-    renderCounter = 0;
-    renderAllDiagrams();
+  /* -----------------------------------------------------------------------
+   * Theme switching — re-render every diagram in place with the new theme's
+   * mermaid config. The source survives on card.dataset.mermaidSource; the
+   * new SVG is swapped into the existing card's stage so zoom controls and
+   * layout are preserved.
+   * -------------------------------------------------------------------- */
+  let themeRerenderToken = 0;
+
+  async function rerenderDiagramsForTheme() {
+    const cards = document.querySelectorAll<HTMLElement>('.mermaid-rendered-svg[data-mermaid-source]');
+    if (cards.length === 0) return;
+
+    const token = ++themeRerenderToken;
+    const mermaid = await loadMermaid();
+    mermaid.initialize(getMermaidConfig());
+
+    for (const card of Array.from(cards)) {
+      // A newer theme switch superseded this pass — abandon it
+      if (token !== themeRerenderToken) return;
+
+      const source = card.dataset.mermaidSource!;
+      try {
+        const { svg } = await mermaid.render(`mermaid-retheme-${renderCounter++}`, source);
+        if (!svg || svg.includes('class="error-text"') || svg.includes("class='error-text'")) continue;
+        const stage = card.querySelector<HTMLElement>('[id$="-stage"]');
+        if (stage) {
+          stage.innerHTML = makeResponsiveSvg(svg);
+          fixLabelContrast(stage);
+        }
+      } catch {
+        // Keep the previous SVG rather than blanking the diagram
+      }
+    }
   }
+
+  // Watch <html> class for light/dark flips. Track previous state so other
+  // class churn (e.g. the transient "theme-transition" class) doesn't
+  // trigger spurious re-renders.
+  let wasDark = document.documentElement.classList.contains('dark');
+  const themeObserver = new MutationObserver(() => {
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark !== wasDark) {
+      wasDark = isDark;
+      rerenderDiagramsForTheme();
+    }
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
   // -----------------------------------------------------------------------
   // MutationObserver — catches pre.mermaid elements added by LayerCollapse

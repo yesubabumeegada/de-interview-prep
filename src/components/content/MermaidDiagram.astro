@@ -172,6 +172,31 @@ const diagramId = `mermaid-${Math.random().toString(36).substring(2, 11)}`;
     ADD_ATTR: ['viewBox','xmlns','style','fill','stroke','stroke-width','marker-end','marker-start','d','cx','cy','r','x','y','width','height','transform','text-anchor','dominant-baseline','font-size','font-family','fill-opacity','stroke-dasharray','points','rx','ry','x1','y1','x2','y2','refX','refY','markerWidth','markerHeight','orient','id','clip-path','href','class'],
   };
 
+  /**
+   * Diagrams may hard-code light node fills ("style X fill:#e1f5fe") that
+   * override mermaid's theme; in dark mode the theme's light label text then
+   * lands on a light box. Force a contrasting label color per node based on
+   * the actual fill luminance. Container must be attached to the DOM.
+   */
+  function fixLabelContrast(container: HTMLElement) {
+    container.querySelectorAll<SVGGElement>('g.node, g.cluster').forEach((node) => {
+      const shape = node.querySelector<SVGElement>('rect, polygon, circle, ellipse, path');
+      if (!shape) return;
+      const fill = getComputedStyle(shape).fill;
+      const m = fill.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (!m) return;
+      if (m[4] !== undefined && parseFloat(m[4]) < 0.5) return;
+      const lum = 0.2126 * +m[1] + 0.7152 * +m[2] + 0.0722 * +m[3];
+      const color = lum > 140 ? '#1e293b' : '#f1f5f9';
+      node.querySelectorAll<HTMLElement>('.nodeLabel, span, div, p').forEach((el) => {
+        el.style.setProperty('color', color, 'important');
+      });
+      node.querySelectorAll<SVGElement>('text, tspan').forEach((el) => {
+        el.style.setProperty('fill', color, 'important');
+      });
+    });
+  }
+
   function getMermaidConfig() {
     const isDark = document.documentElement.classList.contains('dark');
     const light = {
@@ -296,6 +321,8 @@ const diagramId = `mermaid-${Math.random().toString(36).substring(2, 11)}`;
 
     document.body.style.overflow = 'hidden';
     document.body.appendChild(modal);
+    const modalStage = modal.querySelector<HTMLElement>('[data-modal-stage]');
+    if (modalStage) fixLabelContrast(modalStage);
 
     // Wire events
     modal.querySelector('[data-modal-close]')?.addEventListener('click', close);
@@ -407,6 +434,7 @@ const diagramId = `mermaid-${Math.random().toString(36).substring(2, 11)}`;
           .replace(/<svg /, '<svg style="max-width:100%;display:block;" ');
 
         svgStage.innerHTML = DOMPurify.sanitize(svgResponsive, SVG_ALLOW);
+        fixLabelContrast(svgStage);
         renderedEl.classList.remove('hidden');
         loadingEl.classList.add('hidden');
         diagramZooms.set(id, 100);
@@ -447,8 +475,9 @@ const diagramId = `mermaid-${Math.random().toString(36).substring(2, 11)}`;
   }
 
   document.addEventListener('astro:page-load', initMermaidDiagrams);
-  document.addEventListener('theme-changed', () => {
-    // Re-render: clear existing SVG stages so they re-render with new theme
+
+  function resetAndRerenderForTheme() {
+    // Clear existing SVG stages so they re-render with the new theme
     document.querySelectorAll<HTMLElement>('.mermaid-diagram-wrapper').forEach((w) => {
       const id = w.dataset.diagramId!;
       const stage = document.getElementById(`${id}-svg-stage`);
@@ -459,11 +488,18 @@ const diagramId = `mermaid-${Math.random().toString(36).substring(2, 11)}`;
       if (loading) loading.classList.remove('hidden');
     });
     initMermaidDiagrams();
-  });
+  }
 
-  const htmlObs = new MutationObserver((muts) => {
-    for (const m of muts) {
-      if (m.attributeName === 'class') { initMermaidDiagrams(); break; }
+  document.addEventListener('theme-changed', resetAndRerenderForTheme);
+
+  // Watch <html> class for actual light/dark flips only — other class churn
+  // (e.g. the transient "theme-transition" class) must not trigger re-renders.
+  let wasDark = document.documentElement.classList.contains('dark');
+  const htmlObs = new MutationObserver(() => {
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark !== wasDark) {
+      wasDark = isDark;
+      resetAndRerenderForTheme();
     }
   });
   htmlObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
