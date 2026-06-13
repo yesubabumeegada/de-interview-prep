@@ -142,7 +142,7 @@ export default function LayerCollapse({ layers }: LayerCollapseProps) {
               id={panelId}
               role="region"
               aria-labelledby={headerId}
-              className={`overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out grid ${
+              className={`overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out grid grid-cols-[minmax(0,1fr)] ${
                 isExpanded
                   ? 'grid-rows-[1fr] opacity-100'
                   : 'grid-rows-[0fr] opacity-0'

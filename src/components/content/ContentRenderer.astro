@@ -166,7 +166,6 @@ const { content, class: className = '' } = Astro.props;
     padding: 8px 12px;
     border: 1px solid var(--color-surface-tertiary);
     color: var(--color-content);
-    white-space: nowrap;
   }
 
   .content-renderer td {
@@ -251,6 +250,14 @@ const { content, class: className = '' } = Astro.props;
     font-size: 0.85rem;
     line-height: 1.6;
     color: #e2e8f0;
+  }
+
+  /* --- Mobile: scale down headings so they don't overflow narrow screens --- */
+  @media (max-width: 640px) {
+    .content-renderer h1 { font-size: 1.5rem; line-height: 2rem; }
+    .content-renderer h2 { font-size: 1.25rem; line-height: 1.75rem; }
+    .content-renderer h3 { font-size: 1.125rem; line-height: 1.625rem; }
+    .content-renderer h4 { font-size: 1rem;    line-height: 1.5rem;  }
   }
 
   /* --- Mermaid rendered SVG containers --- */
