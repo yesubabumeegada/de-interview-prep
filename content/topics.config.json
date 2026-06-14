@@ -236,6 +236,31 @@
           "id": "performance-tuning",
           "displayName": "Performance Tuning",
           "order": 10
+        },
+        {
+          "id": "security-access-control",
+          "displayName": "Security & Access Control",
+          "order": 11
+        },
+        {
+          "id": "data-loading-stages",
+          "displayName": "Data Loading & Stages",
+          "order": 12
+        },
+        {
+          "id": "cost-management",
+          "displayName": "Cost Management",
+          "order": 13
+        },
+        {
+          "id": "snowpark-udfs",
+          "displayName": "Snowpark & UDFs",
+          "order": 14
+        },
+        {
+          "id": "cortex-ai",
+          "displayName": "Cortex AI",
+          "order": 15
         }
       ]
     },
