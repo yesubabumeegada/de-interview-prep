@@ -178,6 +178,46 @@
           "id": "lakehouse-architecture",
           "displayName": "Lakehouse Architecture",
           "order": 12
+        },
+        {
+          "id": "mlflow-model-registry",
+          "displayName": "MLflow & Model Registry",
+          "order": 13
+        },
+        {
+          "id": "feature-store",
+          "displayName": "Feature Store",
+          "order": 14
+        },
+        {
+          "id": "mosaic-ai",
+          "displayName": "Mosaic AI",
+          "order": 15
+        },
+        {
+          "id": "data-governance-lineage",
+          "displayName": "Data Governance & Lineage",
+          "order": 16
+        },
+        {
+          "id": "performance-tuning",
+          "displayName": "Performance Tuning",
+          "order": 17
+        },
+        {
+          "id": "notebooks-collaboration",
+          "displayName": "Notebooks & Collaboration",
+          "order": 18
+        },
+        {
+          "id": "security-networking",
+          "displayName": "Security & Networking",
+          "order": 19
+        },
+        {
+          "id": "cost-management",
+          "displayName": "Cost Management",
+          "order": 20
         }
       ]
     },
