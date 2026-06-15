@@ -359,6 +359,16 @@
           "id": "hadoop-ecosystem-architecture",
           "displayName": "Hadoop Ecosystem Architecture",
           "order": 10
+        },
+        {
+          "id": "hive-performance",
+          "displayName": "Hive Performance Tuning",
+          "order": 11
+        },
+        {
+          "id": "orc-parquet-formats",
+          "displayName": "ORC & Parquet Formats",
+          "order": 12
         }
       ]
     },
@@ -407,6 +417,11 @@
           "id": "materialized-views",
           "displayName": "Materialized Views",
           "order": 8
+        },
+        {
+          "id": "interview-scenarios",
+          "displayName": "Interview Scenarios",
+          "order": 9
         }
       ]
     },
@@ -455,6 +470,11 @@
           "id": "query-optimization",
           "displayName": "Query Optimization",
           "order": 8
+        },
+        {
+          "id": "interview-scenarios",
+          "displayName": "Interview Scenarios",
+          "order": 9
         }
       ]
     },
@@ -1062,6 +1082,16 @@
           "id": "performance-analyzer",
           "displayName": "Performance Analyzer",
           "order": 8
+        },
+        {
+          "id": "deployment-pipelines",
+          "displayName": "Deployment Pipelines",
+          "order": 9
+        },
+        {
+          "id": "composite-models",
+          "displayName": "Composite Models",
+          "order": 10
         }
       ]
     },
