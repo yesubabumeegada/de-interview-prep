@@ -583,6 +583,16 @@
           "id": "interview-coding-problems",
           "displayName": "Interview Coding Problems",
           "order": 20
+        },
+        {
+          "id": "data-pipeline-patterns",
+          "displayName": "Data Pipeline Patterns",
+          "order": 21
+        },
+        {
+          "id": "sql-and-databases",
+          "displayName": "SQL & Databases",
+          "order": 22
         }
       ]
     },
@@ -681,6 +691,16 @@
           "id": "testing-pyspark",
           "displayName": "Testing PySpark",
           "order": 18
+        },
+        {
+          "id": "schema-management",
+          "displayName": "Schema Management",
+          "order": 19
+        },
+        {
+          "id": "interview-scenarios",
+          "displayName": "Interview Scenarios",
+          "order": 20
         }
       ]
     },
@@ -749,6 +769,21 @@
           "id": "interview-coding-problems",
           "displayName": "Interview Coding Problems",
           "order": 12
+        },
+        {
+          "id": "date-time-functions",
+          "displayName": "Date & Time Functions",
+          "order": 13
+        },
+        {
+          "id": "null-handling",
+          "displayName": "NULL Handling",
+          "order": 14
+        },
+        {
+          "id": "interview-patterns",
+          "displayName": "Interview Patterns",
+          "order": 15
         }
       ]
     },
@@ -817,6 +852,21 @@
           "id": "deployment-patterns",
           "displayName": "Deployment Patterns",
           "order": 12
+        },
+        {
+          "id": "airflow-security",
+          "displayName": "Airflow Security",
+          "order": 13
+        },
+        {
+          "id": "monitoring-and-alerting",
+          "displayName": "Monitoring & Alerting",
+          "order": 14
+        },
+        {
+          "id": "airflow-testing",
+          "displayName": "Airflow Testing",
+          "order": 15
         }
       ]
     },
