@@ -301,6 +301,16 @@
           "id": "cortex-ai",
           "displayName": "Cortex AI",
           "order": 15
+        },
+        {
+          "id": "replication-and-failover",
+          "displayName": "Replication & Failover",
+          "order": 16
+        },
+        {
+          "id": "data-clean-rooms",
+          "displayName": "Data Clean Rooms",
+          "order": 17
         }
       ]
     },
@@ -1084,6 +1094,16 @@
           "id": "pipeline-design-patterns",
           "displayName": "Pipeline Design Patterns",
           "order": 10
+        },
+        {
+          "id": "data-freshness-patterns",
+          "displayName": "Data Freshness Patterns",
+          "order": 12
+        },
+        {
+          "id": "interview-scenarios",
+          "displayName": "Interview Scenarios",
+          "order": 13
         }
       ]
     },
@@ -1316,6 +1336,11 @@
           "id": "schema-design-patterns",
           "displayName": "Schema Design Patterns",
           "order": 10
+        },
+        {
+          "id": "interview-scenarios",
+          "displayName": "Interview Scenarios",
+          "order": 9
         }
       ]
     },
