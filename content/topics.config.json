@@ -1425,6 +1425,26 @@
           "id": "purview",
           "displayName": "Microsoft Purview",
           "order": 9
+        },
+        {
+          "id": "azure-data-lake-analytics",
+          "displayName": "Azure Data Lake Analytics",
+          "order": 10
+        },
+        {
+          "id": "azure-monitor-alerts",
+          "displayName": "Azure Monitor & Alerts",
+          "order": 11
+        },
+        {
+          "id": "azure-devops-pipelines",
+          "displayName": "Azure DevOps Pipelines",
+          "order": 12
+        },
+        {
+          "id": "microsoft-fabric",
+          "displayName": "Microsoft Fabric",
+          "order": 13
         }
       ]
     },
@@ -1632,6 +1652,21 @@
           "id": "looker",
           "displayName": "Looker & Looker Studio",
           "order": 8
+        },
+        {
+          "id": "bigquery-advanced",
+          "displayName": "BigQuery Advanced",
+          "order": 9
+        },
+        {
+          "id": "vertex-ai",
+          "displayName": "Vertex AI for Data Engineers",
+          "order": 10
+        },
+        {
+          "id": "gcp-iam-security",
+          "displayName": "GCP IAM & Security",
+          "order": 11
         }
       ]
     },
@@ -1733,6 +1768,21 @@
           "id": "negotiation-and-leveling",
           "displayName": "Negotiation & Leveling",
           "order": 5
+        },
+        {
+          "id": "system-design-interview",
+          "displayName": "System Design Interview",
+          "order": 6
+        },
+        {
+          "id": "whiteboard-coding",
+          "displayName": "Whiteboard Coding",
+          "order": 7
+        },
+        {
+          "id": "leetcode-for-de",
+          "displayName": "LeetCode for Data Engineers",
+          "order": 8
         }
       ]
     },
@@ -1771,6 +1821,21 @@
           "id": "monitoring-and-alerting",
           "displayName": "Monitoring & Alerting",
           "order": 6
+        },
+        {
+          "id": "terraform-for-data",
+          "displayName": "Terraform for Data",
+          "order": 7
+        },
+        {
+          "id": "data-pipeline-versioning",
+          "displayName": "Data Pipeline Versioning",
+          "order": 8
+        },
+        {
+          "id": "observability-and-slos",
+          "displayName": "Observability & SLOs",
+          "order": 9
         }
       ]
     },
@@ -1847,6 +1912,16 @@
           "id": "container-security",
           "displayName": "Container Security",
           "order": 6
+        },
+        {
+          "id": "airflow-on-kubernetes",
+          "displayName": "Airflow on Kubernetes",
+          "order": 7
+        },
+        {
+          "id": "data-platform-infrastructure",
+          "displayName": "Data Platform Infrastructure",
+          "order": 8
         }
       ]
     },
