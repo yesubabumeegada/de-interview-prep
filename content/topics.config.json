@@ -1110,6 +1110,26 @@
           "id": "orchestration-frameworks",
           "displayName": "Orchestration Frameworks",
           "order": 8
+        },
+        {
+          "id": "agentic-patterns",
+          "displayName": "Agentic Patterns",
+          "order": 9
+        },
+        {
+          "id": "llm-guardrails",
+          "displayName": "LLM Guardrails",
+          "order": 10
+        },
+        {
+          "id": "cost-latency-tradeoffs",
+          "displayName": "Cost & Latency Tradeoffs",
+          "order": 11
+        },
+        {
+          "id": "vector-search-indexing",
+          "displayName": "Vector Search & Indexing",
+          "order": 12
         }
       ]
     },
@@ -1264,6 +1284,31 @@
           "id": "dbt-cloud-and-ci-cd",
           "displayName": "dbt Cloud & CI/CD",
           "order": 8
+        },
+        {
+          "id": "dbt-packages",
+          "displayName": "dbt Packages",
+          "order": 9
+        },
+        {
+          "id": "dbt-orchestration",
+          "displayName": "dbt Orchestration",
+          "order": 10
+        },
+        {
+          "id": "incremental-strategies",
+          "displayName": "Incremental Strategies",
+          "order": 11
+        },
+        {
+          "id": "dbt-documentation",
+          "displayName": "dbt Documentation",
+          "order": 12
+        },
+        {
+          "id": "advanced-testing",
+          "displayName": "Advanced Testing",
+          "order": 13
         }
       ]
     },
@@ -1312,6 +1357,21 @@
           "id": "incident-management",
           "displayName": "Incident Management",
           "order": 8
+        },
+        {
+          "id": "dbt-testing-integration",
+          "displayName": "dbt Testing Integration",
+          "order": 9
+        },
+        {
+          "id": "observability-tools",
+          "displayName": "Observability Tools",
+          "order": 10
+        },
+        {
+          "id": "data-sla-enforcement",
+          "displayName": "Data SLA Enforcement",
+          "order": 11
         }
       ]
     },
@@ -1461,6 +1521,21 @@
           "id": "streaming-architecture",
           "displayName": "Streaming Architecture Patterns",
           "order": 8
+        },
+        {
+          "id": "exactly-once-semantics",
+          "displayName": "Exactly-Once Semantics",
+          "order": 9
+        },
+        {
+          "id": "kafka-flink-integration",
+          "displayName": "Kafka-Flink Integration",
+          "order": 10
+        },
+        {
+          "id": "streaming-data-quality",
+          "displayName": "Streaming Data Quality",
+          "order": 11
         }
       ]
     },
@@ -1605,6 +1680,26 @@
           "id": "trade-off-analysis",
           "displayName": "Trade-off Analysis",
           "order": 8
+        },
+        {
+          "id": "interview-practice-problems",
+          "displayName": "Interview Practice Problems",
+          "order": 9
+        },
+        {
+          "id": "multi-cloud-architecture",
+          "displayName": "Multi-Cloud Architecture",
+          "order": 10
+        },
+        {
+          "id": "event-driven-architecture",
+          "displayName": "Event-Driven Architecture",
+          "order": 11
+        },
+        {
+          "id": "data-mesh-design",
+          "displayName": "Data Mesh Design",
+          "order": 12
         }
       ]
     },
