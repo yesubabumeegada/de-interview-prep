@@ -110,6 +110,16 @@
           "id": "batch",
           "displayName": "AWS Batch",
           "order": 21
+        },
+        {
+          "id": "aws-cost-optimization",
+          "displayName": "Cost Optimization",
+          "order": 23
+        },
+        {
+          "id": "data-migration-services",
+          "displayName": "Data Migration Services",
+          "order": 24
         }
       ]
     },
@@ -218,6 +228,11 @@
           "id": "cost-management",
           "displayName": "Cost Management",
           "order": 20
+        },
+        {
+          "id": "databricks-connect",
+          "displayName": "Databricks Connect",
+          "order": 21
         }
       ]
     },
