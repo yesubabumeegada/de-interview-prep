@@ -2,7 +2,7 @@
 title: "AWS Cost Optimization Fundamentals for Data Engineers"
 description: "Core AWS pricing concepts, S3 storage tiers, EC2 pricing models, and Cost Explorer basics for data workloads"
 content_type: study_material
-topic: aws
+topic: aws-services
 subtopic: aws-cost-optimization
 layer: fundamentals
 difficulty_level: junior

@@ -2,7 +2,7 @@
 title: "AWS Cost Optimization Scenario Questions"
 description: "Practice scenarios for AWS cost optimization: S3 storage tier selection, EMR Spot pipeline design, and FinOps strategy for multi-account data platforms"
 content_type: scenario_question
-topic: aws
+topic: aws-services
 subtopic: aws-cost-optimization
 tags: [aws, cost-optimization, s3, emr, spot-instances, finops, scenario, interview]
 ---

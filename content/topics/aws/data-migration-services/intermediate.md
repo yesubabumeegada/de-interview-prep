@@ -2,7 +2,7 @@
 title: "AWS DMS Intermediate — Task Types, LOB Handling, Table Mapping, and Validation"
 description: "DMS task types in depth, LOB column handling, table mapping rules, DMS validation, SCT assessment interpretation, and replication instance sizing"
 content_type: study_material
-topic: aws
+topic: aws-services
 subtopic: data-migration-services
 layer: intermediate
 difficulty_level: mid-level

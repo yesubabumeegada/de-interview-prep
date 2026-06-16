@@ -2,7 +2,7 @@
 title: "AWS Cost Optimization Intermediate — Spot Instances, Lifecycle Policies, and Athena Tuning"
 description: "Spot instance strategies for EMR and Glue, S3 lifecycle automation, Savings Plans vs Reserved Instances, and Athena query cost control"
 content_type: study_material
-topic: aws
+topic: aws-services
 subtopic: aws-cost-optimization
 layer: intermediate
 difficulty_level: mid-level

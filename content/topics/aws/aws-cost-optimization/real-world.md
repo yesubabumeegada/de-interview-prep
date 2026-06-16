@@ -2,7 +2,7 @@
 title: "AWS Cost Optimization Real-World Case Studies"
 description: "Real-world case studies: Spot interruption strategy for EMR, S3 storage audit, Athena workgroup governance, and cross-region replication cost trap"
 content_type: study_material
-topic: aws
+topic: aws-services
 subtopic: aws-cost-optimization
 layer: real-world
 difficulty_level: senior

@@ -2,7 +2,7 @@
 title: "AWS Data Migration Services Fundamentals"
 description: "Overview of AWS DMS, SCT, Snow Family, and DataSync for migrating databases and files to AWS"
 content_type: study_material
-topic: aws
+topic: aws-services
 subtopic: data-migration-services
 layer: fundamentals
 difficulty_level: junior

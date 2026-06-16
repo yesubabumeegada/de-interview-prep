@@ -2,7 +2,7 @@
 title: "AWS Cost Optimization Senior Deep Dive — FinOps, Multi-Account, and Pipeline Right-Sizing"
 description: "Multi-account cost allocation with AWS Organizations, Redshift reserved capacity, data transfer cost engineering, and FinOps practices for data platform teams"
 content_type: study_material
-topic: aws
+topic: aws-services
 subtopic: aws-cost-optimization
 layer: senior-deep-dive
 difficulty_level: senior
