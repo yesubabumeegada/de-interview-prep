@@ -120,6 +120,11 @@
           "id": "data-migration-services",
           "displayName": "Data Migration Services",
           "order": 24
+        },
+        {
+          "id": "aws-bedrock",
+          "displayName": "AWS Bedrock",
+          "order": 25
         }
       ]
     },
